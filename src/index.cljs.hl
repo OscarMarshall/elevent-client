@@ -1,10 +1,76 @@
 (page "index.html"
   (:require
-    [tailrecursion.hoplon.reload :refer [reload-all]]))
+    [tailrecursion.hoplon.reload :refer [reload-all]]
+    [polymer.core-elements :as polymer-core]
+    [polymer.paper-elements :as polymer-paper]
+    [garden.core :refer [css]]
+    [garden.stylesheet :refer [at-media]]))
 
 (reload-all 1000)
 
+(def core-elements
+  '("header-panel" "icon-button" "scaffold" "style" "toolbar"))
+(def paper-elements
+  '("input" "shadow"))
+
+
+(def primary-color   ["#2196f3" "#bbdefb" "#1976d2"])
+(def secondary-color ["#ff5252" "#ff8a80" "#d50000"])
+
+(def black-dividers       "rgba(0, 0, 0, 0.12)")
+(def black-disabled       "rgba(0, 0, 0, 0.26)")
+(def black-hint-text      "rgba(0, 0, 0, 0.26)")
+(def black-secondary-text "rgba(0, 0, 0, 0.54)")
+(def black-icons          "rgba(0, 0, 0, 0.54)")
+(def black-text           "rgba(0, 0, 0, 0.87)")
+(def black                "#000")
+
+(def white-dividers       "rgba(255, 255, 255, 0.12)")
+(def white-disabled       "rgba(255, 255, 255, 0.30)")
+(def white-hint-text      "rgba(255, 255, 255, 0.30)")
+(def white-secondary-text "rgba(255, 255, 255, 0.70)")
+(def white-text           "#fff")
+(def white-icons          "#fff")
+(def white                "#fff")
+
 (html
-  (head)
-  (body
-    (h1 "Hello, World!")))
+  (head
+    (title "U of U | AASA | High School Conference")
+    (meta :name "viewport"
+          :content "width=device-width, initial-scale=1.0, user-scalable=no")
+    (script :src "bower_components/webcomponentsjs/webcomponents.min.js")
+    (link :rel "import" :href "bower_components/font-roboto/roboto.html")
+    (for [component (concat (map (partial str "core-") core-elements)
+                            (map (partial str "paper-") paper-elements))]
+      (link
+        :rel "import"
+        :href (str "bower_components/" component "/" component ".html")))
+    (style (css [:body {:background black-dividers
+                        :font-family "Roboto, sans-serif"}]
+                [:.card {:background white
+                         :border-radius "2px"}]
+                [:core-toolbar {:background (first primary-color)
+                                :color white-text}]
+                [:#main {:width "1200px"
+                         :margin "64px auto"
+                         :padding "8px 0"}
+                 [:paper-input-decorator {:padding "12px 24px"}]
+                 (at-media {:max-width 1800}
+                   [:& {:width "66.66%"}])])))
+  (body :fullbleed true :layout true :vertical true
+    (polymer-core/header-panel :mode "standard" :navigation true :flex true
+      (polymer-core/toolbar (polymer-core/icon-button :icon "menu") "Elevent")
+      (section :vertical true :layout true
+        (polymer-paper/shadow :id "main" :class "card" :z 1
+          (form
+            (div :horizontal true :layout true
+              (polymer-paper/input-decorator
+                :label "First Name"
+                :floatinglabel true
+                :flex true
+                (input :is "core-input"))
+              (polymer-paper/input-decorator
+                :label "Last Name"
+                :floatinglabel true
+                :flex true
+                (input :is "core-input")))))))))

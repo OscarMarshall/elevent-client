@@ -6,7 +6,8 @@
   :project      'eleventclient
   :version      "0.1.0-SNAPSHOT"
   :dependencies '[[tailrecursion/boot.task   "2.2.4"]
-                  [tailrecursion/hoplon      "5.10.24"]]
+                  [tailrecursion/hoplon      "5.10.24"]
+                  [garden                    "1.2.5"]]
   :out-path     "resources/public"
   :src-paths    #{"src"})
 
