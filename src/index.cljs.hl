@@ -3,35 +3,24 @@
     [tailrecursion.hoplon.reload :refer [reload-all]]
     [polymer.core-elements :as polymer-core]
     [polymer.paper-elements :as polymer-paper]
-    [garden.core :refer [css]]
-    [garden.stylesheet :refer [at-media]]))
+    [util :as util]
+    [style :as style]))
 
 (reload-all 1000)
 
 (def core-elements
   '("header-panel" "icon-button" "scaffold" "style" "toolbar"))
 (def paper-elements
-  '("input" "shadow"))
+  '("button" "fab" "input" "shadow"))
 
 
-(def primary-color   ["#2196f3" "#bbdefb" "#1976d2"])
-(def secondary-color ["#ff5252" "#ff8a80" "#d50000"])
+(defc event-id 1)
+(defc= event-attendees
+  (let [url  (str "http://aws.elevent.solutions/events/" event-id "/attendees")
+        ajax (clj->js {:dataType "jsonp", :url url})]
+    (doto (.ajax js/jQuery ajax)
+      (.done #(js/alert (.stringify js/JSON %))))))
 
-(def black-dividers       "rgba(0, 0, 0, 0.12)")
-(def black-disabled       "rgba(0, 0, 0, 0.26)")
-(def black-hint-text      "rgba(0, 0, 0, 0.26)")
-(def black-secondary-text "rgba(0, 0, 0, 0.54)")
-(def black-icons          "rgba(0, 0, 0, 0.54)")
-(def black-text           "rgba(0, 0, 0, 0.87)")
-(def black                "#000")
-
-(def white-dividers       "rgba(255, 255, 255, 0.12)")
-(def white-disabled       "rgba(255, 255, 255, 0.30)")
-(def white-hint-text      "rgba(255, 255, 255, 0.30)")
-(def white-secondary-text "rgba(255, 255, 255, 0.70)")
-(def white-text           "#fff")
-(def white-icons          "#fff")
-(def white                "#fff")
 
 (html
   (head
@@ -45,32 +34,34 @@
       (link
         :rel "import"
         :href (str "bower_components/" component "/" component ".html")))
-    (style (css [:body {:background black-dividers
-                        :font-family "Roboto, sans-serif"}]
-                [:.card {:background white
-                         :border-radius "2px"}]
-                [:core-toolbar {:background (first primary-color)
-                                :color white-text}]
-                [:#main {:width "1200px"
-                         :margin "64px auto"
-                         :padding "8px 0"}
-                 [:paper-input-decorator {:padding "12px 24px"}]
-                 (at-media {:max-width 1800}
-                   [:& {:width "66.66%"}])])))
+    (style style/stylesheet))
   (body :fullbleed true :layout true :vertical true
     (polymer-core/header-panel :mode "standard" :navigation true :flex true
       (polymer-core/toolbar (polymer-core/icon-button :icon "menu") "Elevent")
       (section :vertical true :layout true
-        (polymer-paper/shadow :id "main" :class "card" :z 1
-          (form
-            (div :horizontal true :layout true
-              (polymer-paper/input-decorator
-                :label "First Name"
-                :floatinglabel true
-                :flex true
-                (input :is "core-input"))
-              (polymer-paper/input-decorator
-                :label "Last Name"
-                :floatinglabel true
-                :flex true
-                (input :is "core-input")))))))))
+        (form
+          (polymer-paper/shadow :id "main" :z 1
+            (div :class "card"
+              (header (img :src "images/aasa-high-school-conference-registration-1.png"))
+              (section :class "body"
+                (h2 :class "title" "Register for AASA High School Conference 2015")
+                (div :horizontal true :layout true
+                  (polymer-paper/input-decorator
+                    :label "Email"
+                    :floatinglabel true
+                    (input :is "core-input")))
+                (div :horizontal true :layout true
+                  (polymer-paper/input-decorator
+                    :label "First Name"
+                    :floatinglabel true
+                    (input :is "core-input"))
+                  (polymer-paper/input-decorator
+                    :label "Last Name"
+                    :floatinglabel true
+                    (input :is "core-input")))
+                (div :reverse true :horizontal true :layout true
+                  (polymer-paper/button :class "red" :on-click (fn [] (swap! style/primary-color #(into [] (cons "red" (rest %)))))
+                    "red")
+                  (polymer-paper/button :class "blue" :on-click (fn [] (swap! style/primary-color #(into [] (cons "blue" (rest %)))))
+                    "blue")))))
+          (polymer-paper/fab :icon "check"))))))

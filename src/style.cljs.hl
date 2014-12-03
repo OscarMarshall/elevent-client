@@ -1,0 +1,61 @@
+(ns style
+  (:require
+    [garden.core :refer [css]]
+    [garden.stylesheet :refer [at-media]]))
+
+(def black-dividers       "rgba(0, 0, 0, 0.12)")
+(def black-disabled       "rgba(0, 0, 0, 0.26)")
+(def black-hint-text      "rgba(0, 0, 0, 0.26)")
+(def black-secondary-text "rgba(0, 0, 0, 0.54)")
+(def black-icons          "rgba(0, 0, 0, 0.54)")
+(def black-text           "rgba(0, 0, 0, 0.87)")
+(def black                "#000")
+
+(def white-dividers       "rgba(255, 255, 255, 0.12)")
+(def white-disabled       "rgba(255, 255, 255, 0.30)")
+(def white-hint-text      "rgba(255, 255, 255, 0.30)")
+(def white-secondary-text "rgba(255, 255, 255, 0.70)")
+(def white-text           "#fff")
+(def white-icons          "#fff")
+(def white                "#fff")
+
+(defc primary-color   ["#673AB7" "#B39DDB" "#512DA8"])
+(defc secondary-color ["#FF4081"])
+
+(defc= stylesheet
+  (css [[:.display-4 {:font-weight "300"
+                      :font-size   "112px"}]
+        [:.display-3 {:font-weight "400"
+                      :font-size   "56px"}]
+        [:.display-2 {:font-weight "400"
+                      :font-size   "45px"}]
+        [:.display-1 {:font-weight "400"
+                      :font-size   "34px"}]
+        [:.headline {:font-weight "400"
+                     :font-size   "24px"}]
+        [:.title {:font-weight "500"
+                  :font-size   "20px"}]
+        [:.card {:overflow      "hidden"
+                 :background    white
+                 :border-radius "2px"}]
+        [:body {:background  black-dividers
+                :font-family "Roboto, sans-serif"
+                :color       black-text}]
+        [:core-header-panel [:&>:last-child {:position "relative"}]]
+        [:paper-fab {:position "fixed"
+                     :right    "24px"
+                     :bottom   "24px"}]
+        [:core-toolbar {:background (first primary-color)
+                        :color      white-text}]
+        [:#main {:width   "1200px"
+                 :margin  "64px auto"}
+         [:header [:img {:width   "100%"
+                         :display "block"}]]
+         [:.body {:padding "0 16px 0 24px"}]
+         [:&>:last-child {:padding-bottom "8px"}]
+         [:paper-input-decorator {:padding "12px 24px"
+                                  :width   "256px"}
+          [:&:first-child {:padding-left "0"}]
+          [:&:last-child {:padding-right "0"}]]
+         (at-media {:max-width "1800px"}
+           [:& {:width "66.66%"}])]]))
