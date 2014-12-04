@@ -1,67 +1,83 @@
 (page "index.html"
   (:require
+    [clojure.string :refer [split-lines]]
     [tailrecursion.hoplon.reload :refer [reload-all]]
-    [polymer.core-elements :as polymer-core]
-    [polymer.paper-elements :as polymer-paper]
-    [util :as util]
-    [style :as style]))
+    [style :refer [stylesheet]]))
 
-(reload-all 1000)
+(reload-all)
 
-(def core-elements
-  '("header-panel" "icon-button" "scaffold" "style" "toolbar"))
-(def paper-elements
-  '("button" "fab" "input" "shadow"))
+(defc event
+  {:title
+   "University of Utah Asian American High School Conference 2015"
 
+   :description
+   "The 16th annual Asian American High School Conference on Friday, February 27th, 2015 from 8:00 am until 2:00 pm is presented by the Asian American Student Association at the University of Utah and sponsored by President David W. Pershing and Provost Ruth Watkins. Our goal is to promote to all students, in particular Asian American youth, to apply and attend college. Although all programs will be made specifically for Asian American youth and be facilitated by students well-informed of Asian American issues, the conference is open to everyone. Workshops include, but are not limited to, admissions and scholarship aid, Asian American contemporary issues, major exploration, program-specific exploration, leadership opportunities, and service opportunities. Lunch is provided for all registered applicants.
+*For more information, please contact AASA (aasa.uofu@gmail.com), Deepika Malla (deepikashah6@gmail.com), or Jimmy Sieng (jsieng@hotmail.com)."})
 
-(defc event-id 1)
-(defc= event-attendees
-  (let [url  (str "http://aws.elevent.solutions/events/" event-id "/attendees")
-        ajax (clj->js {:dataType "jsonp", :url url})]
-    (doto (.ajax js/jQuery ajax)
-      (.done #(js/alert (.stringify js/JSON %))))))
-
+(.ready js/jQuery #(.dropdown (js/jQuery "select.dropdown")))
 
 (html
   (head
-    (title "U of U | AASA | High School Conference")
-    (meta :name "viewport"
-          :content "width=device-width, initial-scale=1.0, user-scalable=no")
-    (script :src "bower_components/webcomponentsjs/webcomponents.min.js")
-    (link :rel "import" :href "bower_components/font-roboto/roboto.html")
-    (for [component (concat (map (partial str "core-") core-elements)
-                            (map (partial str "paper-") paper-elements))]
-      (link
-        :rel "import"
-        :href (str "bower_components/" component "/" component ".html")))
-    (style style/stylesheet))
-  (body :fullbleed true :layout true :vertical true
-    (polymer-core/header-panel :mode "standard" :navigation true :flex true
-      (polymer-core/toolbar (polymer-core/icon-button :icon "menu") "Elevent")
-      (section :vertical true :layout true
-        (form
-          (polymer-paper/shadow :id "main" :z 1
-            (div :class "card"
-              (header (img :src "images/aasa-high-school-conference-registration-1.png"))
-              (section :class "body"
-                (h2 :class "title" "Register for AASA High School Conference 2015")
-                (div :horizontal true :layout true
-                  (polymer-paper/input-decorator
-                    :label "Email"
-                    :floatinglabel true
-                    (input :is "core-input")))
-                (div :horizontal true :layout true
-                  (polymer-paper/input-decorator
-                    :label "First Name"
-                    :floatinglabel true
-                    (input :is "core-input"))
-                  (polymer-paper/input-decorator
-                    :label "Last Name"
-                    :floatinglabel true
-                    (input :is "core-input")))
-                (div :reverse true :horizontal true :layout true
-                  (polymer-paper/button :class "red" :on-click (fn [] (swap! style/primary-color #(into [] (cons "red" (rest %)))))
-                    "red")
-                  (polymer-paper/button :class "blue" :on-click (fn [] (swap! style/primary-color #(into [] (cons "blue" (rest %)))))
-                    "blue")))))
-          (polymer-paper/fab :icon "check"))))))
+    (title (text "Register for ~{(:title event)}"))
+    (meta :name "viewport" :content "width=device-width, initial-scale=1.0")
+    (link :rel "stylesheet"
+          :type "text/css"
+          :href "bower_components/semantic-ui/dist/semantic.min.css")
+    (script :src "bower_components/semantic-ui/dist/semantic.min.js")
+    (style stylesheet))
+  (body
+    (div :class "ui fixed menu"
+      (a :class "logo item"
+        (img :src "images/logo-menu.png"))
+      (a :class "item"
+        (i :class "calendar icon") "Events")
+      (a :class "item"
+        (i :class "bar chart icon") "Statistics")
+      (div :class "right menu"
+        (a :class "item"
+          (i :class "user icon") "Login")))
+    (div :class "ui page grid"
+      (div :class "sixteen wide column"
+        (div :class "ui breadcrumb"
+          (a :class "section" "Home")
+          (i :class "right chevron icon divider")
+          (a :class "section" (text "~{(:title event)}"))
+          (i :class "right chevron icon divider")
+          (div :class "active section" "Register")))
+      (div :class "twelve wide column"
+        (div :class "ui segment"
+          (div :class "ui vertical segment"
+            (h2 :class "ui dividing header"
+              (text "Register for ~{(:title event)}"))
+            (loop-tpl :bindings [line
+                                 (cell= (split-lines (:description event)))]
+              (p line)))
+          (div :class "ui vertical segment"
+            (div :class "ui form"
+              (div :class "one field"
+                (div :class "required field"
+                  (label "Email")
+                  (input :type "email")))
+              (div :class "two fields"
+                (div :class "required field"
+                  (label "First Name")
+                  (input :type "text"))
+                (div :class "required field"
+                  (label "Last Name")
+                  (input :type "text")))
+              (div :class "two fields"
+                (div :class "required field"
+                  (label "UID")
+                  (input :type "text"))
+                (div :class "required field"
+                  (label "Favorite Color")
+                  (input :type "text")))
+              (div :class "ui primary button"
+                "Register")))))
+      (div :class "four wide column"
+        (div :class "ui fluid card"
+          (div :class "image"
+            (img :src "images/aasa-logo.png"))
+          (div :class "content"
+            (a :class "header" "Asian American Student Association")
+            (div :class "meta" "University of Utah")))))))
