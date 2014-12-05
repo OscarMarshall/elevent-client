@@ -1,0 +1,59 @@
+(ns pages.event-register.view
+  (:require
+    [clojure.string :refer [split-lines]]))
+
+(defc organizer
+  {:title "Asian American Student Association"
+   :name  "asian-american-student-association"})
+
+(defc event
+  {:title
+   "University of Utah Asian American High School Conference 2015"
+
+   :name
+   "university-of-utah-asian-american-high-school-conference-2015"
+
+   :description
+   "The 16th annual Asian American High School Conference on Friday, February 27th, 2015 from 8:00 am until 2:00 pm is presented by the Asian American Student Association at the University of Utah and sponsored by President David W. Pershing and Provost Ruth Watkins. Our goal is to promote to all students, in particular Asian American youth, to apply and attend college. Although all programs will be made specifically for Asian American youth and be facilitated by students well-informed of Asian American issues, the conference is open to everyone. Workshops include, but are not limited to, admissions and scholarship aid, Asian American contemporary issues, major exploration, program-specific exploration, leadership opportunities, and service opportunities. Lunch is provided for all registered applicants.
+*For more information, please contact AASA (aasa.uofu@gmail.com), Deepika Malla (deepikashah6@gmail.com), or Jimmy Sieng (jsieng@hotmail.com)."})
+
+(defn template []
+  (div :class "ui stackable page grid"
+    (div :class "twelve wide column"
+      (div :class "ui segment"
+        (div :class "ui vertical segment"
+          (img :src "images/aasa-high-school-conference-registration-1.png"
+               :width "100%")
+          (h2 :class "ui dividing header"
+            (text "Register for ~{(:title event)}"))
+          (loop-tpl :bindings [line (cell= (split-lines (:description event)))]
+            (p line)))
+        (div :class "ui vertical segment"
+          (div :class "ui form"
+            (div :class "one field"
+              (div :class "required field"
+                (label "Email")
+                (input :type "email")))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "First Name")
+                (input :type "text"))
+              (div :class "required field"
+                (label "Last Name")
+                (input :type "text")))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Phone Number")
+                (input :type "text"))
+              (div :class "required field"
+                (label "Date of Birth")
+                (input :type "text")))
+            (a :class "ui primary button" :href "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
+              "Register")))))
+    (div :class "four wide column"
+      (div :class "ui fluid card"
+        (div :class "image"
+          (img :src "images/aasa-logo.png"))
+        (div :class "content"
+          (a :class "header" "Asian American Student Association")
+          (div :class "meta" "University of Utah"))))))

@@ -1,0 +1,48 @@
+(ns pages.event-schedule.view)
+
+(defn template [event activities schedule]
+  (div :class "ui stackable page grid"
+    (div :class "twelve wide column"
+      (div :class "ui segment"
+        (div :class "ui vertical segment"
+          (h2 :class "ui dividing header"
+            (text "Schedule for ~{(:Title event)}"))
+          (table :class "ui table"
+            (thead
+              (tr
+                (th "Countdown")
+                (th "Start")
+                (th "End")
+                (th "Activity")
+                (th "Location")
+                (th)))
+            (tbody
+              (loop-tpl :bindings [activity (map activities schedule)]
+                (tr
+                  (td)
+                  (td :nowrap true (text (:StartTime activity)))
+                  (td :nowrap true (text (:EndTime activity)))
+                  (td (text (:Name activity)))
+                  (td (text (:Location activity)))
+                  (td :class "right aligned"
+                    (a :href "#"
+                      (i :class "red remove icon") "Remove")))))
+            (tfoot
+              (tr
+                (th :colspan "6"
+                  (div :class "ui small labeled icon button"
+                    (i :class "print icon") "Print"))))))
+        (div :class "ui vertical segment"
+          (div :class "ui divided items"
+            (loop-tpl :bindings [activity (vals (apply dissoc
+                                                       activities
+                                                       schedule))]
+              (div :class "item"
+                (div :class "content"
+                  (a :class "header" (text (:Name activity)))
+                  (div :class "meta" (text (:Location activity)))
+                  (div :class "description"
+                    (text (:Description activity)))
+                  (div :class "extra"
+                    (div :class "ui right floated primary button"
+                      "Add" (i :class "right chevron icon"))))))))))))

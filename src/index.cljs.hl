@@ -1,37 +1,113 @@
 (page "index.html"
   (:require
-    [clojure.string :refer [split-lines]]
     [tailrecursion.hoplon.reload :refer [reload-all]]
-    [style :refer [stylesheet]]))
+    [style :refer [stylesheet]]
+    [pages.event-register.view :as register]
+    [pages.event-schedule.view :as schedule]))
 
 (reload-all)
 
+(def api-base-url "http://aws.elevent.solutions:8860")
+
+(def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
+
+(defc user
+  {:Id 1
+   :Email "johnclukey@gmail.com"
+   :FirstName "John"
+   :LastName "Clukey"
+   :MiddleName "Hamlin"})
+
+(defc organizer
+  {:Title "Asian American Student Association"
+   :Name  "asian-american-student-association"})
+
 (defc event
-  {:title
+  {:EventId
+   2
+
+   :Title
    "University of Utah Asian American High School Conference 2015"
 
-   :description
+   :Name
+   "university-of-utah-asian-american-high-school-conference-2015"
+
+   :Description
    "The 16th annual Asian American High School Conference on Friday, February 27th, 2015 from 8:00 am until 2:00 pm is presented by the Asian American Student Association at the University of Utah and sponsored by President David W. Pershing and Provost Ruth Watkins. Our goal is to promote to all students, in particular Asian American youth, to apply and attend college. Although all programs will be made specifically for Asian American youth and be facilitated by students well-informed of Asian American issues, the conference is open to everyone. Workshops include, but are not limited to, admissions and scholarship aid, Asian American contemporary issues, major exploration, program-specific exploration, leadership opportunities, and service opportunities. Lunch is provided for all registered applicants.
 *For more information, please contact AASA (aasa.uofu@gmail.com), Deepika Malla (deepikashah6@gmail.com), or Jimmy Sieng (jsieng@hotmail.com)."})
 
-(.ready js/jQuery #(.dropdown (js/jQuery "select.dropdown")))
+(defc activities
+  {1
+   {:ActivityId 1
+    :Name "The First James Bloom Experience"
+    :Location "loc"
+    :EnrollmentCap 5
+    :StartTime "12/5/2014 2:51:23 AM"
+    :EndTime "12/5/2014 2:51:23 AM"
+    :Description "desc"}
+
+   2
+   {:ActivityId 2
+    :Name "The Second James Bloom Experience"
+    :Location "loc"
+    :EnrollmentCap 5
+    :StartTime "12/5/2014 2:51:32 AM"
+    :EndTime "12/5/2014 2:51:32 AM"
+    :Description "desc"}
+
+   3
+   {:ActivityId 3
+    :Name "The Third James Bloom Experience"
+    :Location "loc"
+    :EnrollmentCap 5
+    :StartTime "12/5/2014 2:51:45 AM"
+    :EndTime "12/5/2014 2:51:45 AM"
+    :Description "desc"}
+
+   4
+   {:ActivityId 4
+    :Name "The Fourth James Bloom Experience"
+    :Location "loc"
+    :EnrollmentCap 5
+    :StartTime "12/5/2014 2:51:54 AM"
+    :EndTime "12/5/2014 2:51:54 AM"
+    :Description "desc"}})
+(cell= (.getJSON js/jQuery
+                 (str api-base-url
+                      "/events"
+                      "/" (:EventId event)
+                      "/activities")
+                 (fn [json]
+                   (->> json
+                        js->clj
+                        (map #(vector (:ActivityId %) %))
+                        (into {})
+                        (reset! activities)))))
+
+(defc schedule [1 2 3])
+(cell= (.getJSON js/jQuery
+                 (str api-base-url
+                      "/user"
+                      "/" (:Id user)
+                      "/schedule")
+                 #(->> % js->clj (map :ActivityId) (reset! schedule))))
 
 (html
   (head
-    (title (text "Register for ~{(:title event)}"))
-    (meta :name "viewport" :content "width=device-width, initial-scale=1.0")
+    (title (text "Register for ~{(:Title event)}"))
+    (meta :Name "viewport" :content "width=device-width, initial-scale=1.0")
     (link :rel "stylesheet"
           :type "text/css"
           :href "bower_components/semantic-ui/dist/semantic.min.css")
     (script :src "bower_components/semantic-ui/dist/semantic.min.js")
     (style stylesheet))
   (body
-    (div :class "ui fixed menu"
-      (a :class "logo item"
+    (nav :class "ui fixed menu"
+      (a :class "logo item" :href "#"
         (img :src "images/logo-menu.png"))
-      (a :class "item"
+      (a :class "item" :href "#/events"
         (i :class "calendar icon") "Events")
-      (a :class "item"
+      (a :class "item" :href "#/statistics"
         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
         (a :class "item"
@@ -40,44 +116,21 @@
       (div :class "sixteen wide column"
         (div :class "ui breadcrumb"
           (a :class "section" "Home")
-          (i :class "right chevron icon divider")
-          (a :class "section" (text "~{(:title event)}"))
-          (i :class "right chevron icon divider")
-          (div :class "active section" "Register")))
-      (div :class "twelve wide column"
-        (div :class "ui segment"
-          (div :class "ui vertical segment"
-            (h2 :class "ui dividing header"
-              (text "Register for ~{(:title event)}"))
-            (loop-tpl :bindings [line
-                                 (cell= (split-lines (:description event)))]
-              (p line)))
-          (div :class "ui vertical segment"
-            (div :class "ui form"
-              (div :class "one field"
-                (div :class "required field"
-                  (label "Email")
-                  (input :type "email")))
-              (div :class "two fields"
-                (div :class "required field"
-                  (label "First Name")
-                  (input :type "text"))
-                (div :class "required field"
-                  (label "Last Name")
-                  (input :type "text")))
-              (div :class "two fields"
-                (div :class "required field"
-                  (label "UID")
-                  (input :type "text"))
-                (div :class "required field"
-                  (label "Favorite Color")
-                  (input :type "text")))
-              (div :class "ui primary button"
-                "Register")))))
-      (div :class "four wide column"
-        (div :class "ui fluid card"
-          (div :class "image"
-            (img :src "images/aasa-logo.png"))
-          (div :class "content"
-            (a :class "header" "Asian American Student Association")
-            (div :class "meta" "University of Utah")))))))
+          (div :class "divider" " / ")
+          (a :class "section" "Events")
+          (div :class "divider" " / ")
+          (a :class "section" (text "~{(:Title organizer)}"))
+          (div :class "divider" " / ")
+          (a :class "section" (text "~{(:Title event)}"))
+          (div :class "divider" " / ")
+          (div :class "active section" "Register"))))
+    (div
+      (cell=
+        (case route
+          "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"
+          (register/template)
+
+          "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
+          (schedule/template event activities schedule)
+
+          (text "Default"))))))
