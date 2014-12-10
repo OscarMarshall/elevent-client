@@ -11,12 +11,23 @@
 
 (def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
 
+(defc user-id 1)
 (defc user
-  {:Id 1
+  {:UserId 1
    :Email "johnclukey@gmail.com"
    :FirstName "John"
    :LastName "Clukey"
    :MiddleName "Hamlin"})
+(cell=
+  (.getJSON js/jQuery
+            (str api-base-url
+                 "/users"
+                 "/" user-id)
+            ~(fn [json]
+              (reset! user (js->clj json :keywordize-keys true)))))
+
+(defn set-user-id! [new-user-id]
+  (reset! user-id new-user-id))
 
 (defc organizer
   {:Title "Asian American Student Association"
@@ -77,20 +88,32 @@
                       "/events"
                       "/" (:EventId event)
                       "/activities")
-                 (fn [json]
-                   (->> json
-                        js->clj
-                        (map #(vector (:ActivityId %) %))
-                        (into {})
-                        (reset! activities)))))
+                 ~(fn [json]
+                    (->> (js->clj json :keywordize-keys true)
+                         (map #(vector (:ActivityId %) %))
+                         (into {})
+                         (reset! activities)
+                         (prn-str)
+                         (.log js/console)))))
 
 (defc schedule [1 2 3])
-(cell= (.getJSON js/jQuery
-                 (str api-base-url
-                      "/user"
-                      "/" (:Id user)
-                      "/schedule")
-                 #(->> % js->clj (map :ActivityId) (reset! schedule))))
+(defc= reset-schedule
+  (.getJSON js/jQuery
+            (str api-base-url
+                 "/users"
+                 "/" (:UserId user)
+                 "/events"
+                 "/" (:EventId event)
+                 "/activities")
+            ~(fn [json] 
+               (->> (js->clj json :keywordize-keys true)
+                    (map :ActivityId)
+                    (reset! schedule)
+                    (prn-str)
+                    (.log js/console)))))
+
+(defn update-schedule [new-schedule]
+  (reset! schedule new-schedule))
 
 (html
   (head
@@ -128,9 +151,9 @@
       (cell=
         (case route
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"
-          (register/template)
+          (register/template set-user-id!)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-          (schedule/template event activities schedule)
+          (schedule/template user event activities schedule update-schedule)
 
           (text "Default"))))))
