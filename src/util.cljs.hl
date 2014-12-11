@@ -1,0 +1,4 @@
+(ns util)
+
+(defelem input-cell [{:keys [state] :as attr} _]
+  (input (assoc (dissoc attr :state) :value @state :on-keyup #(reset! state @%))))
