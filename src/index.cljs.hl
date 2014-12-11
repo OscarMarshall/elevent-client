@@ -3,6 +3,7 @@
     [tailrecursion.hoplon.reload       :refer [reload-all]]
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
     [style :refer [stylesheet]]
+    [util :as util]
     [pages.event-register.view :as register]
     [pages.event-schedule.view :as schedule]))
 
@@ -106,7 +107,7 @@
                  "/events"
                  "/" (:EventId event)
                  "/activities")
-            ~(fn [json] 
+            ~(fn [json]
                (->> (js->clj json :keywordize-keys true)
                     (map :ActivityId)
                     (reset! schedule)
@@ -135,7 +136,25 @@
         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
         (a :class "item"
-          (i :class "user icon") "Login")))
+           :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
+          (i :class "user icon") "Login"
+          (div :class "ui small login modal"
+            (i :class "close icon")
+            (div :class "header"
+              "Login")
+            (div :class "content"
+              (div :class "description"
+                (div :class "ui form"
+                  (div :class "two fields"
+                    (div :class "field"
+                      (label "Email")
+                      (input :type "email"))
+                    (div :class "field"
+                      (label "Password")
+                      (input :type "password"))))))
+            (div :class "actions"
+              (button :class "ui button" "Cancel")
+              (button :class "ui button primary" "Login"))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (cell=
