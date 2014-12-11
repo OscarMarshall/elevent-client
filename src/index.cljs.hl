@@ -1,17 +1,18 @@
 (page "index.html"
   (:require
-    [tailrecursion.hoplon.reload :refer [reload-all]]
+    [tailrecursion.hoplon.reload       :refer [reload-all]]
+    [tailrecursion.hoplon.storage-atom :refer [local-storage]]
     [style :refer [stylesheet]]
     [pages.event-register.view :as register]
     [pages.event-schedule.view :as schedule]))
 
 (reload-all)
 
-(def api-base-url "http://aws.elevent.solutions:8860")
+(def api-base-url "http://elevent.solutions:8860")
 
 (def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
 
-(defc user-id 1)
+(def user-id (-> (cell 1) (local-storage ::user-id)))
 (defc user
   {:UserId 1
    :Email "johnclukey@gmail.com"
@@ -24,7 +25,7 @@
                  "/users"
                  "/" user-id)
             ~(fn [json]
-              (reset! user (js->clj json :keywordize-keys true)))))
+               (reset! user (js->clj json :keywordize-keys true)))))
 
 (defn set-user-id! [new-user-id]
   (reset! user-id new-user-id))
@@ -137,16 +138,24 @@
           (i :class "user icon") "Login")))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
-        (div :class "ui breadcrumb"
-          (a :class "section" "Home")
-          (div :class "divider" " / ")
-          (a :class "section" "Events")
-          (div :class "divider" " / ")
-          (a :class "section" (text "~{(:Title organizer)}"))
-          (div :class "divider" " / ")
-          (a :class "section" (text "~{(:Title event)}"))
-          (div :class "divider" " / ")
-          (div :class "active section" "Register"))))
+        (cell=
+          (div :class "ui breadcrumb"
+            (a :class "section" "Home")
+            (div :class "divider" " / ")
+            (a :class "section" "Events")
+            (div :class "divider" " / ")
+            (a :class "section" (text "~{(:Title organizer)}"))
+            (div :class "divider" " / ")
+            (a :class "section" (text "~{(:Title event)}"))
+            (div :class "divider" " / ")
+            (case route
+              "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"
+              (div :class "active section" "Register")
+
+              "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
+              (div :class "active section" "Schedule")
+
+              (div :class "active section" "You're lost"))))))
     (div
       (cell=
         (case route

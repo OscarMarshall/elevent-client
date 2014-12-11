@@ -3,7 +3,7 @@
     [clojure.string :refer [split-lines]]
     [util :refer [input-cell]]))
 
-(def api-base-url "http://aws.elevent.solutions:8860")
+(def api-base-url "http://elevent.solutions:8860")
 
 (defc email nil)
 (defc first-name nil)
@@ -52,7 +52,7 @@
                                   (clj->js {:Email     @email
                                             :FirstName @first-name
                                             :LastName  @last-name})
-                                  #(create-attendee (:id (js->clj % :keywordize-keys true)))
+                                  #(create-attendee (:UserId (js->clj % :keywordize-keys true)))
                                   "json")
                            (create-attendee user-id))))))
 

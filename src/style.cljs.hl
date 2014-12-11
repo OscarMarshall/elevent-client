@@ -11,4 +11,5 @@
                              :padding-bottom ".32em"}
                 [:img {:height "2em"}]]]
        ; Fixes
-       [:.ui.menu.fixed {:top "0"}]))
+       [:.ui.menu.fixed {:top "0"}]
+       [:.right.menu {:display "inline-block"}]))

@@ -1,6 +1,6 @@
 (ns pages.event-schedule.view)
 
-(def api-base-url "http://aws.elevent.solutions:8860")
+(def api-base-url "http://elevent.solutions:8860")
 
 (defn add-activity [user-id activity-id schedule update-schedule]
   (.post js/jQuery
