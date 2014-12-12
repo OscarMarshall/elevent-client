@@ -37,7 +37,7 @@
                                (.get js/jQuery
                                       (str api-base-url
                                            "/events"
-                                           "/" 5
+                                           "/" 2
                                            "/attendees")
                                       ;(clj->js {:UserId user-id})
                                       (do
