@@ -14,9 +14,10 @@
 (def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
 
 (def user-id (-> (cell 1) (local-storage ::user-id)))
+
 (defc user
   {:UserId 1
-   :Email "johnclukey@gmail.com"
+   :Email "johnhclukey@gmail.com"
    :FirstName "John"
    :LastName "Clukey"
    :MiddleName "Hamlin"})
@@ -27,6 +28,20 @@
                  "/" user-id)
             ~(fn [json]
                (reset! user (js->clj json :keywordize-keys true)))))
+
+(defc login-email nil)
+(defc login-pass nil)
+(defc= login-info
+  {:email login-email}
+  {:pass login-pass})
+
+(defn login [info]
+  (.getJSON js/jQuery
+            (str api-base-url
+                 "/users?email="
+                 (:email info))
+            (fn [json]
+              (reset! user-id (:UserId (js->clj json :keywordize-keys true))))))
 
 (defn set-user-id! [new-user-id]
   (reset! user-id new-user-id))
@@ -132,6 +147,8 @@
         (img :src "images/logo-menu.png"))
       (a :class "item" :href "#/events"
         (i :class "calendar icon") "Events")
+      (a :class "item" :href "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
+        (i :class "clock icon") "Schedule")
       (a :class "item" :href "#/statistics"
         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
@@ -148,13 +165,13 @@
                   (div :class "two fields"
                     (div :class "field"
                       (label "Email")
-                      (input :type "email"))
+                      (util/input-cell :type "email" :state login-email))
                     (div :class "field"
                       (label "Password")
-                      (input :type "password"))))))
+                      (util/input-cell :type "password" :state login-pass))))))
             (div :class "actions"
               (button :class "ui button" "Cancel")
-              (button :class "ui button primary" "Login"))))))
+              (button :class "ui button primary" :on-click #(login @login-info) "Login"))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (cell=
