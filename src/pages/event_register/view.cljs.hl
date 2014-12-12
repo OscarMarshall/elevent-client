@@ -34,12 +34,12 @@
                              
                              create-attendee
                              (fn [user-id]
-                               (.get js/jQuery
+                               (.post js/jQuery
                                       (str api-base-url
                                            "/events"
                                            "/" 2
                                            "/attendees")
-                                      ;(clj->js {:UserId user-id})
+                                      (clj->js {:UserId user-id})
                                       (do
                                         (set-user-id! user-id)
                                         #(set! (.-location js/window) "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
