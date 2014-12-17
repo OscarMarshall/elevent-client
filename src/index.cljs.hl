@@ -5,7 +5,12 @@
     [style :refer [stylesheet]]
     [util :as util]
     [pages.event-register.view :as register]
-    [pages.event-schedule.view :as schedule]))
+    [pages.event-schedule.view :as schedule]
+    [pages.events-admin.view :as events-admin]
+    [pages.events-attendee.view :as events-attendee]
+    [pages.event-create.view :as event-create]
+    [pages.activity-create.view :as activity-create]
+    [pages.organizations.view :as organizations]))
 
 (reload-all)
 
@@ -41,7 +46,9 @@
                  "/users?email="
                  (:email info))
             (fn [json]
-              (reset! user-id (:UserId (js->clj json :keywordize-keys true))))))
+              (do
+                (reset! user-id (:UserId (js->clj json :keywordize-keys true)))
+                (set! (.-location js/window) "/#/events")))))
 
 (defn set-user-id! [new-user-id]
   (reset! user-id new-user-id))
@@ -129,6 +136,18 @@
                     (prn-str)
                     (.log js/console)))))
 
+
+(defc events
+  [
+    {:EventId 2
+     :Name "University of Utah Asian American High School Conference 2015"
+     :StartDate "02/05/2015"
+     :EndDate "02/05/2015"
+     :Description "A fun time"}])
+;(cell= (.getJSON js/jQuery
+;                 (str api-base-url
+;                      "/events")))
+
 (defn update-schedule [new-schedule]
   (reset! schedule new-schedule))
 
@@ -147,6 +166,8 @@
         (img :src "images/logo-menu.png"))
       (a :class "item" :href "#/events"
         (i :class "calendar icon") "Events")
+      (a :class "item" :href "#/organizations"
+         (i :class "cubes icon") "Organizations")
       (a :class "item" :href "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
         (i :class "clock icon") "Schedule")
       (a :class "item" :href "#/statistics"
@@ -200,5 +221,17 @@
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
           (schedule/template user event activities schedule update-schedule)
+          
+          "#/events"
+          (events-attendee/template events)
+          
+          "#/events/create"
+          (event-create/template)
+          
+          "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/activities/create"
+          (activity-create/template)
+          
+          "#/organizations"
+          (organizations/template organizations)
 
           (text "Default"))))))

@@ -1,0 +1,41 @@
+(ns pages.activity-create.view)
+
+(defn template []
+  (div :class "ui stackable page grid"
+    (div :class "twelve wide column"
+      (div :class "ui segment"
+        (div :class "ui vertical segment"
+          (h2 :class "ui dividing header" "Activities for U of U TAs Conference 2014")
+          (table :class "ui table"
+            (thead
+              (tr
+                (th "Time")
+                (th "Activity")
+                (th)))
+            (tbody
+              (tr
+                (td "11/5/2014 11:35am")
+                (td "Keynote")
+                (td :class "right aligned"
+                  (a :href "#"
+                    (i :class "red remove icon")
+                    "Remove"))))
+            (tfoot
+              (tr
+                (th :colspan "4"
+                  (div :class "ui small labeled icon button"
+                    (i :class "add icon")
+                    "Add Activity"))))))))
+    (div :class "four wide column"
+      (div :class "ui fluid card"
+        (div :class "image"
+          (img :src "images/aasa-logo.png"))
+        (div :class "content"
+          (a :class "header"
+             "University of Utah")
+          (div :class "meta"
+            "Salt Lake City, UT"))
+        (div :class "extra content"
+          (a
+            (i :class "users icon")
+            "9,876 Members"))))))

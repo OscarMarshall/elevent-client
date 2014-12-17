@@ -1,0 +1,53 @@
+(ns pages.event-create.view
+    [bower-components.semantic-ui.src.definitions.modules.dropdown       :refer [dropdown]])
+
+(-> js/document js/jQuery (.ready #(-> (js/jQuery "select.dropdown") (.dropdown))))
+
+(defn template []
+  (div :class "ui stackable page grid"
+    (div :class "twelve wide column"
+      (div :class "ui segment"
+        (div :class "ui form"
+          (div :class "ui vertical segment"
+            (h2 :class "ui dividing header"
+              "Create an Event")
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Title")
+                (input :type "text" :value "U of U TA Conference 2014"))
+              (div :class "field"
+                (label "Clone From")
+                (select :class "ui dropdown"
+                  (option :value "" "None")))))
+          (div :class "ui vertical segment"
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Organization")
+                (select :class "ui dropdown"
+                  (option :value "Asian American Student Association" "University of Utah")))
+              (div :class "required field"
+                (label "Venue")
+                (input :type "text" :value "WEB 2230")))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Start Date")
+                (input :type "date" :value "2014-11-05"))
+              (div :class "required field"
+                (label "End Date")
+                (input :type "date" :value "2014-11-05")))
+            (div :class "field"
+              (label "Description")
+              (textarea "U of U TAs are great. Let's hold a conference for them."))
+            (div :class "ui primary button"
+              "Create")))))
+    (div :class "four wide column"
+      (div :class "ui fluid card"
+        (div :class "image"
+          (img :src "images/aasa-logo.png"))
+        (div :class "content"
+          (a :class "header" "University of Utah")
+          (div :class "meta" "Salt Lake City, UT"))
+        (div :class "extra content"
+          (a
+            (i :class "users icon")
+            "9,876 Members"))))))

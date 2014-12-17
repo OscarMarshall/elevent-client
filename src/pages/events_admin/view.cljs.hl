@@ -1,0 +1,95 @@
+(ns pages.events-admin.view)
+
+(defn template []
+  (div :class "ui page grid"
+    (div :class "twelve wide column"
+      (div :class "ui segment"
+        (div :class "ui vertical segment"
+          (h2 :class "ui dividing header"
+              "U of U TA Conference 2014")
+          (div :class "ui right floated small labeled icon button"
+            (i :class "edit icon")
+            "Edit")
+          (div
+            (b "Venue:") "WEB 2230")
+          (div
+            (b "Date:") "11/05/2014")
+          (p
+            "U of U TAs are great. Let's hold a conference for them."))
+        (div :class "ui vertical segment"
+          (h2 :class "ui header"
+              "Schedule")
+          (table :class "ui table"
+            (thead
+              (tr
+                (th "Countdown")
+                (th "Time")
+                (th "Activity")))
+            (tbody
+              (tr :class "negative"
+                (td "Over")
+                (td "11/5/2014 11:35am")
+                (td "Keynote"))
+              (tr :class "positive"
+                (td "Now")
+                (td "11/5/2014 11:45am")
+                (td "UI Presentation"))
+              (tr
+                (td "27 minutes")
+                (td "11/5/2014 12:15pm")
+                (td "Connecting With Students Workshop")))
+            (tfoot
+              (tr
+                (th :colspan "4"
+                  (div :class "ui right floated small labeled icon button"
+                    (i :class "edit icon")
+                    "Edit")
+                  (div :class "ui small labeled icon button"
+                    (i :class "print icon")
+                    "Print"))))))
+        (div :class "ui vertical segment"
+          (h2 :class "ui header" "Groups")
+          (table :class "ui table"
+            (thead
+              (tr
+                (th "Name")
+                (th "Members")))
+            (tbody
+              (tr
+                (td "Red")
+                (td "20")))
+            (tfoot
+              (tr
+                (th :colspan "4"
+                  (div :class "ui right floated small labeled icon button"
+                       (i :class "edit icon")
+                       "Edit"))))))
+        (div :class "ui vertical segment"
+          (h2 :class "ui header"
+              "Attendees")
+          (table :class "ui table"
+            (thead
+              (tr
+                (th "Name")
+                (th "Location")))
+            (tbody
+              (tr
+                (td "Leslie Baker")
+                (td "WEB 2230")))
+            (tfoot
+              (tr
+                (th :colspan "4"
+                  (div :class "ui right floated small labeled icon button"
+                    (i :class "edit icon")
+                    "Edit"))))))))
+      (div :class "four wide column"
+        (div :class "ui fluid card"
+          (div :class "image"
+            (img :src "images/aasa-logo.png"))
+          (div :class "content"
+            (a :class "header" "University of Utah")
+            (div :class "meta" "Salt Lake City, UT"))
+          (div :class "extra content"
+            (a
+              (i :class "users icon")
+              "9,876 Members"))))))
