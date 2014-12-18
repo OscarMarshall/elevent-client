@@ -50,6 +50,9 @@
                 (reset! user-id (:UserId (js->clj json :keywordize-keys true)))
                 (set! (.-location js/window) "/#/events")))))
 
+(defn logout []
+  (reset! user {}))
+
 (defn set-user-id! [new-user-id]
   (reset! user-id new-user-id))
 
@@ -122,19 +125,23 @@
 
 (defc schedule [1 2 3])
 (defc= reset-schedule
-  (.getJSON js/jQuery
-            (str api-base-url
-                 "/users"
-                 "/" (:UserId user)
-                 "/events"
-                 "/" (:EventId event)
-                 "/activities")
-            ~(fn [json]
-               (->> (js->clj json :keywordize-keys true)
-                    (map :ActivityId)
-                    (reset! schedule)
-                    (prn-str)
-                    (.log js/console)))))
+  (when-not (empty? user)
+    (.getJSON js/jQuery
+              (str api-base-url
+                   "/users"
+                   "/" (:UserId user)
+                   "/events"
+                   "/" (:EventId event)
+                   "/activities")
+              ~(fn [json]
+                 (->> (js->clj json :keywordize-keys true)
+                      (map :ActivityId)
+                      (reset! schedule)
+                      (prn-str)
+                      (.log js/console))))))
+
+(defn update-schedule [new-schedule]
+  (reset! schedule new-schedule))
 
 
 (defc events
@@ -144,12 +151,32 @@
      :StartDate "02/05/2015"
      :EndDate "02/05/2015"
      :Description "A fun time"}])
-;(cell= (.getJSON js/jQuery
-;                 (str api-base-url
-;                      "/events")))
+(defc events-by-organization "")
+(cell= (.getJSON js/jQuery
+                 (str api-base-url
+                      events-by-organization
+                      "/events")
+                 ~(fn [json]
+                    (->> (js->clj json :keywordize-keys true)
+                         (reset! events)
+                         (prn-str)
+                         (.log js/console)))))
 
-(defn update-schedule [new-schedule]
-  (reset! schedule new-schedule))
+(defc organizations nil)
+(cell= (.getJSON js/jQuery
+                 (str api-base-url
+                      "/organizations")
+                 ~(fn [json]
+                    (->> (js->clj json :keywordize-keys true)
+                         (reset! organizations)
+                         (prn-str)
+                         (.log js/console)))))
+
+(defn view-events-organization [organization-id]
+  (reset! events-by-organization (str "/organizations/" organization-id)))
+
+(defn view-all-events []
+  (reset! events-by-organization ""))
 
 (html
   (head
@@ -164,7 +191,7 @@
     (nav :class "ui fixed menu"
       (a :class "logo item" :href "#"
         (img :src "images/logo-menu.png"))
-      (a :class "item" :href "#/events"
+      (a :class "item" :href "#/events" :on-click view-all-events
         (i :class "calendar icon") "Events")
       (a :class "item" :href "#/organizations"
          (i :class "cubes icon") "Organizations")
@@ -173,26 +200,31 @@
       (a :class "item" :href "#/statistics"
         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
-        (a :class "item"
-           :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
-          (i :class "user icon") "Login"
-          (div :class "ui small login modal"
-            (i :class "close icon")
-            (div :class "header"
-              "Login")
-            (div :class "content"
-              (div :class "description"
-                (div :class "ui form"
-                  (div :class "two fields"
-                    (div :class "field"
-                      (label "Email")
-                      (util/input-cell :type "email" :state login-email))
-                    (div :class "field"
-                      (label "Password")
-                      (util/input-cell :type "password" :state login-pass))))))
-            (div :class "actions"
-              (button :class "ui button" "Cancel")
-              (button :class "ui button primary" :on-click #(login @login-info) "Login"))))))
+        (cell=
+          (if (empty? user)
+            (a :class "item"
+               :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
+              (i :class "user icon") "Login"
+              (div :class "ui small login modal"
+                (i :class "close icon")
+                (div :class "header"
+                  "Login")
+                (div :class "content"
+                  (div :class "description"
+                    (div :class "ui form"
+                      (div :class "two fields"
+                        (div :class "field"
+                          (label "Email")
+                          (util/input-cell :type "email" :state login-email))
+                        (div :class "field"
+                          (label "Password")
+                          (util/input-cell :type "password" :state login-pass))))))
+                (div :class "actions"
+                  (button :class "ui button" "Cancel")
+                  (button :class "ui button primary" :on-click #(login login-info) "Login"))))
+            (a :class "item"
+               :on-click logout
+               (i :class "user icon") (str "Hello, " (:FirstName user) ". Logout"))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (cell=
@@ -232,6 +264,6 @@
           (activity-create/template)
           
           "#/organizations"
-          (organizations/template organizations)
+          (organizations/template organizations view-events-organization)
 
           (text "Default"))))))

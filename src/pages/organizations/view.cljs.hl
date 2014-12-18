@@ -1,53 +1,16 @@
 (ns pages.organizations.view)
 
-(defn template [events]
+(defn template [organizations view-events-organization]
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
-        (loop-tpl :bindings [event events]
+        (loop-tpl :bindings [organization organizations]
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
-                (text "~{(:Name event)}"))
-            (div :class "ui right floated small labeled icon button"
-              (i :class "edit icon")
-              "Edit")
-            (div
-              (b "Venue: ") "Union Ballroom")
-            (div
-              (b "Date: ") "02/05/2015")
-            (p
-              "High school conference for Asian American Student Association."))
-          (div :class "ui vertical segment"
-            (h2 :class "ui header"
-                "Schedule")
-            (table :class "ui table"
-              (thead
-                (tr
-                  (th "Countdown")
-                  (th "Time")
-                  (th "Activity")))
-              (tbody
-                (tr :class "negative"
-                  (td "Over")
-                  (td "11/5/2014 11:35am")
-                  (td "Keynote"))
-                (tr :class "positive"
-                  (td "Now")
-                  (td "11/5/2014 11:45am")
-                  (td "UI Presentation"))
-                (tr
-                  (td "27 minutes")
-                  (td "11/5/2014 12:15pm")
-                  (td "Connecting With Students Workshop")))
-              (tfoot
-                (tr
-                  (th :colspan "4"
-                    (div :class "ui right floated small labeled icon button"
-                      (i :class "edit icon")
-                      "Edit")
-                    (div :class "ui small labeled icon button"
-                      (i :class "print icon")
-                      "Print")))))))))
+                (text "~{(:Name organization)}"))
+            (a :class "ui right floated small icon button" :href "#/events"
+                 :on-click #(view-events-organization (:OrganizationId @organization))
+              "View events")))))
       (div :class "four wide column"
         (div :class "ui fluid card"
           (div :class "image"
