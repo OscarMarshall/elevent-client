@@ -1,11 +1,5 @@
 (ns pages.calendar.view)
 
-(defc callback nil)
-(cell=
-  (when-not (empty? callback)
-    ((first callback))
-    ~(swap! callback rest)))
-
 (defn template [schedule]
   (div :class "ui page grid"
     (div :class "twelve wide column"
