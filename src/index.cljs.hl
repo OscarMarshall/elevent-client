@@ -11,7 +11,8 @@
     [pages.events-attendee.view :as events-attendee]
     [pages.event-create.view :as event-create]
     [pages.activity-create.view :as activity-create]
-    [pages.organizations.view :as organizations]))
+    [pages.organizations.view :as organizations]
+    [pages.calendar.view :as calendar]))
 
 (reload-all)
 
@@ -153,10 +154,12 @@
     (nav :class "ui fixed menu"
       (a :class "logo item" :href "#"
         (img :src "images/logo-menu.png"))
+      (a :class "item" :href "#/calendar"
+        (i :class "calendar icon") "Calendar")
       (a :class "item" :href "#/events" :on-click view-all-events
-        (i :class "calendar icon") "Events")
+        (i :class "ticket icon") "Events")
       (a :class "item" :href "#/organizations"
-         (i :class "cubes icon") "Organizations")
+         (i :class "building icon") "Organizations")
       (a :class "item" :href "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
         (i :class "clock icon") "Schedule")
       (a :class "item" :href "#/statistics"
@@ -203,5 +206,8 @@
 
           "#/organizations"
           (organizations/template organizations view-events-organization)
+
+          "#/calendar"
+          (calendar/template (map activities schedule))
 
           (text "Default"))))))
