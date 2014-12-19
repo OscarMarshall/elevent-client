@@ -1,5 +1,6 @@
 (page "index.html"
   (:require
+    [clojure.string :refer [split]]
     [tailrecursion.hoplon.reload       :refer [reload-all]]
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
     [style :refer [stylesheet]]
@@ -171,21 +172,10 @@
         (cell=
           (div :class "ui breadcrumb"
             (a :class "section" "Home")
-            (div :class "divider" " / ")
-            (a :class "section" "Events")
-            (div :class "divider" " / ")
-            (a :class "section" (text "~{(:Title organizer)}"))
-            (div :class "divider" " / ")
-            (a :class "section" (text "~{(:Title event)}"))
-            (div :class "divider" " / ")
-            (case route
-              "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"
-              (div :class "active section" "Register")
-
-              "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-              (div :class "active section" "Schedule")
-
-              (div :class "active section" "You're lost"))))))
+            (loop-tpl :bindings [crumb (rest (split route "/"))]
+              (span
+                (div :class "divider" " / ")
+                (a :class "section" crumb)))))))
     (div
       (cell=
         (case route
