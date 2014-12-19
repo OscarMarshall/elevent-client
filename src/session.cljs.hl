@@ -28,7 +28,8 @@
                (reset! user (js->clj json :keywordize-keys true))))))
 
 (defn logout! []
-  (reset! user nil))
+  (reset! user nil)
+  (set! (.-location js/window) "/#"))
 
 (defn control [attr]
   (cell=
