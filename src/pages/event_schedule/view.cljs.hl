@@ -33,7 +33,6 @@
           (table :class "ui table"
             (thead
               (tr
-                (th "Countdown")
                 (th "Start")
                 (th "End")
                 (th "Activity")
@@ -42,9 +41,10 @@
             (tbody
               (loop-tpl :bindings [activity (map activities schedule)]
                 (tr
-                  (td)
-                  (td :nowrap true (text (:StartTime activity)))
-                  (td :nowrap true (text (:EndTime activity)))
+                  (let [start (js/Date. (:StartTime @activity))]
+                    (td :nowrap true (.toLocaleString start)))
+                  (let [end (js/Date. (:EndTime @activity))]
+                    (td :nowrap true (.toLocaleString end)))
                   (td (text (:Name activity)))
                   (td (text (:Location activity)))
                   (td :class "right aligned" :nowrap true
@@ -64,6 +64,9 @@
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
                   (div :class "meta" (text (:Location activity)))
+                  (let [start (js/Date. (:StartTime @activity))
+                        end (js/Date. (:EndTime @activity))]
+                    (div (str (.toLocaleString start) " - " (.toLocaleString end))))
                   (div :class "description"
                     (text (:Description activity)))
                   (div :class "extra"
