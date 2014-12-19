@@ -10,6 +10,8 @@
        [:.menu [:.logo.item {:padding-top    ".32em"
                              :padding-bottom ".32em"}
                 [:img {:height "2em"}]]]
+       [:.ui.vertical.segment:first-child {:padding-top 0}]
+       [:.ui.vertical.segment:last-child {:padding-bottom 0}]
        ; Fixes
        [:.ui.menu.fixed {:top "0"}]
        [:.right.menu {:display "inline-block"}]))

@@ -4,6 +4,7 @@
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
     [style :refer [stylesheet]]
     [util :refer [input-cell]]
+    [session :as session]
     [pages.event-register.view :as register]
     [pages.event-schedule.view :as schedule]
     [pages.events-admin.view :as events-admin]
@@ -17,44 +18,6 @@
 (def api-base-url "http://elevent.solutions:8860")
 
 (def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
-
-(def user-id (-> (cell 1) (local-storage ::user-id)))
-
-(defc user
-  {:UserId 1
-   :Email "johnhclukey@gmail.com"
-   :FirstName "John"
-   :LastName "Clukey"
-   :MiddleName "Hamlin"})
-(cell=
-  (.getJSON js/jQuery
-            (str api-base-url
-                 "/users"
-                 "/" user-id)
-            ~(fn [json]
-               (reset! user (js->clj json :keywordize-keys true)))))
-
-(defc login-email nil)
-(defc login-pass nil)
-(defc= login-info
-  {:email login-email}
-  {:pass login-pass})
-
-(defn login [info]
-  (.getJSON js/jQuery
-            (str api-base-url
-                 "/users?email="
-                 (:email info))
-            (fn [json]
-              (do
-                (reset! user-id (:UserId (js->clj json :keywordize-keys true)))
-                (set! (.-location js/window) "/#/events")))))
-
-(defn logout []
-  (reset! user {}))
-
-(defn set-user-id! [new-user-id]
-  (reset! user-id new-user-id))
 
 (defc organizer
   {:Title "Asian American Student Association"
@@ -124,21 +87,19 @@
                          (.log js/console)))))
 
 (defc schedule [1 2 3])
-(defc= reset-schedule
-  (when-not (empty? user)
+(cell=
+  (when session/user
     (.getJSON js/jQuery
               (str api-base-url
                    "/users"
-                   "/" (:UserId user)
+                   "/" (:UserId session/user)
                    "/events"
                    "/" (:EventId event)
                    "/activities")
               ~(fn [json]
                  (->> (js->clj json :keywordize-keys true)
                       (map :ActivityId)
-                      (reset! schedule)
-                      (prn-str)
-                      (.log js/console))))))
+                      (reset! schedule))))))
 
 (defn update-schedule [new-schedule]
   (reset! schedule new-schedule))
@@ -187,10 +148,6 @@
   (head
     (title (text "Register for ~{(:Title event)}"))
     (meta :Name "viewport" :content "width=device-width, initial-scale=1.0")
-    (link :rel "stylesheet"
-          :type "text/css"
-          :href "bower_components/semantic-ui/dist/semantic.min.css")
-    (script :src "bower_components/semantic-ui/dist/semantic.min.js")
     (style stylesheet))
   (body
     (nav :class "ui fixed menu"
@@ -205,26 +162,7 @@
       (a :class "item" :href "#/statistics"
         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
-        (a :class "item"
-           :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
-          (i :class "user icon") "Login"
-          (div :class "ui small login modal"
-            (i :class "close icon")
-            (div :class "header"
-              "Login")
-            (div :class "content"
-              (div :class "description"
-                (div :class "ui form"
-                  (div :class "two fields"
-                    (div :class "field"
-                      (label "Email")
-                      (input-cell :type "email" :state login-email))
-                    (div :class "field"
-                      (label "Password")
-                      (input-cell :type "password" :state login-pass))))))
-            (div :class "actions"
-              (button :class "ui button" "Cancel")
-              (button :class "ui button primary" :on-click #(login @login-info) "Login"))))))
+        (session/control {:class "item"})))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (cell=
@@ -249,20 +187,20 @@
       (cell=
         (case route
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"
-          (register/template set-user-id!)
+          (register/template)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-          (schedule/template user event activities schedule update-schedule)
-          
+          (schedule/template session/user event activities schedule update-schedule)
+
           "#/events"
           (events-attendee/template events)
-          
+
           "#/events/create"
           (event-create/template organizations reset-events)
-          
+
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/activities/create"
           (activity-create/template)
-          
+
           "#/organizations"
           (organizations/template organizations view-events-organization)
 

@@ -1,0 +1,68 @@
+(ns session
+  (:require
+    [tailrecursion.hoplon.storage-atom :refer [local-storage]]
+    [util :refer [input-cell]]))
+
+(def api-base-url "http://elevent.solutions:8860")
+
+(def user (-> (cell nil) (local-storage ::user)))
+; Run once to sync info.
+(when @user
+  (.getJSON js/jQuery
+            (str api-base-url "/users/" (:UserId @user))
+            (fn [json] (reset! user (js->clj json :keywordize-keys true)))))
+
+(defn login!
+  ([email password]
+   (.getJSON js/jQuery
+             (str api-base-url
+                  "/users?email="
+                  email)
+             (fn [json]
+               (do
+                 (reset! user (js->clj json :keywordize-keys true))
+                 (set! (.-location js/window) "/#/events")))))
+  ; HACK: Because we shouldn't sign people in by user-id
+  ([user-id]
+   (.getJSON js/jQuery
+             (str api-base-url
+                  "/users"
+                  "/" user-id)
+             ~(fn [json]
+                (reset! user (js->clj json :keywordize-keys true))))))
+
+(defn logout! []
+  (reset! user nil))
+
+(defn control [attr]
+  (cell=
+    (if user
+      (a (assoc attr :on-click #(logout!))
+        (text "Logout of ~{(:FirstName user)}'s account"))
+      (let [email    (cell nil)
+            password (cell nil)]
+        (a (assoc attr
+             :on-click #(.modal (js/jQuery ".ui.login.modal") "show"))
+          (i :class "user icon")
+          "Login"
+          (form :class "ui small login modal"
+                :on-submit (fn []
+                             (login! @email @password)
+                             false)
+            (i :class "close icon")
+            (div :class "header"
+              "Login")
+            (div :class "content"
+              (div :class "description"
+                (div :class "ui form"
+                  (div :class "two fields"
+                    (div :class "field"
+                      (label "Email")
+                      (input-cell :type "email" :state email))
+                    (div :class "field"
+                      (label "Password")
+                      (input-cell :type "password" :state password))))))
+            (div :class "actions"
+              (button :class "ui button" "Cancel")
+              (input :type "submit" :class "ui button primary"
+                "Login"))))))))

@@ -1,7 +1,8 @@
 (ns pages.event-register.view
   (:require
     [clojure.string :refer [split-lines]]
-    [util :refer [input-cell]]))
+    [util :refer [input-cell]]
+    [session :as session]))
 
 (def api-base-url "http://elevent.solutions:8860")
 
@@ -24,14 +25,14 @@
 ; TODO: error checking for user
 ; form validation
 
-(defn register [set-user-id!]
+(defn register []
   (.getJSON js/jQuery
             (str api-base-url
                  "/users?email="
                  (:email @form-data))
             (fn [json] (let [user-id
                              (:UserId (js->clj json :keywordize-keys true))
-                             
+
                              create-attendee
                              (fn [user-id]
                                (.post js/jQuery
@@ -40,9 +41,9 @@
                                            "/" 2
                                            "/attendees")
                                       (clj->js {:UserId user-id})
-                                      (do
-                                        (set-user-id! user-id)
-                                        #(set! (.-location js/window) "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
+                                      (fn [{:keys [UserId]}]
+                                        (session/login! UserId)
+                                        (set! (.-location js/window) "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
                                       "json"))]
                          (if (== user-id 0)
                            ; user does not exist
