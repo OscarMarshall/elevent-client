@@ -30,32 +30,29 @@
             (str api-base-url
                  "/users?email="
                  (:email @form-data))
-            (fn [json] (let [user-id
-                             (:UserId (js->clj json :keywordize-keys true))
+            (fn [json]
+              (let [user-id
+                    (:UserId (js->clj json :keywordize-keys true))
 
-                             create-attendee
-                             (fn [user-id]
-                               (.post js/jQuery
-                                      (str api-base-url
-                                           "/events"
-                                           "/" 2
-                                           "/attendees")
-                                      (clj->js {:UserId user-id})
-                                      (fn [{:keys [UserId]}]
-                                        (session/login! UserId)
-                                        (set! (.-location js/window) "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
-                                      "json"))]
-                         (if (== user-id 0)
-                           ; user does not exist
-                           (.post js/jQuery
-                                  (str api-base-url
-                                       "/users")
-                                  (clj->js {:Email     @email
-                                            :FirstName @first-name
-                                            :LastName  @last-name})
-                                  #(create-attendee (:UserId (js->clj % :keywordize-keys true)))
-                                  "json")
-                           (create-attendee user-id))))))
+                    create-attendee
+                    (fn [user-id]
+                      (.post js/jQuery
+                             (str api-base-url "/events/" 2 "/attendees")
+                             (clj->js {:UserId user-id})
+                             (fn [json]
+                               (session/login! user-id)
+                               (set! (.-location js/window) "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
+                             "json"))]
+                (if (== user-id 0)
+                  ; user does not exist
+                  (.post js/jQuery
+                         (str api-base-url "/users")
+                         (clj->js {:Email     @email
+                                   :FirstName @first-name
+                                   :LastName  @last-name})
+                         #(create-attendee (:UserId (js->clj % :keywordize-keys true)))
+                         "json")
+                  (create-attendee user-id))))))
 
 (defc event
   {:title
@@ -99,7 +96,7 @@
               (div :class "required field"
                 (label "Date of Birth")
                 (input-cell :type "text" :state birth-date)))
-            (div :class "ui primary button" :on-click #(register set-user-id!)
+            (div :class "ui primary button" :on-click #(register)
               (text "Register"))))))
     (div :class "four wide column"
       (div :class "ui fluid card"

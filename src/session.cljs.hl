@@ -15,9 +15,7 @@
 (defn login!
   ([email password]
    (.getJSON js/jQuery
-             (str api-base-url
-                  "/users?email="
-                  email)
+             (str api-base-url "/users?email=" email)
              (fn [json]
                (do
                  (reset! user (js->clj json :keywordize-keys true))
@@ -25,11 +23,9 @@
   ; HACK: Because we shouldn't sign people in by user-id
   ([user-id]
    (.getJSON js/jQuery
-             (str api-base-url
-                  "/users"
-                  "/" user-id)
-             ~(fn [json]
-                (reset! user (js->clj json :keywordize-keys true))))))
+             (str api-base-url "/users/" user-id)
+             (fn [json]
+               (reset! user (js->clj json :keywordize-keys true))))))
 
 (defn logout! []
   (reset! user nil))
