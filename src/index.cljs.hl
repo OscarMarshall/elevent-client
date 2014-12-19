@@ -3,7 +3,7 @@
     [tailrecursion.hoplon.reload       :refer [reload-all]]
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
     [style :refer [stylesheet]]
-    [util :as util]
+    [util :refer [input-cell]]
     [pages.event-register.view :as register]
     [pages.event-schedule.view :as schedule]
     [pages.events-admin.view :as events-admin]
@@ -162,6 +162,11 @@
                          (prn-str)
                          (.log js/console)))))
 
+(defn reset-events [new-event]
+  (do
+    (reset! events (assoc @events 0 (js->clj new-event :keywordize-keys true)))
+    (set! (.-location js/window) "/#/events")))
+
 (defc organizations nil)
 (cell= (.getJSON js/jQuery
                  (str api-base-url
@@ -200,31 +205,26 @@
       (a :class "item" :href "#/statistics"
         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
-        (cell=
-          (if (empty? user)
-            (a :class "item"
-               :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
-              (i :class "user icon") "Login"
-              (div :class "ui small login modal"
-                (i :class "close icon")
-                (div :class "header"
-                  "Login")
-                (div :class "content"
-                  (div :class "description"
-                    (div :class "ui form"
-                      (div :class "two fields"
-                        (div :class "field"
-                          (label "Email")
-                          (util/input-cell :type "email" :state login-email))
-                        (div :class "field"
-                          (label "Password")
-                          (util/input-cell :type "password" :state login-pass))))))
-                (div :class "actions"
-                  (button :class "ui button" "Cancel")
-                  (button :class "ui button primary" :on-click #(login login-info) "Login"))))
-            (a :class "item"
-               :on-click logout
-               (i :class "user icon") (str "Hello, " (:FirstName user) ". Logout"))))))
+        (a :class "item"
+           :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
+          (i :class "user icon") "Login"
+          (div :class "ui small login modal"
+            (i :class "close icon")
+            (div :class "header"
+              "Login")
+            (div :class "content"
+              (div :class "description"
+                (div :class "ui form"
+                  (div :class "two fields"
+                    (div :class "field"
+                      (label "Email")
+                      (input-cell :type "email" :state login-email))
+                    (div :class "field"
+                      (label "Password")
+                      (input-cell :type "password" :state login-pass))))))
+            (div :class "actions"
+              (button :class "ui button" "Cancel")
+              (button :class "ui button primary" :on-click #(login @login-info) "Login"))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (cell=
@@ -258,7 +258,7 @@
           (events-attendee/template events)
           
           "#/events/create"
-          (event-create/template)
+          (event-create/template organizations reset-events)
           
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/activities/create"
           (activity-create/template)

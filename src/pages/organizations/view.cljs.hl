@@ -14,11 +14,7 @@
       (div :class "four wide column"
         (div :class "ui fluid card"
           (div :class "image"
-            (img :src "images/aasa-logo.png"))
-          (div :class "content"
-            (a :class "header" "University of Utah")
-            (div :class "meta" "Salt Lake City, UT"))
+            (img :src "images/logo-image-floating.jpg"))
           (div :class "extra content"
             (a
-              (i :class "users icon")
-              "9,876 Members"))))))
+              "Powered by Elevent"))))))

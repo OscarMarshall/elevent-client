@@ -4,6 +4,9 @@
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
+        (h1 :class "ui header" "Upcoming Events" (a :href "/#/events/create"
+                                                    :class "ui right floated small button"
+                                                   "Create Event"))
         (loop-tpl :bindings [event events]
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
@@ -11,17 +14,18 @@
             (a :class "ui right floated small icon button" ;:href (str "#/events/" (:EventId @event))
               "Register")
             (div
-              (b "Date: ") (text "~{(:StartDate event)} to ~{(:EndDate event)}"))
+              (b "Date: ")
+              (let [start (js/Date. (:StartDate @event))
+                    end (js/Date. (:EndDate @event))]
+                (str (.toLocaleDateString start) (if (> (.getTime end) (.getTime start))
+                                                   (str " to " (.toLocaleDateString end))
+                                                   ""))))
             (p
               (text "~{(:Description event)}"))))))
       (div :class "four wide column"
         (div :class "ui fluid card"
           (div :class "image"
-            (img :src "images/aasa-logo.png"))
-          (div :class "content"
-            (a :class "header" "University of Utah")
-            (div :class "meta" "Salt Lake City, UT"))
+            (img :src "images/logo-image-floating.jpg"))
           (div :class "extra content"
             (a
-              (i :class "users icon")
-              "9,876 Members"))))))
+              "Powered by Elevent"))))))
