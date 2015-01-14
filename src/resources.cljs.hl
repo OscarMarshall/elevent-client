@@ -1,4 +1,6 @@
-(ns resources)
+(ns resources
+  (:require
+    [session]))
 
 (def api-base-url "http://elevent.solutions:8860")
 
@@ -6,19 +8,34 @@
 
 (defc event nil)
 
+(defc schedule nil)
+(cell= (when session/user
+         (.getJSON js/jQuery
+                   (str api-base-url
+                        "/users"
+                        "/" (:UserId session/user)
+                        "/events"
+                        "/" (:EventId event)
+                        "/activities")
+                   ~(fn [json]
+                      (->> (js->clj json :keywordize-keys true)
+                           (map :ActivityId)
+                           (reset! schedule))))))
+
 (defc activities nil)
-(cell= (.getJSON js/jQuery
-                 (str api-base-url
-                      "/events"
-                      "/" (:EventId event)
-                      "/activities")
-                 ~(fn [json]
-                    (->> (js->clj json :keywordize-keys true)
-                         (map #(vector (:ActivityId %) %))
-                         (into {})
-                         (reset! activities)
-                         (prn-str)
-                         (.log js/console)))))
+(cell= (when event
+         (.getJSON js/jQuery
+                   (str api-base-url
+                        "/events"
+                        "/" (:EventId event)
+                        "/activities")
+                   ~(fn [json]
+                      (->> (js->clj json :keywordize-keys true)
+                           (map #(vector (:ActivityId %) %))
+                           (into {})
+                           (reset! activities)
+                           (prn-str)
+                           (.log js/console))))))
 (defn add-activity [user-id activity-id]
   (.post js/jQuery
          (str api-base-url
@@ -52,14 +69,13 @@
 (defc events nil)
 (cell= (.getJSON js/jQuery
                  (str api-base-url
-                      events-by-organization
                       "/events")
                  ~(fn [json]
                     (->> (js->clj json :keywordize-keys true)
                          (reset! events)
                          (prn-str)
                          (.log js/console)))))
-(defn create-event [form-data reset-events]
+(defn create-event [form-data]
   (let [new-event (clj->js (assoc form-data :Organization (int (.val (js/jQuery "#event-organization")))))]
     (.post js/jQuery
            (str api-base-url
@@ -67,17 +83,3 @@
            new-event
            (fn [] (swap! resources/events #(conj % new-event)))
            "json")))
-
-(defc schedule nil)
-(cell= (when session/user
-         (.getJSON js/jQuery
-                   (str api-base-url
-                        "/users"
-                        "/" (:UserId session/user)
-                        "/events"
-                        "/" (:EventId event)
-                        "/activities")
-                   ~(fn [json]
-                      (->> (js->clj json :keywordize-keys true)
-                           (map :ActivityId)
-                           (reset! schedule))))))
