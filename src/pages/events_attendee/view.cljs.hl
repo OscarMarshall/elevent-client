@@ -1,25 +1,31 @@
-(ns pages.events-attendee.view)
+(ns pages.events-attendee.view
+  (:require
+    [cljs-time.core :refer [after? at-midnight]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [unparse]]
+    [util :refer [date-formatter]]))
 
 (defn template [events]
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
-        (h1 :class "ui header" "Upcoming Events" (a :href "/#/events/create"
-                                                    :class "ui right floated small button"
-                                                   "Create Event"))
+        (h1 :class "ui header"
+          "Upcoming Events"
+          (a :href "/#/events/create" :class "ui right floated small button"
+            "Create Event"))
         (loop-tpl :bindings [event events]
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
-                (text "~{(:Name event)}"))
-            (a :class "ui right floated small icon button" ;:href (str "#/events/" (:EventId @event))
+              (text "~{(:Name event)}"))
+            (a :class "ui right floated small icon button"
               "Register")
             (div
               (b "Date: ")
-              (let [start (js/Date. (:StartDate @event))
-                    end (js/Date. (:EndDate @event))]
-                (str (.toLocaleDateString start) (if (> (.getTime end) (.getTime start))
-                                                   (str " to " (.toLocaleDateString end))
-                                                   ""))))
+              (let [start (from-string (:StartDate @event))
+                    end   (from-string (:EndDate   @event))]
+                (str (unparse date-formatter start)
+                     (when (after? end start)
+                       (str " to " (unparse date-formatter end))))))
             (p
               (text "~{(:Description event)}"))))))
       (div :class "four wide column"

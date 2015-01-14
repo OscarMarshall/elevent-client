@@ -1,4 +1,10 @@
-(ns util)
+(ns util
+  (:require
+    [cljs-time.format :refer [formatter]]))
+
+(def date-formatter (formatter "MMMM d, yyyy"))
+(def time-formatter (formatter "h:mma"))
+(def datetime-formatter (formatter "h:mma MMMM d, yyyy"))
 
 (defelem input-cell [{:keys [state] :as attr} _]
   (input (assoc (dissoc attr :state) :value @state :on-keyup #(reset! state @%) :on-change #(reset! state @%))))

@@ -1,17 +1,20 @@
 (ns pages.event-create.view
   (:require
-    [util :refer [input-cell textarea-cell]]))
+    [util :refer [input-cell textarea-cell]]
+    [cljs-time.core :refer  [now]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [formatters unparse]]))
 
 (defc event-title nil)
 (defc organization nil)
 (defc venue nil)
-(defc start-date nil)
-(defc end-date nil)
+(defc start-date (unparse (:date formatters) (now)))
+(defc end-date   (unparse (:date formatters) (now)))
 (defc description nil)
 (defc= form-data
   {:Name event-title
-   :StartDate (.toJSON (js/Date. start-date))
-   :EndDate (.toJSON (js/Date. end-date))
+   :StartDate (unparse (:basic-date-time formatters) (from-string start-date))
+   :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
    :Description description})
 
 (def api-base-url "http://elevent.solutions:8860")

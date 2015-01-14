@@ -107,13 +107,7 @@
   (reset! schedule new-schedule))
 
 
-(defc events
-  [
-    {:EventId 2
-     :Name "University of Utah Asian American High School Conference 2015"
-     :StartDate "02/05/2015"
-     :EndDate "02/05/2015"
-     :Description "A fun time"}])
+(defc events nil)
 (defc events-by-organization "")
 (cell= (.getJSON js/jQuery
                  (str api-base-url
