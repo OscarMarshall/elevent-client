@@ -6,6 +6,7 @@
     [style :refer [stylesheet]]
     [util :refer [input-cell]]
     [session :as session]
+    [resources :as resources]
     [pages.event-register.view :as register]
     [pages.event-schedule.view :as schedule]
     [pages.events-admin.view :as events-admin]
@@ -17,125 +18,7 @@
 
 (reload-all)
 
-(def api-base-url "http://elevent.solutions:8860")
-
 (def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
-
-(defc organizer
-  {:Title "Asian American Student Association"
-   :Name  "asian-american-student-association"})
-
-(defc event
-  {:EventId
-   2
-
-   :Title
-   "University of Utah Asian American High School Conference 2015"
-
-   :Name
-   "university-of-utah-asian-american-high-school-conference-2015"
-
-   :Description
-   "The 16th annual Asian American High School Conference on Friday, February 27th, 2015 from 8:00 am until 2:00 pm is presented by the Asian American Student Association at the University of Utah and sponsored by President David W. Pershing and Provost Ruth Watkins. Our goal is to promote to all students, in particular Asian American youth, to apply and attend college. Although all programs will be made specifically for Asian American youth and be facilitated by students well-informed of Asian American issues, the conference is open to everyone. Workshops include, but are not limited to, admissions and scholarship aid, Asian American contemporary issues, major exploration, program-specific exploration, leadership opportunities, and service opportunities. Lunch is provided for all registered applicants.
-*For more information, please contact AASA (aasa.uofu@gmail.com), Deepika Malla (deepikashah6@gmail.com), or Jimmy Sieng (jsieng@hotmail.com)."})
-
-(defc activities
-  {1
-   {:ActivityId 1
-    :Name "The First James Bloom Experience"
-    :Location "loc"
-    :EnrollmentCap 5
-    :StartTime "12/5/2014 2:51:23 AM"
-    :EndTime "12/5/2014 2:51:23 AM"
-    :Description "desc"}
-
-   2
-   {:ActivityId 2
-    :Name "The Second James Bloom Experience"
-    :Location "loc"
-    :EnrollmentCap 5
-    :StartTime "12/5/2014 2:51:32 AM"
-    :EndTime "12/5/2014 2:51:32 AM"
-    :Description "desc"}
-
-   3
-   {:ActivityId 3
-    :Name "The Third James Bloom Experience"
-    :Location "loc"
-    :EnrollmentCap 5
-    :StartTime "12/5/2014 2:51:45 AM"
-    :EndTime "12/5/2014 2:51:45 AM"
-    :Description "desc"}
-
-   4
-   {:ActivityId 4
-    :Name "The Fourth James Bloom Experience"
-    :Location "loc"
-    :EnrollmentCap 5
-    :StartTime "12/5/2014 2:51:54 AM"
-    :EndTime "12/5/2014 2:51:54 AM"
-    :Description "desc"}})
-(cell= (.getJSON js/jQuery
-                 (str api-base-url
-                      "/events"
-                      "/" (:EventId event)
-                      "/activities")
-                 ~(fn [json]
-                    (->> (js->clj json :keywordize-keys true)
-                         (map #(vector (:ActivityId %) %))
-                         (into {})
-                         (reset! activities)
-                         (prn-str)
-                         (.log js/console)))))
-
-(defc schedule [1 2 3])
-(cell=
-  (when session/user
-    (.getJSON js/jQuery
-              (str api-base-url
-                   "/users"
-                   "/" (:UserId session/user)
-                   "/events"
-                   "/" (:EventId event)
-                   "/activities")
-              ~(fn [json]
-                 (->> (js->clj json :keywordize-keys true)
-                      (map :ActivityId)
-                      (reset! schedule))))))
-
-(defn update-schedule [new-schedule]
-  (reset! schedule new-schedule))
-
-
-(defc events nil)
-(defc events-by-organization "")
-(cell= (.getJSON js/jQuery
-                 (str api-base-url
-                      events-by-organization
-                      "/events")
-                 ~(fn [json]
-                    (->> (js->clj json :keywordize-keys true)
-                         (reset! events)
-                         (prn-str)
-                         (.log js/console)))))
-
-(defn reset-events [new-event]
-  (do
-    (reset! events (assoc @events 0 (js->clj new-event :keywordize-keys true)))
-    (set! (.-location js/window) "/#/events")))
-
-(defc organizations nil)
-(cell= (.getJSON js/jQuery
-                 (str api-base-url
-                      "/organizations")
-                 ~(fn [json]
-                    (->> (js->clj json :keywordize-keys true)
-                         (reset! organizations)
-                         (prn-str)
-                         (.log js/console)))))
-
-(defn view-events-organization [organization-id]
-  (reset! events-by-organization (str "/organizations/" organization-id)))
 
 (defn view-all-events []
   (reset! events-by-organization ""))
@@ -177,19 +60,19 @@
           (register/template)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-          (schedule/template session/user event activities schedule update-schedule)
+          (schedule/template session/user resources/event resources/activities resources/schedule)
 
           "#/events"
-          (events-attendee/template events)
+          (events-attendee/template resources/events)
 
           "#/events/create"
-          (event-create/template organizations reset-events)
+          (event-create/template resources/organizations)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/activities/create"
           (activity-create/template)
 
           "#/organizations"
-          (organizations/template organizations view-events-organization)
+          (organizations/template resources/organizations)
 
           "#/calendar"
           (calendar/template (map activities schedule))

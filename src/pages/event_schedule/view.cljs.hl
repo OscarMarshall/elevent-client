@@ -1,33 +1,11 @@
 (ns pages.event-schedule.view
   (:require
-    [util :refer [datetime-formatter]]
     [cljs-time.coerce :refer [from-string]]
-    [cljs-time.format :refer [unparse]]))
+    [cljs-time.format :refer [unparse]]
+    [util :refer [datetime-formatter]]
+    [resources]))
 
-(def api-base-url "http://elevent.solutions:8860")
-
-(defn add-activity [user-id activity-id schedule update-schedule]
-  (.post js/jQuery
-         (str api-base-url
-              "/users"
-              "/" user-id
-              "/activity")
-         (js-obj "ActivityId" activity-id)
-         #(update-schedule (apply vector (cons activity-id schedule)))
-         "json"))
-
-(defn remove-activity [user-id activity-id schedule update-schedule]
-  (.ajax js/jQuery
-         (js-obj "url" (str api-base-url
-                           "/users"
-                           "/" user-id
-                           "/activities"
-                           "/" activity-id)
-                 "type" "DELETE"
-                 "success" #(update-schedule (into [] (disj (set schedule) activity-id)))
-                 "dataType" "json")))
-
-(defn template [user event activities schedule update-schedule]
+(defn template [user event activities schedule]
   (div :class "ui stackable page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
@@ -52,7 +30,7 @@
                   (td (text (:Name activity)))
                   (td (text (:Location activity)))
                   (td :class "right aligned" :nowrap true
-                    (div :class "ui button" :on-click #(remove-activity (:UserId user) (:ActivityId @activity) schedule update-schedule)
+                    (div :class "ui button" :on-click #(resources/remove-activity (:UserId user) (:ActivityId @activity))
                       (i :class "red remove icon") "Remove")))))
             (tfoot
               (tr
@@ -76,5 +54,5 @@
                   (div :class "description"
                     (text (:Description activity)))
                   (div :class "extra"
-                    (div :class "ui right floated primary button" :on-click #(add-activity (:UserId user) (:ActivityId @activity) schedule update-schedule)
+                    (div :class "ui right floated primary button" :on-click #(resources/add-activity (:UserId user) (:ActivityId @activity))
                       "Add" (i :class "right chevron icon"))))))))))))

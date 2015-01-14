@@ -1,9 +1,10 @@
 (ns pages.event-create.view
   (:require
-    [util :refer [input-cell textarea-cell]]
     [cljs-time.core :refer  [now]]
     [cljs-time.coerce :refer [from-string]]
-    [cljs-time.format :refer [formatters unparse]]))
+    [cljs-time.format :refer [formatters unparse]]
+    [util :refer [input-cell textarea-cell]]
+    [resources]))
 
 (defc event-title nil)
 (defc organization nil)
@@ -17,20 +18,7 @@
    :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
    :Description description})
 
-(def api-base-url "http://elevent.solutions:8860")
-
-(defn create-event [form-data reset-events]
-  (let [new-event (clj->js (assoc form-data :Organization (int (.val (js/jQuery "#event-organization")))))]
-    (.post js/jQuery
-           (str api-base-url
-                "/events")
-           new-event
-           (reset-events new-event)
-           "json")))
-
-(-> js/document js/jQuery (.ready #(-> (js/jQuery "select.dropdown") (.dropdown))))
-
-(defn template [organizations reset-events]
+(defn template [organizations]
   (div :class "ui stackable page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -66,7 +54,7 @@
             (div :class "field"
               (label "Description")
               (textarea-cell :state description))
-            (div :class "ui primary button" :on-click #(create-event @form-data reset-events)
+            (div :class "ui primary button" :on-click #(resources/create-event @form-data)
               "Create")))))
     (div :class "four wide column"
         (div :class "ui fluid card"

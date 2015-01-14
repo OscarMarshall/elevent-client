@@ -1,6 +1,6 @@
 (ns pages.organizations.view)
 
-(defn template [organizations view-events-organization]
+(defn template [organizations]
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -9,7 +9,8 @@
             (h2 :class "ui dividing header"
                 (text "~{(:Name organization)}"))
             (a :class "ui right floated small icon button" :href "#/events"
-                 :on-click #(view-events-organization (:OrganizationId @organization))
+                 ;:on-click #(view-events-organization (:OrganizationId @organization)
+                 )
               "View events")))))
       (div :class "four wide column"
         (div :class "ui fluid card"
