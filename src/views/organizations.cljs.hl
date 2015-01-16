@@ -1,4 +1,4 @@
-(ns pages.organizations.view)
+(ns views.organizations)
 
 (defn template [organizations]
   (div :class "ui page grid"
@@ -8,9 +8,7 @@
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
                 (text "~{(:Name organization)}"))
-            (a :class "ui right floated small icon button" :href "#/events"
-                 ;:on-click #(view-events-organization (:OrganizationId @organization)
-                 )
+            (a :class "ui right floated small icon button" :href "#/events")
               "View events")))))
       (div :class "four wide column"
         (div :class "ui fluid card"
@@ -18,4 +16,4 @@
             (img :src "images/logo-image-floating.jpg"))
           (div :class "extra content"
             (a
-              "Powered by Elevent"))))))
+              "Powered by Elevent")))))

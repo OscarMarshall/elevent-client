@@ -1,13 +1,8 @@
 (ns util
   (:require
-    [cljs-time.format :refer [formatter]]))
+    [cljs-time.format :refer [formatter]]
+    [page]))
 
-(def date-formatter (formatter "MMMM d, yyyy"))
-(def time-formatter (formatter "h:mma"))
-(def datetime-formatter (formatter "h:mma MMMM d, yyyy"))
-
-(defelem input-cell [{:keys [state] :as attr} _]
-  (input (assoc (dissoc attr :state) :value @state :on-keyup #(reset! state @%) :on-change #(reset! state @%))))
-
-(defelem textarea-cell [{:keys [state] :as attr} _]
-  (textarea (assoc (dissoc attr :state) :value @state :on-keyup #(reset! state @%))))
+(def date-formatter (formatter page/date-format))
+(def time-formatter (formatter page/time-format))
+(def datetime-formatter (formatter page/datetime-format))

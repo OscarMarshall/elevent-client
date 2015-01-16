@@ -1,4 +1,4 @@
-(ns pages.events-attendee.view
+(ns views.events
   (:require
     [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.coerce :refer [from-string]]

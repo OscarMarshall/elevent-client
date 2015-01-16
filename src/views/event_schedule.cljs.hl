@@ -1,4 +1,4 @@
-(ns pages.event-schedule.view
+(ns views.event-schedule
   (:require
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
@@ -30,7 +30,9 @@
                   (td (text (:Name activity)))
                   (td (text (:Location activity)))
                   (td :class "right aligned" :nowrap true
-                    (div :class "ui button" :on-click #(resources/remove-activity (:UserId user) (:ActivityId @activity))
+                    (div :class "ui button"
+                         :on-click #(resources/remove-activity
+                                      (:UserId user) (:ActivityId @activity))
                       (i :class "red remove icon") "Remove")))))
             (tfoot
               (tr
@@ -54,5 +56,7 @@
                   (div :class "description"
                     (text (:Description activity)))
                   (div :class "extra"
-                    (div :class "ui right floated primary button" :on-click #(resources/add-activity (:UserId user) (:ActivityId @activity))
+                    (div :class "ui right floated primary button"
+                         :on-click #(resources/add-activity
+                                      (:UserId user) (:ActivityId @activity))
                       "Add" (i :class "right chevron icon"))))))))))))

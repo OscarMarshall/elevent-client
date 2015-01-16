@@ -1,9 +1,9 @@
-(ns pages.event-create.view
+(ns views.event-create
   (:require
     [cljs-time.core :refer  [now]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [formatters unparse]]
-    [util :refer [input-cell textarea-cell]]
+    [elements :refer [input-cell textarea-cell]]
     [resources]))
 
 (defc event-title nil)
@@ -40,7 +40,8 @@
                 (label "Organization")
                 (select :class "ui" :id "event-organization"
                   (loop-tpl :bindings [organization organizations]
-                    (option :value (:OrganizationId @organization) (:Name @organization)))))
+                    (option :value (:OrganizationId @organization)
+                      (:Name @organization)))))
               (div :class "required field"
                 (label "Venue")
                 (input-cell :type "text" :state venue)))
@@ -54,7 +55,8 @@
             (div :class "field"
               (label "Description")
               (textarea-cell :state description))
-            (div :class "ui primary button" :on-click #(resources/create-event @form-data)
+            (div :class "ui primary button" :on-click #(resources/create-event
+                                                         @form-data)
               "Create")))))
     (div :class "four wide column"
         (div :class "ui fluid card"

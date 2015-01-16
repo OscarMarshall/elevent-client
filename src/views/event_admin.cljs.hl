@@ -1,4 +1,4 @@
-(ns pages.events-admin.view)
+(ns views.event-admin)
 
 (defn template []
   (div :class "ui page grid"

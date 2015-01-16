@@ -1,4 +1,4 @@
-(ns pages.calendar.view)
+(ns views.calendar)
 
 (defn template [schedule]
   (div :class "ui page grid"
@@ -9,11 +9,11 @@
         (let [element (div)]
           (doto (js/jQuery element)
             (.fullCalendar
-              (clj->js {:events (into [] (map (fn [activity]
-                                                {:title (:Name activity)
-                                                 :start (:StartTime activity)
-                                                 :end   (:EndTime activity)})
-                                              schedule))}))
+              (clj->js {:events (vec (map (fn [activity]
+                                            {:title (:Name activity)
+                                             :start (:StartTime activity)
+                                             :end   (:EndTime activity)})
+                                          schedule))}))
             ((fn [$]
                ; HACK: Figure out a way to do this without a timer.
                (js/setTimeout #(.fullCalendar $ "render") 500))))

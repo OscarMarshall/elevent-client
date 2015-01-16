@@ -1,11 +1,11 @@
 (ns session
   (:require
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
-    [util :refer [input-cell]]))
+    [elements :refer [input-cell]]))
 
 (def api-base-url "http://elevent.solutions:8860")
 
-(def user (-> (cell nil) (local-storage ::user)))
+(def user (local-storage (cell nil) ::user))
 ; Run once to sync info.
 (when @user
   (.getJSON js/jQuery
@@ -34,7 +34,7 @@
 (defn control [attr]
   (cell=
     (if user
-      (a (assoc attr :on-click #(logout!))
+      (a (assoc attr :on-click logout!)
         (text "Logout of ~{(:FirstName user)}'s account"))
       (let [email    (cell nil)
             password (cell nil)]

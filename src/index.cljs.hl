@@ -1,28 +1,25 @@
 (page "index.html"
   (:require
     [clojure.string :refer [split]]
-    [tailrecursion.hoplon.reload       :refer [reload-all]]
-    [tailrecursion.hoplon.storage-atom :refer [local-storage]]
+    [tailrecursion.hoplon.reload :refer [reload-all]]
+    [page]
     [style :refer [stylesheet]]
-    [util :refer [input-cell]]
     [session]
     [resources]
-    [pages.event-register.view :as register]
-    [pages.event-schedule.view :as schedule]
-    [pages.events-admin.view :as events-admin]
-    [pages.events-attendee.view :as events-attendee]
-    [pages.event-create.view :as event-create]
-    [pages.activity-create.view :as activity-create]
-    [pages.organizations.view :as organizations]
-    [pages.calendar.view :as calendar]))
+    [views.event-register]
+    [views.event-schedule]
+    [views.event-admin]
+    [views.events]
+    [views.event-create]
+    [views.activity-create]
+    [views.organizations]
+    [views.calendar]))
 
 (reload-all)
 
-(def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
-
 (html
   (head
-    (title (text "Register for ~{(:Title resources/event)}"))
+    (title page/title-string)
     (meta :Name "viewport" :content "width=device-width, initial-scale=1.0")
     (style stylesheet))
   (body
@@ -31,7 +28,7 @@
         (img :src "images/logo-menu.png"))
       (a :class "item" :href "#/calendar"
         (i :class "calendar icon") "Calendar")
-      (a :class "item" :href "#/events" ;:on-click view-all-events
+      (a :class "item" :href "#/events"
         (i :class "ticket icon") "Events")
       (a :class "item" :href "#/organizations"
          (i :class "building icon") "Organizations")
@@ -46,32 +43,36 @@
         (cell=
           (div :class "ui breadcrumb"
             (a :class "section" "Home")
-            (loop-tpl :bindings [crumb (rest (split route "/"))]
+            (loop-tpl :bindings [crumb (rest (split page/route "/"))]
               (span
                 (div :class "divider" " / ")
                 (a :class "section" crumb)))))))
     (div
       (cell=
-        (case route
+        (case page/route
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"
-          (register/template)
+          (views.event-register/template)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-          (schedule/template session/user resources/event resources/activities resources/schedule)
+          (views.event-schedule/template session/user
+                                         resources/event
+                                         resources/activities
+                                         resources/schedule)
 
           "#/events"
-          (events-attendee/template resources/events)
+          (views.events/template resources/events)
 
           "#/events/create"
-          (event-create/template resources/organizations)
+          (views.event-create/template resources/organizations)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/activities/create"
-          (activity-create/template)
+          (views.activity-create/template)
 
           "#/organizations"
-          (organizations/template resources/organizations)
+          (views.organizations/template resources/organizations)
 
           "#/calendar"
-          (calendar/template (map resources/activities resources/schedule))
+          (views.calendar/template (map resources/activities
+                                        resources/schedule))
 
           (text "Default"))))))

@@ -1,11 +1,12 @@
-(ns pages.activity-create.view)
+(ns views.activity-create)
 
 (defn template []
   (div :class "ui stackable page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
-          (h2 :class "ui dividing header" "Activities for U of U TAs Conference 2014")
+          (h2 :class "ui dividing header"
+            "Activities for U of U TAs Conference 2014")
           (table :class "ui table"
             (thead
               (tr

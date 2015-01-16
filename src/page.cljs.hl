@@ -1,0 +1,16 @@
+(ns page)
+
+(def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
+
+(def api-base-url "http://elevent.solutions:8860")
+
+(def title-base "Elevent")
+(def title-seperator " | ")
+
+(def date-format "MMMM d, yyyy")
+(def time-format "h:mma")
+(def datetime-format "h:mma MMMM d, yyyy")
+
+(defn title-prepare [page] (str title-base title-seperator page))
+
+(defc title-string title-base)

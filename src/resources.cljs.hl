@@ -1,8 +1,7 @@
 (ns resources
   (:require
+    [page]
     [session]))
-
-(def api-base-url "http://elevent.solutions:8860")
 
 (defc organizer nil)
 
@@ -11,7 +10,7 @@
 (defc schedule nil)
 (cell= (when session/user
          (.getJSON js/jQuery
-                   (str api-base-url
+                   (str page/api-base-url
                         "/users"
                         "/" (:UserId session/user)
                         "/events"
@@ -25,7 +24,7 @@
 (defc activities nil)
 (cell= (when event
          (.getJSON js/jQuery
-                   (str api-base-url
+                   (str page/api-base-url
                         "/events"
                         "/" (:EventId event)
                         "/activities")
@@ -38,7 +37,7 @@
                            (.log js/console))))))
 (defn add-activity [user-id activity-id]
   (.post js/jQuery
-         (str api-base-url
+         (str page/api-base-url
               "/users"
               "/" user-id
               "/activity")
@@ -47,18 +46,20 @@
          "json"))
 (defn remove-activity [user-id activity-id]
   (.ajax js/jQuery
-         (js-obj "url" (str api-base-url
+         (js-obj "url" (str page/api-base-url
                            "/users"
                            "/" user-id
                            "/activities"
                            "/" activity-id)
                  "type" "DELETE"
-                 "success" (fn [] (swap! resources/schedule #(vec (remove (partial == activity-id) %))))
+                 "success" (fn [] (swap! resources/schedule
+                                         #(vec (remove (partial == activity-id)
+                                                       %))))
                  "dataType" "json")))
 
 (defc organizations nil)
 (cell= (.getJSON js/jQuery
-                 (str api-base-url
+                 (str page/api-base-url
                       "/organizations")
                  ~(fn [json]
                     (->> (js->clj json :keywordize-keys true)
@@ -68,7 +69,7 @@
 
 (defc events nil)
 (cell= (.getJSON js/jQuery
-                 (str api-base-url
+                 (str page/api-base-url
                       "/events")
                  ~(fn [json]
                     (->> (js->clj json :keywordize-keys true)
@@ -76,10 +77,43 @@
                          (prn-str)
                          (.log js/console)))))
 (defn create-event [form-data]
-  (let [new-event (clj->js (assoc form-data :Organization (int (.val (js/jQuery "#event-organization")))))]
+  (let [new-event (clj->js (assoc form-data
+                             :Organization
+                             (int (.val (js/jQuery "#event-organization")))))]
     (.post js/jQuery
-           (str api-base-url
+           (str page/api-base-url
                 "/events")
            new-event
            (fn [] (swap! resources/events #(conj % new-event)))
            "json")))
+
+(defn register [form-data]
+  (.getJSON js/jQuery
+            (str page/api-base-url
+                 "/users?email="
+                 (:email form-data))
+            (fn [json]
+              (let [user-id
+                    (:UserId (js->clj json :keywordize-keys true))
+
+                    create-attendee
+                    (fn [user-id]
+                      (.post js/jQuery
+                             (str page/api-base-url "/events/" 2 "/attendees")
+                             (clj->js {:UserId user-id})
+                             (fn [json]
+                               (session/login! user-id)
+                               (set! (.-location js/page)
+                                     "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
+                             "json"))]
+                (if (zero? user-id)
+                  ; user does not exist
+                  (.post js/jQuery
+                         (str page/api-base-url "/users")
+                         (clj->js {:Email     (:email form-data)
+                                   :FirstName (:first-name form-data)
+                                   :LastName  (:last-name form-data)})
+                         #(create-attendee
+                            (:UserId (js->clj % :keywordize-keys true)))
+                         "json")
+                  (create-attendee user-id))))))
