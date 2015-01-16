@@ -2,16 +2,17 @@
   (:require
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
-    [util :refer [datetime-formatter]]
-    [resources]))
+    [session]
+    [resources]
+    [util :refer [datetime-formatter]]))
 
-(defn template [user event activities schedule]
+(defn template []
   (div :class "ui stackable page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui dividing header"
-            (text "~{(:FirstName user)}'s Schedule for ~{(:Title event)}"))
+            (text "~{(:FirstName session/user)}'s Schedule for ~{(:Title resources/event)}"))
           (table :class "ui table"
             (thead
               (tr
@@ -21,7 +22,7 @@
                 (th "Location")
                 (th)))
             (tbody
-              (loop-tpl :bindings [activity (map activities schedule)]
+              (loop-tpl :bindings [activity (cell= (map resources/activities resources/schedule))]
                 (tr
                   (let [start (from-string (:StartTime @activity))]
                     (td :nowrap true (unparse datetime-formatter start)))
@@ -32,7 +33,7 @@
                   (td :class "right aligned" :nowrap true
                     (div :class "ui button"
                          :on-click #(resources/remove-activity
-                                      (:UserId user) (:ActivityId @activity))
+                                      (:UserId @session/user) (:ActivityId @activity))
                       (i :class "red remove icon") "Remove")))))
             (tfoot
               (tr
@@ -41,9 +42,9 @@
                     (i :class "print icon") "Print"))))))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity (vals (apply dissoc
-                                                       activities
-                                                       schedule))]
+            (loop-tpl :bindings [activity (cell= (vals (apply dissoc
+                                                                   resources/activities
+                                                                   resources/schedule)))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
@@ -58,5 +59,5 @@
                   (div :class "extra"
                     (div :class "ui right floated primary button"
                          :on-click #(resources/add-activity
-                                      (:UserId user) (:ActivityId @activity))
+                                      (:UserId @session/user) (:ActivityId @activity))
                       "Add" (i :class "right chevron icon"))))))))))))

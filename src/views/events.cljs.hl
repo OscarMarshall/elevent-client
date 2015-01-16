@@ -3,9 +3,10 @@
     [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
-    [util :refer [date-formatter]]))
+    [util :refer [date-formatter]]
+    [resources]))
 
-(defn template [events]
+(defn template []
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -13,7 +14,7 @@
           "Upcoming Events"
           (a :href "/#/events/create" :class "ui right floated small button"
             "Create Event"))
-        (loop-tpl :bindings [event events]
+        (loop-tpl :bindings [event resources/events]
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
               (text "~{(:Name event)}"))

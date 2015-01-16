@@ -18,7 +18,7 @@
    :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
    :Description description})
 
-(defn template [organizations]
+(defn template []
   (div :class "ui stackable page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -39,7 +39,7 @@
               (div :class "required field"
                 (label "Organization")
                 (select :class "ui" :id "event-organization"
-                  (loop-tpl :bindings [organization organizations]
+                  (loop-tpl :bindings [organization resources/organizations]
                     (option :value (:OrganizationId @organization)
                       (:Name @organization)))))
               (div :class "required field"

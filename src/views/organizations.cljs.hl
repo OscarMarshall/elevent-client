@@ -1,19 +1,20 @@
-(ns views.organizations)
+(ns views.organizations
+  (:require [resources]))
 
-(defn template [organizations]
+(defn template []
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
-        (loop-tpl :bindings [organization organizations]
+        (loop-tpl :bindings [organization resources/organizations]
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
-                (text "~{(:Name organization)}"))
-            (a :class "ui right floated small icon button" :href "#/events")
+              (text "~{(:Name organization)}"))
+            (a :class "ui right floated small icon button" :href "#/events"
               "View events")))))
-      (div :class "four wide column"
-        (div :class "ui fluid card"
-          (div :class "image"
-            (img :src "images/logo-image-floating.jpg"))
-          (div :class "extra content"
-            (a
-              "Powered by Elevent")))))
+    (div :class "four wide column"
+      (div :class "ui fluid card"
+        (div :class "image"
+          (img :src "images/logo-image-floating.jpg"))
+        (div :class "extra content"
+          (a
+            "Powered by Elevent"))))))

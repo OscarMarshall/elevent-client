@@ -54,25 +54,21 @@
           (views.event-register/template)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-          (views.event-schedule/template session/user
-                                         resources/event
-                                         resources/activities
-                                         resources/schedule)
+          (views.event-schedule/template)
 
           "#/events"
-          (views.events/template resources/events)
+          (views.events/template)
 
           "#/events/create"
-          (views.event-create/template resources/organizations)
+          (views.event-create/template)
 
           "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/activities/create"
           (views.activity-create/template)
 
           "#/organizations"
-          (views.organizations/template resources/organizations)
+          (views.organizations/template)
 
           "#/calendar"
-          (views.calendar/template (map resources/activities
-                                        resources/schedule))
+          (views.calendar/template)
 
           (text "Default"))))))
