@@ -10,7 +10,8 @@
                   [garden "1.2.5"]
                   [com.andrewmcveigh/cljs-time "0.3.0"]
                   [cljs-ajax "0.3.9"]
-                  [spyscope "0.1.5"]]
+                  [spyscope "0.1.5"]
+                  [secretary "1.2.1"]]
   :out-path     "resources/public"
   :src-paths    #{"src"})
 

@@ -7,19 +7,7 @@
   {:Title "Asian American Student Association"
    :Name  "asian-american-student-association"})
 
-(defc event
-  {:EventId
-   2
-
-   :Title
-   "University of Utah Asian American High School Conference 2015"
-
-   :Name
-   "university-of-utah-asian-american-high-school-conference-2015"
-
-   :Description
-   "The 16th annual Asian American High School Conference on Friday, February 27th, 2015 from 8:00 am until 2:00 pm is presented by the Asian American Student Association at the University of Utah and sponsored by President David W. Pershing and Provost Ruth Watkins. Our goal is to promote to all students, in particular Asian American youth, to apply and attend college. Although all programs will be made specifically for Asian American youth and be facilitated by students well-informed of Asian American issues, the conference is open to everyone. Workshops include, but are not limited to, admissions and scholarship aid, Asian American contemporary issues, major exploration, program-specific exploration, leadership opportunities, and service opportunities. Lunch is provided for all registered applicants.
-*For more information, please contact AASA (aasa.uofu@gmail.com), Deepika Malla (deepikashah6@gmail.com), or Jimmy Sieng (jsieng@hotmail.com)."})
+(defc event nil)
 
 (defc schedule '())
 (cell= (when session/user

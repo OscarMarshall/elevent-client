@@ -1,8 +1,10 @@
-(ns views.event-create
+(ns views.event-add
   (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.core :refer  [now]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [formatters unparse]]
+    [page]
     [elements :refer [input-cell textarea-cell]]
     [resources]))
 
@@ -18,14 +20,14 @@
    :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
    :Description description})
 
-(defn template []
+(def template
   (div :class "ui stackable page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
         (div :class "ui form"
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
-              "Create an Event")
+              "Add an Event")
             (div :class "two fields"
               (div :class "required field"
                 (label "Title")
@@ -57,7 +59,7 @@
               (textarea-cell :state description))
             (div :class "ui primary button" :on-click #(resources/create-event
                                                          @form-data)
-              "Create")))))
+              "Add")))))
     (div :class "four wide column"
         (div :class "ui fluid card"
           (div :class "image"
@@ -65,3 +67,8 @@
           (div :class "extra content"
             (a
               "Powered by Elevent"))))))
+
+(defroute event-add "/events/add" []
+  (reset! page/breadcrumbs '(["Events" "#/events"]
+                             "Add"))
+  template)

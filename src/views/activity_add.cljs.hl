@@ -1,4 +1,4 @@
-(ns views.activity-create)
+(ns views.activity-add)
 
 (defn template []
   (div :class "ui stackable page grid"

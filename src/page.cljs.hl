@@ -7,10 +7,12 @@
 (def title-base "Elevent")
 (def title-seperator " | ")
 
-(def date-format "MMMM d, yyyy")
-(def time-format "h:mma")
-(def datetime-format "h:mma MMMM d, yyyy")
-
 (defn title-prepare [page] (str title-base title-seperator page))
 
 (defc title-string title-base)
+
+(defc breadcrumbs nil)
+
+(def date-format "MMMM d, yyyy")
+(def time-format "h:mma")
+(def datetime-format "h:mma MMMM d, yyyy")

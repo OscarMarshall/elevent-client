@@ -1,18 +1,20 @@
 (ns views.events
   (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
     [util :refer [date-formatter]]
     [resources]))
 
-(defn template []
+(def template
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
         (h1 :class "ui header"
           "Upcoming Events"
-          (a :href "/#/events/create" :class "ui right floated small button"
+          (a :href "#/events/add"
+             :class "ui right floated small button"
             "Create Event"))
         (loop-tpl :bindings [event resources/events]
           (div :class "ui vertical segment"
@@ -36,3 +38,7 @@
           (div :class "extra content"
             (a
               "Powered by Elevent"))))))
+
+(defroute events "/events" []
+  (reset! page/breadcrumbs '("Events"))
+  template)
