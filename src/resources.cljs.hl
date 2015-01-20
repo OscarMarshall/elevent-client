@@ -3,81 +3,71 @@
     [page]
     [session]))
 
-(defc organizer
-  {:Title "Asian American Student Association"
-   :Name  "asian-american-student-association"})
+; (defc schedule '())
+; (cell= (when session/user
+;          (.getJSON js/jQuery
+;                    (str page/api-base-url
+;                         "/users"
+;                         "/" (:UserId session/user)
+;                         "/events"
+;                         "/" (:EventId event)
+;                         "/activities")
+;                    ~(fn [json]
+;                       (->> (js->clj json :keywordize-keys true)
+;                            (map :ActivityId)
+;                            (reset! schedule))))))
 
-(defc event nil)
+; (defc activities '())
+(defn read-activities [event-id state]
+  (when event-id
+    (.getJSON js/jQuery
+              (str page/api-base-url "/events/" event-id "/activities")
+              (fn [json]
+                (->> (js->clj json :keywordize-keys true)
+                     (map #(vector (:ActivityId %) %))
+                     (into {})
+                     (reset! state))))))
+; (defn add-activity [user-id activity-id]
+;   (.post js/jQuery
+;          (str page/api-base-url
+;               "/users"
+;               "/" user-id
+;               "/activity")
+;          (js-obj "ActivityId" activity-id)
+;          (fn [] (swap! resources/schedule #(conj % activity-id)))
+;          "json"))
+; (defn remove-activity [user-id activity-id]
+;   (.ajax js/jQuery
+;          (js-obj "url" (str page/api-base-url
+;                            "/users"
+;                            "/" user-id
+;                            "/activities"
+;                            "/" activity-id)
+;                  "type" "DELETE"
+;                  "success" (fn [] (swap! resources/schedule
+;                                          #(vec (remove (partial == activity-id)
+;                                                        %))))
+;                  "dataType" "json")))
 
-(defc schedule '())
-(cell= (when session/user
-         (.getJSON js/jQuery
-                   (str page/api-base-url
-                        "/users"
-                        "/" (:UserId session/user)
-                        "/events"
-                        "/" (:EventId event)
-                        "/activities")
-                   ~(fn [json]
-                      (->> (js->clj json :keywordize-keys true)
-                           (map :ActivityId)
-                           (reset! schedule))))))
+; (defc organizations '())
+; (cell= (.getJSON js/jQuery
+;                  (str page/api-base-url
+;                       "/organizations")
+;                  ~(fn [json]
+;                     (->> (js->clj json :keywordize-keys true)
+;                          (reset! organizations)
+;                          (prn-str)
+;                          (.log js/console)))))
 
-(defc activities '())
-(cell= (when event
-         (.getJSON js/jQuery
-                   (str page/api-base-url
-                        "/events"
-                        "/" (:EventId event)
-                        "/activities")
-                   ~(fn [json]
-                      (->> (js->clj json :keywordize-keys true)
-                           (map #(vector (:ActivityId %) %))
-                           (into {})
-                           (reset! activities)
-                           (prn-str)
-                           (.log js/console))))))
-(defn add-activity [user-id activity-id]
-  (.post js/jQuery
-         (str page/api-base-url
-              "/users"
-              "/" user-id
-              "/activity")
-         (js-obj "ActivityId" activity-id)
-         (fn [] (swap! resources/schedule #(conj % activity-id)))
-         "json"))
-(defn remove-activity [user-id activity-id]
-  (.ajax js/jQuery
-         (js-obj "url" (str page/api-base-url
-                           "/users"
-                           "/" user-id
-                           "/activities"
-                           "/" activity-id)
-                 "type" "DELETE"
-                 "success" (fn [] (swap! resources/schedule
-                                         #(vec (remove (partial == activity-id)
-                                                       %))))
-                 "dataType" "json")))
-
-(defc organizations '())
-(cell= (.getJSON js/jQuery
-                 (str page/api-base-url
-                      "/organizations")
-                 ~(fn [json]
-                    (->> (js->clj json :keywordize-keys true)
-                         (reset! organizations)
-                         (prn-str)
-                         (.log js/console)))))
-
-(defc events '())
+(defc events {})
 (cell= (.getJSON js/jQuery
                  (str page/api-base-url
                       "/events")
                  ~(fn [json]
                     (->> (js->clj json :keywordize-keys true)
-                         (reset! events)
-                         (prn-str)
-                         (.log js/console)))))
+                         (map #(vector (:EventId %) %))
+                         (into {})
+                         (reset! events)))))
 (defn create-event [form-data]
   (let [new-event (clj->js (assoc form-data
                              :Organization

@@ -8,7 +8,8 @@
     [session]
     [resources]
     [views.events]
-    [views.event-add]))
+    [views.event-add]
+    [views.event-register]))
 
 (reload-all)
 

@@ -1,0 +1,43 @@
+(ns views.event-activities
+  (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [unparse]]
+    [session]
+    [resources]
+    [util :refer [datetime-formatter]]))
+
+(defc event-id nil)
+(defc= event (resources/events event-id))
+(defc activities nil)
+(cell= (resources/read-activities event-id (~(fn [] activities))))
+
+(def template
+  (div :class "ui stackable page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (div :class "ui vertical segment"
+          (h2 :class "ui header"
+            (text "Activities for ~{(:Title resources/event)}")))
+        (div :class "ui vertical segment"
+          (div :class "ui divided items"
+            (loop-tpl :bindings [activity (cell= (vals activities))]
+              (div :class "item"
+                (div :class "content"
+                  (a :class "header" (text (:Name activity)))
+                  (div :class "meta" (text (:Location activity)))
+                  (let [start (from-string (:StartTime @activity))
+                        end (from-string (:EndTime @activity))]
+                    (div (str (unparse datetime-formatter start)
+                              " - "
+                              (unparse datetime-formatter end))))
+                  (div :class "description"
+                    (text (:Description activity))))))))))))
+
+(defroute "/events/:EventId/activities" [EventId]
+  (reset! event-id (int EventId))
+  (reset! page/breadcrumbs
+          (list ["Events" "#/events"]
+                [(cell= (:Name event)) (str "#/events/" EventId)]
+                "Activities"))
+  template)

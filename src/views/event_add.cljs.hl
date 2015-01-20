@@ -22,7 +22,7 @@
 
 (def template
   (div :class "ui stackable page grid"
-    (div :class "twelve wide column"
+    (div :class "sixteen wide column"
       (div :class "ui segment"
         (div :class "ui form"
           (div :class "ui vertical segment"
@@ -59,16 +59,9 @@
               (textarea-cell :state description))
             (div :class "ui primary button" :on-click #(resources/create-event
                                                          @form-data)
-              "Add")))))
-    (div :class "four wide column"
-        (div :class "ui fluid card"
-          (div :class "image"
-            (img :src "images/logo-image-floating.jpg"))
-          (div :class "extra content"
-            (a
-              "Powered by Elevent"))))))
+              "Add")))))))
 
 (defroute event-add "/events/add" []
-  (reset! page/breadcrumbs '(["Events" "#/events"]
-                             "Add"))
+  (reset! page/breadcrumbs (list ["Events" "#/events"]
+                                 "Add"))
   template)

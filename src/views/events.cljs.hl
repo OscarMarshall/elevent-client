@@ -9,18 +9,19 @@
 
 (def template
   (div :class "ui page grid"
-    (div :class "twelve wide column"
+    (div :class "sixteen wide column"
       (div :class "ui segment"
         (h1 :class "ui header"
           "Upcoming Events"
           (a :href "#/events/add"
              :class "ui right floated small button"
             "Create Event"))
-        (loop-tpl :bindings [event resources/events]
+        (loop-tpl :bindings [event (cell= (vals resources/events))]
           (div :class "ui vertical segment"
             (h2 :class "ui dividing header"
               (text "~{(:Name event)}"))
             (a :class "ui right floated small icon button"
+               :href (str "#/events/" (:EventId @event) "/register")
               "Register")
             (div
               (b "Date: ")
@@ -30,15 +31,8 @@
                      (when (after? end start)
                        (str " to " (unparse date-formatter end))))))
             (p
-              (text "~{(:Description event)}"))))))
-      (div :class "four wide column"
-        (div :class "ui fluid card"
-          (div :class "image"
-            (img :src "images/logo-image-floating.jpg"))
-          (div :class "extra content"
-            (a
-              "Powered by Elevent"))))))
+              (text "~{(:Description event)}"))))))))
 
 (defroute events "/events" []
-  (reset! page/breadcrumbs '("Events"))
+  (reset! page/breadcrumbs (list "Events"))
   template)
