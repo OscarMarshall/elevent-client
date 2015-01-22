@@ -28,6 +28,32 @@
   (reset! phone nil)
   (reset! birth-date nil))
 
+(defn register-event [form-data]
+  (resources/api-get
+    (str "/users?email=" (:email form-data))
+    {:handler
+     (fn [json]
+       (let [user-id
+             (:UserId (js->clj json))
+
+             create-attendee
+             (fn [user-id]
+               (resources/api-post (str "/events/" 2 "/attendees")
+                                   {:handler (fn [json]
+                                               (session/login! user-id)
+                                               (set! (.-location js/page)
+                                                     "/#/events/2/schedule"))
+                                    :data {:UserId user-id}}))]
+         (if (zero? user-id)
+           ; user does not exist
+           (resources/api-post "/users"
+                               {:handler (fn [json]
+                                           (create-attendee (:UserId json)))
+                                :data {:Email     (:email form-data)
+                                       :FirstName (:first-name form-data)
+                                       :LastName  (:last-name form-data)}})
+           (create-attendee user-id))))}))
+
 ; TODO: error checking for user
 ; form validation
 
@@ -63,7 +89,7 @@
                 (label "Date of Birth")
                 (input-cell :type "text" :state birth-date)))
             (div :class "ui primary button"
-                 :on-click #(resources/register @form-data)
+                 :on-click #(register-event @form-data)
               (text "Register"))))))))
 
 (defroute "/events/:EventId/register" [EventId]

@@ -1,25 +1,24 @@
 (ns session
   (:require
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
+    [page]
+    [resources]
     [elements :refer [input-cell]]
     [ajax.core :refer [GET POST]]
     [goog.crypt.base64 :as b64]))
-
-(def api-base-url "http://elevent.solutions:8860")
-(def api-base-url-secure "https://elevent.solutions:44300")
 
 (def user (local-storage (cell nil) ::user))
 ; Run once to sync info.
 (when @user
   (.getJSON js/jQuery
-            (str api-base-url "/users/" (:UserId @user))
+            (str page/api-base-url "/users/" (:UserId @user))
             (fn [json] (reset! user (js->clj json :keywordize-keys true)))))
 
 (defc token nil)
 
 (defn set-user!
   ([email]
-   (GET (str api-base-url "/users?email=" email)
+   (GET (str page/api-base-url "/users?email=" email)
         {:response-format :json
          :keywords? true
          :handler (fn [json]
@@ -29,10 +28,8 @@
 (defn login!
   ([email password]
    (let [auth-string (b64/encodeString (str email ":" password))]
-     (GET (str api-base-url-secure "/token")
-          {:response-format :json
-           :keywords? true
-           :headers {:Authorization (str "Basic " auth-string)}
+     (resources/api-get-secure "/token"
+          {:auth-string auth-string
            :error-handler #(.log js/console "failed")
            :handler (fn [json]
                       (do
@@ -41,7 +38,7 @@
   ; HACK: Because we shouldn't sign people in by user-id
   ([user-id]
    (.getJSON js/jQuery
-             (str api-base-url "/users/" user-id)
+             (str page/api-base-url "/users/" user-id)
              (fn [json]
                (reset! user (js->clj json :keywordize-keys true))))))
 

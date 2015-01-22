@@ -1,7 +1,7 @@
 (ns resources
   (:require
-    [page]
-    [session]))
+    [ajax.core :refer [GET POST]]
+    [page]))
 
 ; (defc schedule '())
 ; (cell= (when session/user
@@ -79,33 +79,43 @@
            (fn [] (swap! resources/events #(conj % new-event)))
            "json")))
 
-(defn register [form-data]
-  (.getJSON js/jQuery
-            (str page/api-base-url
-                 "/users?email="
-                 (:email form-data))
-            (fn [json]
-              (let [user-id
-                    (:UserId (js->clj json :keywordize-keys true))
+(defn register-site [form-data]
+  (POST (str page/api-base-url "/users")
+        {:response-format :json
+         :keywords? true
+         ;:params {:Email     (:email form-data)
+         ;         :FirstName (:first-name form-data)
+         ;         :LastName  (:last-name form-data)}
+         :handler :nothing}))
 
-                    create-attendee
-                    (fn [user-id]
-                      (.post js/jQuery
-                             (str page/api-base-url "/events/" 2 "/attendees")
-                             (clj->js {:UserId user-id})
-                             (fn [json]
-                               (session/login! user-id)
-                               (set! (.-location js/page)
-                                     "/#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"))
-                             "json"))]
-                (if (zero? user-id)
-                  ; user does not exist
-                  (.post js/jQuery
-                         (str page/api-base-url "/users")
-                         (clj->js {:Email     (:email form-data)
-                                   :FirstName (:first-name form-data)
-                                   :LastName  (:last-name form-data)})
-                         #(create-attendee
-                            (:UserId (js->clj % :keywordize-keys true)))
-                         "json")
-                  (create-attendee user-id))))))
+(defn get-api-base [params]
+  (if (:secure? params)
+    page/api-base-url-secure
+    page/api-base-url))
+
+(defn get-api-data [params]
+  {:format :json
+   :response-format :json
+   :keywords? true
+   :headers (cond
+              (contains? params :token)       {:Authorization (str "Bearer " (:token params))}
+              (contains? params :auth-string) {:Authorization (str "Basic " (:auth-string params))}
+              :else {})
+   :handler (:handler params)
+   :error-handler (:error-handler params)})
+
+(defn api-get [url params]
+  (GET (str (get-api-base params) url)
+       (get-api-data params)))
+
+(defn api-get-secure [url params]
+  (api-get url (assoc params :secure? true)))
+
+(defn api-post [url params]
+  (.log js/console (:data params))
+  (POST (str (get-api-base params) url)
+        (assoc (get-api-data params)
+          :params (:data params))))
+
+(defn api-post-secure [url params]
+  (api-post url (assoc params :secure? true)))
