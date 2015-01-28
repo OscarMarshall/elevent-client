@@ -29,8 +29,6 @@
         (i :class "calendar icon") "Calendar")
       (a :class "item" :href "#/statistics"
         (i :class "bar chart icon") "Statistics")
-      (a :class "item right floated" :href "#/register"
-         "Sign up")
       (div :class "right menu"
         (session/control {:class "item"})))
     (div :class "ui page grid"

@@ -34,7 +34,7 @@
     {:handler
      (fn [json]
        (let [user-id
-             (:UserId (js->clj json))
+             (:UserId json)
 
              create-attendee
              (fn [user-id]

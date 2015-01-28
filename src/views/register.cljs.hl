@@ -1,0 +1,64 @@
+(ns views.register
+  (:require
+    [elements :refer [input-cell]]
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [resources]
+    [session]))
+
+(defc email nil)
+(defc first-name nil)
+(defc last-name nil)
+(defc password nil)
+(defc password-confirm nil)
+
+(defc= form-data {:email email
+                  :first-name first-name
+                  :last-name last-name
+                  :password password
+                  :password-confirm password-confirm})
+
+; TODO verify passwords match
+; Also don't send the password in plaintext
+(defn register-site [form-data]
+  (resources/api-post "/users"
+                      {:data {:Email (:email form-data)
+                              :FirstName (:first-name form-data)
+                              :LastName (:last-name form-data)
+                              :Password (:password form-data)}
+                       :handler (fn [json]
+                                  (session/login! (:UserId json)))
+                       :error-handler #(.log js/console "An error occured")}))
+
+(def template
+  (div :class "ui page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (h1 :class "ui header"
+          "Create an account")
+        (div :class "ui vertical segment"
+          (div :class "ui form"
+            (div :class "one field"
+              (div :class "required field"
+                (label "Email")
+                (input-cell :type "text" :state email)))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "First Name")
+                (input-cell :type "text" :state first-name))
+              (div :class "required field"
+                (label "Last Name")
+                (input-cell :type "text" :state last-name)))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Password")
+                (input-cell :type "password" :state password))
+              (div :class "required field"
+                (label "Confirm password")
+                (input-cell :type "password" :state password-confirm)))
+            (div :class "ui primary button" :on-click #(register-site @form-data)
+              (text "Register"))))))))
+
+(defroute register "/register" []
+  (reset! page/breadcrumbs
+          (list "Register"))
+  template)

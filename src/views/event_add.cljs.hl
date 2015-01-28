@@ -20,6 +20,15 @@
    :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
    :Description description})
 
+(defn create-event [form-data]
+  (let [new-event (assoc form-data
+                    :Organization
+                    (int (.val (js/jQuery "#event-organization"))))]
+    (resources/api-post "/events"
+                        {:data new-event
+                         :handler (fn []
+                                    (swap! resources/events #(conj % new-event)))})))
+
 (def breadcrumbs (list ["Events" "#/events"]
                        "Add"))
 
@@ -60,8 +69,7 @@
             (div :class "field"
               (label "Description")
               (input-cell :type "textarea" :state description))
-            (div :class "ui primary button" :on-click #(resources/create-event
-                                                         @form-data)
+            (div :class "ui primary button" :on-click #(create-event @form-data)
               "Add")))))))
 
 (defroute event-add "/events/add" []

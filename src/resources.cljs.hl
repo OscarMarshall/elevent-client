@@ -3,6 +3,8 @@
     [ajax.core :refer [GET POST]]
     [page]))
 
+(defc token nil)
+
 (defn get-api-base [params]
   (if (:secure? params)
     page/api-base-url-secure
@@ -12,15 +14,9 @@
   {:format :json
    :response-format :json
    :keywords? true
-   :headers (cond
-              (contains? params :token)
-              {:Authorization (str "Bearer " (:token params))}
-
-              (contains? params :auth-string)
-              {:Authorization (str "Basic " (:auth-string params))}
-
-              :else
-              {})
+   :headers {:Authentication (str "Bearer " @token)
+             :Authorization (when (contains? params :auth-string)
+                              (str "Basic " (:auth-string params)))}
    :handler (:handler params)
    :error-handler (:error-handler params)})
 
@@ -101,23 +97,3 @@
                      (->> (map #(vector (:EventId %) %) json)
                           (into {})
                           (reset! events)))})
-
-(defn create-event [form-data]
-  (let [new-event (clj->js (assoc form-data
-                             :Organization
-                             (int (.val (js/jQuery "#event-organization")))))]
-    (.post js/jQuery
-           (str page/api-base-url
-                "/events")
-           new-event
-           (fn [] (swap! resources/events #(conj % new-event)))
-           "json")))
-
-(defn register-site [form-data]
-  (POST (str page/api-base-url "/users")
-        {:response-format :json
-         :keywords? true
-         ;:params {:Email     (:email form-data)
-         ;         :FirstName (:first-name form-data)
-         ;         :LastName  (:last-name form-data)}
-         :handler :nothing}))

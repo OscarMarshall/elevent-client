@@ -1,8 +1,6 @@
 (ns session
   (:require
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]
-    [page]
-    [resources]
     [elements :refer [input-cell]]
     [ajax.core :refer [GET POST]]
     [goog.crypt.base64 :as b64]))
@@ -10,20 +8,16 @@
 (def user (local-storage (cell nil) ::user))
 ; Run once to sync info.
 (when @user
-  (.getJSON js/jQuery
-            (str page/api-base-url "/users/" (:UserId @user))
-            (fn [json] (reset! user (js->clj json :keywordize-keys true)))))
-
-(defc token nil)
+  (resources/api-get (str "/users/" (:UserId @user))
+                     {:handler (fn [json]
+                                 (reset! user json))}))
 
 (defn set-user!
   ([email]
-   (GET (str page/api-base-url "/users?email=" email)
-        {:response-format :json
-         :keywords? true
-         :handler (fn [json]
-                    (reset! user (js->clj json :keywordize-keys true))
-                    (set! (.-location js/window) "/#/events"))})))
+   (resources/api-get (str "/users?email=" email)
+                      {:handler (fn [json]
+                                  (reset! user json)
+                                  (set! js/location "#/events"))})))
 
 (defn login!
   ([email password]
@@ -33,18 +27,20 @@
            :error-handler #(.log js/console "failed")
            :handler (fn [json]
                       (do
-                        (reset! token (:Token (js->clj json)))
+                        (reset! resources/token (:Token json))
+                        (.log js/console @resources/token)
                         (set-user! email)))})))
   ; HACK: Because we shouldn't sign people in by user-id
   ([user-id]
-   (.getJSON js/jQuery
-             (str page/api-base-url "/users/" user-id)
-             (fn [json]
-               (reset! user (js->clj json :keywordize-keys true))))))
+   (resources/api-get (str "/users" user-id)
+                      {:handler (fn [json]
+                                  (do
+                                    (reset! user (js->clj json :keywordize-keys true))
+                                    (set! js/location "#/")))})))
 
 (defn logout! []
   (reset! user nil)
-  (set! (.-location js/window) "/#"))
+  (set! js/location "#/"))
 
 (defn control [attr]
   (cell=
@@ -53,28 +49,31 @@
         (text "Logout of ~{(:FirstName user)}'s account"))
       (let [email    (cell nil)
             password (cell nil)]
-        (a (assoc attr
-             :on-click #(.modal (js/jQuery ".ui.login.modal") "show"))
-          (i :class "user icon")
-          "Login"
-          (form :class "ui small login modal"
-                :on-submit (fn []
-                             (login! @email @password)
-                             false)
-            (i :class "close icon")
-            (div :class "header"
-              "Login")
-            (div :class "content"
-              (div :class "description"
-                (div :class "ui form"
-                  (div :class "two fields"
-                    (div :class "field"
-                      (label "Email")
-                      (input-cell :type "email" :state email))
-                    (div :class "field"
-                      (label "Password")
-                      (input-cell :type "password" :state password))))))
-            (div :class "actions"
-              (button :class "ui button" "Cancel")
-              (input :type "submit" :class "ui button primary"
-                "Login"))))))))
+        (div
+          (a (assoc attr
+               :on-click #(.modal (js/jQuery ".ui.login.modal") "show"))
+            (i :class "user icon")
+            "Login"
+            (form :class "ui small login modal"
+                  :on-submit (fn []
+                               (login! @email @password)
+                               false)
+              (i :class "close icon")
+              (div :class "header"
+                "Login")
+              (div :class "content"
+                (div :class "description"
+                  (div :class "ui form"
+                    (div :class "two fields"
+                      (div :class "field"
+                        (label "Email")
+                        (input-cell :type "email" :state email))
+                      (div :class "field"
+                        (label "Password")
+                        (input-cell :type "password" :state password))))))
+              (div :class "actions"
+                (button :class "ui button" "Cancel")
+                (input :type "submit" :class "ui button primary"
+                  "Login"))))
+          (a :class "item right floated" :href "#/register"
+            "Sign up"))))))
