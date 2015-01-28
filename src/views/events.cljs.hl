@@ -5,33 +5,45 @@
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
     [util :refer [date-formatter]]
-    [resources]))
+    [resources]
+    [page]))
 
 (def template
   (div :class "ui page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
-        (h1 :class "ui header"
-          "Upcoming Events"
-          (a :href "#/events/add"
-             :class "ui right floated small button"
-            "Create Event"))
-        (loop-tpl :bindings [event (cell= (vals resources/events))]
+        (div
           (div :class "ui vertical segment"
-            (h2 :class "ui dividing header"
-              (text "~{(:Name event)}"))
-            (a :class "ui right floated small icon button"
-               :href (str "#/events/" (:EventId @event) "/register")
-              "Register")
-            (div
-              (b "Date: ")
-              (let [start (from-string (:StartDate @event))
-                    end   (from-string (:EndDate   @event))]
-                (str (unparse date-formatter start)
-                     (when (after? end start)
-                       (str " to " (unparse date-formatter end))))))
-            (p
-              (text "~{(:Description event)}"))))))))
+            (h1 :class "ui header"
+              "Upcoming Events"
+              (a :href "#/events/add"
+                 :class "ui right floated small button"
+                "Add Event")))
+          (div :class "ui vertical segment"
+            (div :class "ui divided items"
+              (loop-tpl :bindings [event (cell= (vals resources/events))]
+                (div :class "item"
+                  (div :class "content"
+                    (a :class "header" :href (str "#/events/" (:EventId @event))
+                      (text "~{(:Name event)}"))
+                    (div :class "meta"
+                      (b "Date: ")
+                      (let [start (from-string (:StartDate @event))
+                            end   (from-string (:EndDate   @event))]
+                        (str (unparse date-formatter start)
+                             (when (after? end start)
+                               (str " to " (unparse date-formatter end))))))
+                    (div :class "description"
+                      (text "~{(:Description event)}"))
+                    (div :class "extra"
+                      (a :class "ui right floated button"
+                         :href (str "#/events/" (:EventId @event) "/register")
+                        "Register"
+                        (i :class "right chevron icon")))))))))
+        (div :do-class (cell= {:ui true
+                               :active (empty? resources/events)
+                               :dimmer true})
+          (div :class "ui loader"))))))
 
 (defroute events "/events" []
   (reset! page/breadcrumbs (list "Events"))

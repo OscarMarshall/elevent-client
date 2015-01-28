@@ -1,20 +1,35 @@
 (ns views.organizations
-  (:require [resources]))
+  (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [page]
+    [resources]))
 
-(defn template []
+(def breadcrumbs (list "Organizations"))
+
+(def template
   (div :class "ui page grid"
-    (div :class "twelve wide column"
+    (div :class "sixteen wide column"
       (div :class "ui segment"
-        (loop-tpl :bindings [organization resources/organizations]
-          (div :class "ui vertical segment"
-            (h2 :class "ui dividing header"
-              (text "~{(:Name organization)}"))
-            (a :class "ui right floated small icon button" :href "#/events"
-              "View events")))))
-    (div :class "four wide column"
-      (div :class "ui fluid card"
-        (div :class "image"
-          (img :src "images/logo-image-floating.jpg"))
-        (div :class "extra content"
-          (a
-            "Powered by Elevent"))))))
+        (div :class "ui vertical segment"
+          (h1 :class "ui header"
+            "Organizations"
+            (a :class "ui right floated small button"
+               :href "#/organizations/add"
+              "Add Organization")))
+        (div :class "ui vertical segment"
+          (div :class "ui items"
+            (loop-tpl :bindings [organization
+                                 (cell= (vals resources/organizations))]
+              (div :class "item"
+                (div :class "content"
+                  (a :class "header"
+                    (text "~{(:Name organization)}"))
+                  (div :class "extra"
+                    (a :class "ui right floated small icon button"
+                       :href (str "#/events?organization="
+                                  (:Name @organization))
+                      "View events")))))))))))
+
+(defroute "/organizations" []
+  (reset! page/breadcrumbs breadcrumbs)
+  template)

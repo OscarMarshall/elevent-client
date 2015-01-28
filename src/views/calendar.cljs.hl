@@ -1,28 +1,28 @@
 (ns views.calendar
-  (:require [resources]))
+  (:require [secretary.core :as secretary :refer-macros [defroute]]))
 
-(defn template []
+(def template
   (div :class "ui page grid"
-    (div :class "twelve wide column"
+    (div :class "sixteen wide column"
       (div :class "ui segment"
         (h1 :class "ui header"
           "Calendar")
-        (let [element (div)]
-          (doto (js/jQuery element)
-            (.fullCalendar
-              (clj->js {:events (vec (map (fn [activity]
-                                            {:title (:Name activity)
-                                             :start (:StartTime activity)
-                                             :end   (:EndTime activity)})
-                                          (map @resources/activities
-                                               @resources/schedule)))}))
-            ((fn [$]
-               ; HACK: Figure out a way to do this without a timer.
-               (js/setTimeout #(.fullCalendar $ "render") 500))))
-          element)))
-    (div :class "four wide column"
-      (div :class "ui fluid card"
-        (div :class "image"
-          (img :src "images/logo-image-floating.jpg"))
-        (div :class "extra content"
-          (a "Powered by Elevent"))))))
+        (div
+          (cell=
+            (let [element (div)]
+              page/route
+              (doto (js/jQuery element)
+                (.fullCalendar
+                  (clj->js
+                    {:events (vec (map (fn [activity]
+                                         {:title (:Name activity)
+                                          :start (:StartTime activity)
+                                          :end   (:EndTime activity)})
+                                       (vals (resources/activities 2))))}))
+                ((fn [$]
+                   ; HACK: Figure out a way to do this without a timer.
+                   (js/setTimeout #(.fullCalendar $ "render") 64))))
+              element)))))))
+
+(defroute "/calendar" []
+  template)

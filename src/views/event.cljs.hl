@@ -1,12 +1,19 @@
-(ns views.event-admin)
+(ns views.event
+  (:require [secretary.core :as secretary :refer-macros [defroute]]))
 
-(defn template []
+(defc event-id nil)
+(defc= event (resources/events event-id))
+
+(def breadcrumbs (list ["Events" "#/events"]
+                       (cell= (:Name event))))
+
+(def template
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui dividing header"
-              "U of U TA Conference 2014")
+              (cell= (:Name event)))
           (div :class "ui right floated small labeled icon button"
             (i :class "edit icon")
             "Edit")
@@ -93,3 +100,8 @@
             (a
               (i :class "users icon")
               "9,876 Members"))))))
+
+(defroute "/events/:EventId" [EventId]
+  (reset! page/breadcrumbs breadcrumbs)
+  (reset! event-id (int EventId))
+  template)

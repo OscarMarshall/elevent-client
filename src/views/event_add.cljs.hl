@@ -5,7 +5,7 @@
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [formatters unparse]]
     [page]
-    [elements :refer [input-cell textarea-cell]]
+    [elements :refer [input-cell]]
     [resources]))
 
 (defc event-title nil)
@@ -19,6 +19,9 @@
    :StartDate (unparse (:basic-date-time formatters) (from-string start-date))
    :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
    :Description description})
+
+(def breadcrumbs (list ["Events" "#/events"]
+                       "Add"))
 
 (def template
   (div :class "ui stackable page grid"
@@ -56,12 +59,11 @@
                 (input-cell :type "date" :state end-date)))
             (div :class "field"
               (label "Description")
-              (textarea-cell :state description))
+              (input-cell :type "textarea" :state description))
             (div :class "ui primary button" :on-click #(resources/create-event
                                                          @form-data)
               "Add")))))))
 
 (defroute event-add "/events/add" []
-  (reset! page/breadcrumbs (list ["Events" "#/events"]
-                                 "Add"))
+  (reset! page/breadcrumbs breadcrumbs)
   template)

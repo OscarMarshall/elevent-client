@@ -1,12 +1,20 @@
 (ns elements)
 
-(defelem input-cell [{:keys [state] :as attr} _]
-  (input (assoc (dissoc attr :state)
-           :value @state
-           :on-keyup #(reset! state @%)
-           :on-change #(reset! state @%))))
+(defelem input-cell [{:keys [type state options] :as attr} _]
+  (case type
+    "textarea"
+    (textarea (assoc (dissoc attr :state)
+                :value @state
+                :on-keyup #(reset! state @%)))
 
-(defelem textarea-cell [{:keys [state] :as attr} _]
-  (textarea (assoc (dissoc attr :state)
+    "select"
+    (select (assoc (dissoc attr :state :options)
               :value @state
-              :on-keyup #(reset! state @%))))
+              :on-keyup #(reset! state @%))
+      (loop-tpl :bindings [[name value] options]
+        (option :value value
+          name)))
+
+    (input (assoc (dissoc attr :state)
+             :value @state
+             :on-change #(reset! state @%)))))

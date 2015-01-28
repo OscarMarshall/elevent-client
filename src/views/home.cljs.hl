@@ -1,0 +1,17 @@
+(ns views.home
+  (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [page]))
+
+(def breadcrumbs '())
+
+(def template
+  (div :class "ui page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (h2 :class "ui header"
+          "Home")))))
+
+(defroute "/" []
+  (reset! page/breadcrumbs breadcrumbs)
+  template)

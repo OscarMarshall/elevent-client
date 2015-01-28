@@ -2,14 +2,7 @@
   (:require
     [clojure.string :refer [split]]
     [tailrecursion.hoplon.reload :refer [reload-all]]
-    [secretary.core :as secretary]
-    [page]
-    [style :refer [stylesheet]]
-    [session]
-    [resources]
-    [views.events]
-    [views.event-add]
-    [views.event-register]))
+    [secretary.core :as secretary :refer-macros [defroute]]))
 
 (reload-all)
 
@@ -19,11 +12,13 @@
   (head
     (title page/title-string)
     (meta :Name "viewport" :content "width=device-width, initial-scale=1.0")
-    (style stylesheet))
+    (style style/stylesheet))
   (body
     (nav :class "ui fixed menu"
       (a :class "logo item" :href "#"
         (img :src "images/logo-menu.png"))
+      (a :class "item" :href "#/explore"
+        (i :class "rocket icon") "Explore")
       (a :class "item" :href "#/events"
         (i :class "ticket icon") "Events")
       (a :class "item" :href "#/organizations"
@@ -55,3 +50,7 @@
                     (div :class "active section"
                       breadcrumb)))))))))
     (div (cell= (secretary/dispatch! page/route)))))
+
+(defroute "*" []
+  (set! js/location "#/page-not-found")
+  nil)

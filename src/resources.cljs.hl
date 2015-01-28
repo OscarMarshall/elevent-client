@@ -3,6 +3,44 @@
     [ajax.core :refer [GET POST]]
     [page]))
 
+(defn get-api-base [params]
+  (if (:secure? params)
+    page/api-base-url-secure
+    page/api-base-url))
+
+(defn get-api-data [params]
+  {:format :json
+   :response-format :json
+   :keywords? true
+   :headers (cond
+              (contains? params :token)
+              {:Authorization (str "Bearer " (:token params))}
+
+              (contains? params :auth-string)
+              {:Authorization (str "Basic " (:auth-string params))}
+
+              :else
+              {})
+   :handler (:handler params)
+   :error-handler (:error-handler params)})
+
+(defn api-get [url params]
+  (GET (str (get-api-base params) url)
+       (get-api-data params)))
+
+(defn api-get-secure [url params]
+  (api-get url (assoc params :secure? true)))
+
+(defn api-post [url params]
+  (.log js/console (:data params))
+  (POST (str (get-api-base params) url)
+        (assoc (get-api-data params)
+          :params (:data params))))
+
+(defn api-post-secure [url params]
+  (api-post url (assoc params :secure? true)))
+
+
 ; (defc schedule '())
 ; (cell= (when session/user
 ;          (.getJSON js/jQuery
@@ -17,16 +55,17 @@
 ;                            (map :ActivityId)
 ;                            (reset! schedule))))))
 
-; (defc activities '())
-(defn read-activities [event-id state]
-  (when event-id
-    (.getJSON js/jQuery
-              (str page/api-base-url "/events/" event-id "/activities")
-              (fn [json]
-                (->> (js->clj json :keywordize-keys true)
-                     (map #(vector (:ActivityId %) %))
-                     (into {})
-                     (reset! state))))))
+(defc activities {})
+(api-get "/activities"
+         {:handler (fn [json]
+                     (->> (group-by :EventId json)
+                          (map (fn [[event-id event-activities]]
+                                 (->> event-activities
+                                      (map #(vector (:ActivityId %) %))
+                                      (into {})
+                                      (vector event-id))))
+                          (into {})
+                          (reset! activities)))})
 ; (defn add-activity [user-id activity-id]
 ;   (.post js/jQuery
 ;          (str page/api-base-url
@@ -49,25 +88,20 @@
 ;                                                        %))))
 ;                  "dataType" "json")))
 
-; (defc organizations '())
-; (cell= (.getJSON js/jQuery
-;                  (str page/api-base-url
-;                       "/organizations")
-;                  ~(fn [json]
-;                     (->> (js->clj json :keywordize-keys true)
-;                          (reset! organizations)
-;                          (prn-str)
-;                          (.log js/console)))))
+(defc organizations {})
+(api-get "/organizations"
+         {:handler (fn [json]
+                     (->> (map #(vector (:OrganizationId %) %) json)
+                          (into {})
+                          (reset! organizations)))})
 
 (defc events {})
-(cell= (.getJSON js/jQuery
-                 (str page/api-base-url
-                      "/events")
-                 ~(fn [json]
-                    (->> (js->clj json :keywordize-keys true)
-                         (map #(vector (:EventId %) %))
-                         (into {})
-                         (reset! events)))))
+(api-get "/events"
+         {:handler (fn [json]
+                     (->> (map #(vector (:EventId %) %) json)
+                          (into {})
+                          (reset! events)))})
+
 (defn create-event [form-data]
   (let [new-event (clj->js (assoc form-data
                              :Organization
@@ -87,35 +121,3 @@
          ;         :FirstName (:first-name form-data)
          ;         :LastName  (:last-name form-data)}
          :handler :nothing}))
-
-(defn get-api-base [params]
-  (if (:secure? params)
-    page/api-base-url-secure
-    page/api-base-url))
-
-(defn get-api-data [params]
-  {:format :json
-   :response-format :json
-   :keywords? true
-   :headers (cond
-              (contains? params :token)       {:Authorization (str "Bearer " (:token params))}
-              (contains? params :auth-string) {:Authorization (str "Basic " (:auth-string params))}
-              :else {})
-   :handler (:handler params)
-   :error-handler (:error-handler params)})
-
-(defn api-get [url params]
-  (GET (str (get-api-base params) url)
-       (get-api-data params)))
-
-(defn api-get-secure [url params]
-  (api-get url (assoc params :secure? true)))
-
-(defn api-post [url params]
-  (.log js/console (:data params))
-  (POST (str (get-api-base params) url)
-        (assoc (get-api-data params)
-          :params (:data params))))
-
-(defn api-post-secure [url params]
-  (api-post url (assoc params :secure? true)))

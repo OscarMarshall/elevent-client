@@ -1,4 +1,4 @@
-(ns sidebar)
+(ns views.sidebar)
 
 (def template
   (div :class "ui fluid card"

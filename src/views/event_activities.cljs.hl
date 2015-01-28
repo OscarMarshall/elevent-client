@@ -9,8 +9,14 @@
 
 (defc event-id nil)
 (defc= event (resources/events event-id))
-(defc activities nil)
-(cell= (resources/read-activities event-id (~(fn [] activities))))
+(defc= event-activities (resources/activities event-id))
+
+(def breadcrumbs (list ["Events" "#/events"]
+
+                       [(cell= (:Name event))
+                        (str "#/events/" (:EventId event))]
+
+                       "Activities"))
 
 (def template
   (div :class "ui stackable page grid"
@@ -18,10 +24,10 @@
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui header"
-            (text "Activities for ~{(:Title resources/event)}")))
+            (text "Activities for ~{(:Name event)}")))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity (cell= (vals activities))]
+            (loop-tpl :bindings [activity (cell= (vals event-activities))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
@@ -35,9 +41,6 @@
                     (text (:Description activity))))))))))))
 
 (defroute "/events/:EventId/activities" [EventId]
+  (reset! page/breadcrumbs breadcrumbs)
   (reset! event-id (int EventId))
-  (reset! page/breadcrumbs
-          (list ["Events" "#/events"]
-                [(cell= (:Name event)) (str "#/events/" EventId)]
-                "Activities"))
   template)
