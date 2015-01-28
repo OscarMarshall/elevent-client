@@ -1,6 +1,6 @@
 (ns page)
 
-(def route (route-cell "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/register"))
+(def route (route-cell "#/"))
 
 (def api-base-url "http://elevent.solutions:8860")
 (def api-base-url-secure "https://elevent.solutions:44300")

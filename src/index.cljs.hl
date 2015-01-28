@@ -15,7 +15,7 @@
     (style style/stylesheet))
   (body
     (nav :class "ui fixed menu"
-      (a :class "logo item" :href "#"
+      (a :class "logo item" :href "#/"
         (img :src "images/logo-menu.png"))
       (a :class "item" :href "#/explore"
         (i :class "rocket icon") "Explore")
