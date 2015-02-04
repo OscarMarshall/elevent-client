@@ -38,12 +38,13 @@
 
              create-attendee
              (fn [user-id]
-               (resources/api-post (str "/events/" 2 "/attendees")
+               (resources/api-post (str "/attendees")
                                    {:handler (fn [json]
                                                (session/login! user-id)
-                                               (set! (.-location js/page)
-                                                     "/#/events/2/schedule"))
-                                    :data {:UserId user-id}}))]
+                                               (set! js/location
+                                                     (str "#/events/" @event-id "/schedule")))
+                                    :data {:UserId user-id
+                                           :EventId @event-id}}))]
          (if (zero? user-id)
            ; user does not exist
            (resources/api-post "/users"
