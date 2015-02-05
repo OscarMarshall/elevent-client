@@ -47,12 +47,12 @@
                                            :EventId @event-id}}))]
          (if (zero? user-id)
            ; user does not exist
-           (resources/api-post "/users"
-                               {:handler (fn [json]
-                                           (create-attendee (:UserId json)))
-                                :data {:Email     (:email form-data)
-                                       :FirstName (:first-name form-data)
-                                       :LastName  (:last-name form-data)}})
+           (resources/api-post-secure "/users"
+                                      {:handler (fn [json]
+                                                  (create-attendee (:UserId json)))
+                                       :data {:Email     (:email form-data)
+                                              :FirstName (:first-name form-data)
+                                              :LastName  (:last-name form-data)}})
            (create-attendee user-id))))}))
 
 ; TODO: error checking for user

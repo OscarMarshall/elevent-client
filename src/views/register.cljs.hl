@@ -20,14 +20,14 @@
 ; TODO verify passwords match
 ; Also don't send the password in plaintext
 (defn register-site [form-data]
-  (resources/api-post "/users"
-                      {:data {:Email (:email form-data)
-                              :FirstName (:first-name form-data)
-                              :LastName (:last-name form-data)
-                              :Password (:password form-data)}
-                       :handler (fn [json]
-                                  (session/login! (:UserId json)))
-                       :error-handler #(.log js/console "An error occured")}))
+  (resources/api-post-secure "/users"
+                             {:data {:Email (:email form-data)
+                                     :FirstName (:first-name form-data)
+                                     :LastName (:last-name form-data)
+                                     :Password (:password form-data)}
+                              :handler (fn [json]
+                                         (session/login! (:UserId json)))
+                              :error-handler #(.log js/console "An error occured")}))
 
 (def template
   (div :class "ui page grid"

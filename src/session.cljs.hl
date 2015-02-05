@@ -32,11 +32,11 @@
                         (set-user! email)))})))
   ; HACK: Because we shouldn't sign people in by user-id
   ([user-id]
-   (resources/api-get (str "/users" user-id)
-                      {:handler (fn [json]
-                                  (do
-                                    (reset! user (js->clj json :keywordize-keys true))
-                                    (set! js/location "#/")))})))
+   (resources/api-get-secure (str "/users/" user-id)
+                             {:handler (fn [json]
+                                         (do
+                                           (reset! user (js->clj json :keywordize-keys true))
+                                           (set! js/location "#/")))})))
 
 (defn logout! []
   (reset! user nil)

@@ -28,7 +28,6 @@
   (api-get url (assoc params :secure? true)))
 
 (defn api-post [url params]
-  (.log js/console (:data params))
   (POST (str (get-api-base params) url)
         (assoc (get-api-data params)
           :params (:data params))))
