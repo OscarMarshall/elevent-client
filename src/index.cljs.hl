@@ -2,7 +2,9 @@
   (:require
     [clojure.string :refer [split]]
     [tailrecursion.hoplon.reload :refer [reload-all]]
-    [secretary.core :as secretary :refer-macros [defroute]]))
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [page]
+    [session]))
 
 (reload-all)
 
@@ -19,16 +21,14 @@
         (img :src "images/logo-menu.png"))
       (a :class "item" :href "#/explore"
         (i :class "rocket icon") "Explore")
-      (a :class "item" :href "#/events"
-        (i :class "ticket icon") "Events")
+      (span
+        (cell= (when session/user
+                 (a :class "item" :href "#/events"
+                    (i :class "ticket icon") "Events"))))
       (a :class "item" :href "#/organizations"
          (i :class "building icon") "Organizations")
-      (a :class "item" :href "#/events/asian-american-student-association/university-of-utah-asian-american-high-school-conference-2015/schedule"
-        (i :class "clock icon") "Schedule")
       (a :class "item" :href "#/calendar"
         (i :class "calendar icon") "Calendar")
-      (a :class "item" :href "#/statistics"
-        (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
         (session/control {:class "item"})))
     (div :class "ui page grid"

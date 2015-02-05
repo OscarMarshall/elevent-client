@@ -1,13 +1,12 @@
-(ns views.events
+(ns views.explore
   (:require
     [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
     [util :refer [date-formatter]]
-    [page]
     [resources]
-    [session]))
+    [page]))
 
 (def template
   (div :class "ui page grid"
@@ -16,7 +15,7 @@
         (div
           (div :class "ui vertical segment"
             (h1 :class "ui header"
-              "Upcoming Events"
+              "Explore Events"
               (a :href "#/events/add"
                  :class "ui right floated small button"
                 "Add Event")))
@@ -24,10 +23,15 @@
             (div :class "ui divided items"
               (loop-tpl :bindings [event
                                    (cell=
-                                     (map resources/events
-                                          (keys
-                                            (get resources/attendees
-                                                 (:UserId session/user)))))]
+                                     (if session/user
+                                       (vals
+                                         (apply
+                                           dissoc
+                                           resources/events
+                                           (map (fn [[_ x]] (:EventId x))
+                                                (get resources/attendees
+                                                     (:UserId session/user)))))
+                                       (vals resources/events)))]
                 (div :class "item"
                   (div :class "content"
                     (a :class "header" :href (str "#/events/" (:EventId @event))
@@ -43,16 +47,14 @@
                       (text "~{(:Description event)}"))
                     (div :class "extra"
                       (a :class "ui right floated button"
-                        "Schedule"
+                         :href (str "#/events/" (:EventId @event) "/register")
+                        "Register"
                         (i :class "right chevron icon")))))))))
         (div :do-class (cell= {:ui true
                                :active (empty? resources/events)
                                :dimmer true})
           (div :class "ui loader"))))))
 
-(defroute events "/events" []
-  (if @session/user
-    (do
-      (reset! page/breadcrumbs (list "Events"))
-      template)
-    (set! js/location "#/")))
+(defroute events "/explore" []
+  (reset! page/breadcrumbs (list "Explore"))
+  template)

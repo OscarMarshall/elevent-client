@@ -1,12 +1,15 @@
 (ns views.event-schedule
   (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
     [session]
     [resources]
     [util :refer [datetime-formatter]]))
 
-(defn template []
+(defc event-id nil)
+
+(def template
   (div :class "ui stackable page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
@@ -22,7 +25,11 @@
                 (th "Location")
                 (th)))
             (tbody
-              (loop-tpl :bindings [activity (cell= (map resources/activities resources/schedule))]
+              (loop-tpl :bindings [activity
+                                   (cell= (map (get resources/activities
+                                                    event-id)
+                                               (get resources/schedule
+                                                    (:UserId session/user))))]
                 (tr
                   (let [start (from-string (:StartTime @activity))]
                     (td :nowrap true (unparse datetime-formatter start)))
@@ -42,9 +49,13 @@
                     (i :class "print icon") "Print"))))))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity (cell= (vals (apply dissoc
-                                                                   resources/activities
-                                                                   resources/schedule)))]
+            (loop-tpl :bindings [activity
+                                 (cell= (vals (apply
+                                                dissoc
+                                                (get resources/activities
+                                                     event-id)
+                                                (get resources/schedule
+                                                     (:UserId session/user)))))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
@@ -61,3 +72,7 @@
                          :on-click #(resources/add-activity
                                       (:UserId @session/user) (:ActivityId @activity))
                       "Add" (i :class "right chevron icon"))))))))))))
+
+(defroute "/events/:EventId/schedule" [EventId]
+  (reset! event-id EventId)
+  template)

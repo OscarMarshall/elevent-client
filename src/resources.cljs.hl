@@ -36,31 +36,23 @@
   (api-post url (assoc params :secure? true)))
 
 
-; (defc schedule '())
-; (cell= (when session/user
-;          (.getJSON js/jQuery
-;                    (str page/api-base-url
-;                         "/users"
-;                         "/" (:UserId session/user)
-;                         "/events"
-;                         "/" (:EventId event)
-;                         "/activities")
-;                    ~(fn [json]
-;                       (->> (js->clj json :keywordize-keys true)
-;                            (map :ActivityId)
-;                            (reset! schedule))))))
+(defc schedules {})
+(api-get "/schedules"
+         {:handler (fn [json] (reset! schedules (group-by :UserId json)))})
 
 (defc activities {})
 (api-get "/activities"
          {:handler (fn [json]
                      (->> (group-by :EventId json)
-                          (map (fn [[event-id event-activities]]
-                                 (->> event-activities
+                          (map (fn [[event-id activities]]
+                                 (->> activities
                                       (map #(vector (:ActivityId %) %))
                                       (into {})
                                       (vector event-id))))
                           (into {})
-                          (reset! activities)))})
+                          (reset! activities)
+                          (prn-str)
+                          (js/console.log)))})
 ; (defn add-activity [user-id activity-id]
 ;   (.post js/jQuery
 ;          (str page/api-base-url
@@ -88,11 +80,30 @@
          {:handler (fn [json]
                      (->> (map #(vector (:OrganizationId %) %) json)
                           (into {})
-                          (reset! organizations)))})
+                          (reset! organizations)
+                          (prn-str)
+                          (js/console.log)))})
 
 (defc events {})
 (api-get "/events"
          {:handler (fn [json]
                      (->> (map #(vector (:EventId %) %) json)
                           (into {})
-                          (reset! events)))})
+                          (reset! events)
+                          (prn-str)
+                          (js/console.log)))})
+
+(defc attendees {})
+(api-get "/attendees"
+         {:handler (fn [json]
+                     (js/console.log (prn-str json))
+                     (->> (group-by :UserId json)
+                          (map (fn [[user-id events]]
+                                 (->> events
+                                      (map #(vector (:EventId %) %))
+                                      (into {})
+                                      (vector user-id))))
+                          (into {})
+                          (reset! attendees)
+                          (prn-str)
+                          (js/console.log)))})

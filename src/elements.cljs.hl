@@ -5,16 +5,16 @@
     "textarea"
     (textarea (assoc (dissoc attr :state)
                 :value @state
-                :on-change #(reset! state @%)))
+                :on-input #(reset! state @%)))
 
     "select"
     (select (assoc (dissoc attr :state :options)
               :value @state
-              :on-change #(reset! state @%))
+              :on-input #(reset! state @%))
       (loop-tpl :bindings [[name value] options]
         (option :value value
           name)))
 
     (input (assoc (dissoc attr :state)
              :value @state
-             :on-change #(reset! state @%)))))
+             :on-input #(reset! state @%)))))
