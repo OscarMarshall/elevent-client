@@ -48,12 +48,14 @@
             (tfoot
               (tr
                 (th :colspan "4"
-                  (div :class "ui right floated small labeled icon button"
-                    (i :class "edit icon")
-                    "Edit")
-                  (div :class "ui small labeled icon button"
-                    (i :class "print icon")
-                    "Print"))))))
+                  (cell=
+                    (a :class "ui right floated small labeled icon button"
+                      :href (str "#/events/" (:EventId event) "/activities/add")
+                      (i :class "edit icon")
+                      "Edit")
+                    (div :class "ui small labeled icon button"
+                      (i :class "print icon")
+                      "Print")))))))
         (div :class "ui vertical segment"
           (h2 :class "ui header" "Groups")
           (table :class "ui table"

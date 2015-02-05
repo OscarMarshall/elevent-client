@@ -1,0 +1,84 @@
+(ns views.event-activities-add
+  (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [cljs-time.core :refer [after? at-midnight]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [unparse]]
+    [util :refer [date-formatter]]
+    [elements :refer [input-cell]]
+    [resources]))
+
+(defc activity-name nil)
+(defc location nil)
+(defc enrollment-cap nil)
+(defc start-time nil)
+(defc end-time nil)
+
+(defc= form-data {:Name activity-name
+                  :Location location
+                  :EnrollmentCap enrollment-cap
+                  :StartTime start-time
+                  :EndTime end-time})
+
+(defc event-id nil)
+(defc= event (resources/events event-id))
+
+(def breadcrumbs (list ["Events" "#/events"]
+                       [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
+                       "Activities"))
+
+(def template
+  (div :class "ui page grid"
+    (div :class "twelve wide column"
+      (div :class "ui segment"
+        (div :class "ui vertical segment"
+          (h2 :class "ui header"
+              (cell= (:Name event))))
+        (div :class "ui vertical segment"
+          (h2 :class "ui header"
+              "Add activity")
+          (div :class "ui form"
+            (div :class "one field"
+              (div :class "required field"
+                (label "Name")
+                (input-cell :type "text" :state activity-name)))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Location")
+                (input-cell :type "text" :state location))
+              (div :class "field"
+                (label "Enrollment Cap")
+                (input-cell :type "text" :state enrollment-cap)))
+            (div :class "two fields"
+              (div :class "required field"
+                (label "Start time")
+                (input-cell :type "password" :state start-time))
+              (div :class "required field"
+                (label "End time")
+                (input-cell :type "password" :state end-time)))
+            (div :class "ui primary button" :on-click (.log js/console @resources/activities)
+              (text "Register"))))
+        (div :class "ui vertical segment"
+          (h2 :class "ui header"
+              "Schedule")
+          (table :class "ui table"
+            (thead
+              (tr
+                (th "Time")
+                (th "Activity")
+                (th "Location")))
+            (tbody
+              (loop-tpl :bindings [activity resources/activities]
+              (tr
+                (td (let [start (from-string (:StartTime activity))
+                          end   (from-string (:EndTime   activity))]
+                      (str (unparse date-formatter start)
+                           (when (after? end start)
+                             (str " to " (unparse date-formatter end))))))
+                (td (:Name activity))
+                (td (:Location activity)))))))))))
+
+(defroute "/events/:EventId/activities/add" [EventId]
+  (reset! page/breadcrumbs breadcrumbs)
+  (reset! event-id (int EventId))
+  template)

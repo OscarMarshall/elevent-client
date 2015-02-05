@@ -63,9 +63,7 @@
     (div :class "twelve wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
-          (img :src "images/aasa-high-school-conference-registration-1.png"
-               :width "100%")
-          (h2 :class "ui dividing header"
+          (h2 :class "ui header"
             (text "Register for ~{(:Name event)}"))
           (loop-tpl :bindings [line (cell= (split-lines (:Description event)))]
             (p line)))
