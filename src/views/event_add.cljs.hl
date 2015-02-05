@@ -4,8 +4,8 @@
     [cljs-time.core :refer  [now]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [formatters unparse]]
-    [page]
     [elements :refer [input-cell]]
+    [page]
     [resources]))
 
 (defc event-title nil)
@@ -16,18 +16,21 @@
 (defc description nil)
 (defc= form-data
   {:Name event-title
-   :StartDate (unparse (:basic-date-time formatters) (from-string start-date))
-   :EndDate   (unparse (:basic-date-time formatters) (from-string end-date))
+   :StartDate   (unparse (:date-hour-minute-second formatters)
+                         (from-string start-date))
+   :EndDate     (unparse (:date-hour-minute-second formatters)
+                         (from-string end-date))
    :Description description})
 
 (defn create-event [form-data]
-  (let [new-event (assoc form-data
-                    :Organization
-                    (int (.val (js/jQuery "#event-organization"))))]
-    (resources/api-post "/events"
-                        {:data new-event
-                         :handler (fn []
-                                    (swap! resources/events #(conj % new-event)))})))
+  (resources/api-post "/events"
+                      {:data form-data
+                       :handler (fn [resp]
+                                  (swap! resources/events
+                                         #(assoc %
+                                            (:EventId resp)
+                                            (merge resp form-data)))
+                                  (set! js/location "#/events"))}))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        "Add"))
@@ -52,10 +55,14 @@
             (div :class "two fields"
               (div :class "required field"
                 (label "Organization")
-                (select :class "ui" :id "event-organization"
-                  (loop-tpl :bindings [organization resources/organizations]
-                    (option :value (:OrganizationId @organization)
-                      (:Name @organization)))))
+                (input-cell :type "select" :class "ui"
+                            :state organization
+                            :options (cell=
+                                       (map (fn [[_ v]]
+                                              (vector
+                                                (:Name v)
+                                                (:OrganizationId v)))
+                                            resources/organizations))))
               (div :class "required field"
                 (label "Venue")
                 (input-cell :type "text" :state venue)))
