@@ -5,7 +5,7 @@
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [formatters unparse]]
     [elements :refer [input-cell]]
-    [page]
+    [app]
     [resources]))
 
 (defc organization nil)
@@ -15,7 +15,7 @@
    :AdminId (:UserId session/user)})
 
 (defn create-organization [form-data]
-  (resources/api-post "/organizations"
+  nil #_(resources/api-post "/organizations"
                       {:data form-data
                        :handler (fn [resp]
                                   (set! js/location "#/organizations"))}))
@@ -45,6 +45,6 @@
 (defroute organization-add "/organizations/add" []
   (if @session/user
     (do
-      (reset! page/breadcrumbs breadcrumbs)
+      (reset! app/breadcrumbs breadcrumbs)
       (template))
     (set! js/location "#/")))

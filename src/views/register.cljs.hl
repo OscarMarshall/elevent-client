@@ -2,6 +2,8 @@
   (:require
     [elements :refer [input-cell]]
     [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
     [resources]
     [session]))
 
@@ -19,7 +21,7 @@
 
 ; TODO verify passwords match
 ; Also don't send the password in plaintext
-(defn register-site [form-data]
+#_(defn register-site [form-data]
   (resources/api-post-secure "/users"
                              {:data {:Email (:email form-data)
                                      :FirstName (:first-name form-data)
@@ -56,10 +58,10 @@
               (div :class "required field"
                 (label "Confirm password")
                 (input-cell :type "password" :state password-confirm)))
-            (div :class "ui primary button" :on-click #(register-site @form-data)
+            (div :class "ui primary button" ;:on-click #(register-site @form-data)
               (text "Register"))))))))
 
 (defroute register "/register" []
-  (reset! page/breadcrumbs
+  (reset! app/breadcrumbs
           (list "Register"))
   (template))

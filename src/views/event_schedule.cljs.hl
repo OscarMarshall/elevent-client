@@ -1,26 +1,93 @@
 (ns views.event-schedule
   (:require
-    [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
-    [session]
+    [datascript :as d]
+    [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
     [resources]
+    [session]
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event (resources/events event-id))
+(defc= event (when-let [[name]
+                        (when event-id
+                          (first (d/q '[:find ?name
+                                        :in $ ?event-id
+                                        :where [?event-id :Name ?name]]
+                                      resources/events-db event-id)))]
+               {:Name name}))
 
-(defn add-activity [user-id activity-id]
-  (resources/api-post "/schedules"
-                      {:data {:ActivityId activity-id
-                              :UserId user-id}
-                       :handler (fn [] (swap! resources/schedules #(conj % activity-id)))}))
+(defc= scheduled-activities
+  (map #(vector :ScheduleId  %1
+                :ActivityId  %2
+                :Name        %3
+                :Location    %4
+                :StartTime   %5
+                :EndTime     %6)
+       (d/q '[:find
+              ?schedule-id
+              ?activity-id
+              ?name
+              ?location
+              ?start-time
+              ?end-time
 
-(defn remove-activity [user-id activity-id]
-  (resources/api-delete (str "/schedules/" -1)
-                        {:handler (fn [] (swap! resources/schedules
-                                         #(vec (remove (partial == activity-id)
-                                                       %))))}))
+              :in
+              $schedules
+              $activities
+              ?user-id
+
+              :where
+              [$schedules  ?schedule-id :UserId      ?user-id]
+              [$schedules  ?schedule-id :ActivityId  ?activity-id]
+              [$activities ?activity-id :Name        ?name]
+              [$activities ?activity-id :Location    ?location]
+              [$activities ?activity-id :StartTime   ?start-time]
+              [$activities ?activity-id :EndTime     ?end-time]]
+            resources/schedules-db
+            resources/activities-db
+            (:UserId session/user))))
+
+(defc= unscheduled-activities
+  (map #(vector :ActivityId  %1
+                :Name        %2
+                :Location    %3
+                :StartTime   %4
+                :EndTime     %5
+                :Description %6)
+       (d/q '[:find
+              ?activity-id
+              ?name
+              ?location
+              ?start-time
+              ?end-time
+              ?description
+
+              :in
+              $schedules
+              $activities
+              ?user-id
+
+              :where
+              [$schedules  ?schedule-id :UserId      ?user-id]
+              (not [$schedules  ?schedule-id :ActivityId  ?activity-id])
+              [$activities ?activity-id :Name        ?name]
+              [$activities ?activity-id :Location    ?location]
+              [$activities ?activity-id :StartTime   ?start-time]
+              [$activities ?activity-id :EndTime     ?end-time]
+              [$activities ?activity-id :Description ?description]]
+            resources/schedules-db
+            resources/activities-db
+            (:UserId session/user))))
+
+(defn add-activity! [user-id activity-id]
+  (resources/schedules-endpoint :create {:ActivityId activity-id
+                                         :UserId     user-id}))
+
+(defn remove-activity [schedule]
+  (resources/schedules-endpoint :delete schedule))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -32,7 +99,7 @@
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui dividing header"
-            (text "~{(:FirstName session/user)}'s Schedule for ~{(:Name event)}"))
+            (text "~(:FirstName session/user)'s Schedule for ~(:Name event)")))
           (table :class "ui table"
             (thead
               (tr
@@ -42,12 +109,7 @@
                 (th "Location")
                 (th)))
             (tbody
-              (loop-tpl :bindings [activity
-                                   (cell= (map (get resources/activities
-                                                    event-id)
-                                               (map (fn [%] (:ActivityId %))
-                                                      (get resources/schedules
-                                                           (:UserId session/user)))))]
+              (loop-tpl :bindings [activity scheduled-activities]
                 (tr
                   (let [start (from-string (:StartTime @activity))]
                     (td :nowrap true (unparse datetime-formatter start)))
@@ -57,8 +119,7 @@
                   (td (text (:Location activity)))
                   (td :class "right aligned" :nowrap true
                     (div :class "ui button"
-                         :on-click #(remove-activity
-                                      (:UserId @session/user) (:ActivityId @activity))
+                         :on-click #(remove-activity (:ScheduleId @activity))
                       (i :class "red remove icon") "Remove")))))
             (tfoot
               (tr
@@ -67,14 +128,7 @@
                     (i :class "print icon") "Print"))))))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity
-                                 (cell= (vals (apply
-                                                dissoc
-                                                (get resources/activities
-                                                     event-id)
-                                                (map (fn [%] (:ActivityId %))
-                                                     (get resources/schedules
-                                                          (:UserId session/user))))))]
+            (loop-tpl :bindings [activity unscheduled-activities]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
@@ -88,8 +142,8 @@
                     (text (:Description activity)))
                   (div :class "extra"
                     (div :class "ui right floated primary button"
-                         :on-click #(add-activity
-                                      (:UserId @session/user) (:ActivityId @activity))
+                         :on-click #(add-activity! (:UserId @session/user)
+                                                   (:ActivityId @activity))
                       "Add" (i :class "right chevron icon"))))))))))))
 
 (defroute "/events/:EventId/schedule" [EventId]

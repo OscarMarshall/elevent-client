@@ -1,10 +1,12 @@
 (page "index.html"
   (:require
-    [clojure.string :refer [split]]
-    [tailrecursion.hoplon.reload :refer [reload-all]]
     [secretary.core :as secretary :refer-macros [defroute]]
-    [page]
-    [session]))
+    [tailrecursion.hoplon.reload :refer [reload-all]]
+
+    [app]
+    [elements :refer [input-cell]]
+    [session]
+    [style]))
 
 (reload-all)
 
@@ -12,31 +14,70 @@
 
 (html
   (head
-    (title page/title-string)
+    (title app/title-string)
     (meta :Name "viewport" :content "width=device-width, initial-scale=1.0")
     (style style/stylesheet))
   (body
     (nav :class "ui fixed menu"
-      (a :class "logo item" :href "#/"
-        (img :src "images/logo-menu.png"))
-      (a :class "item" :href "#/explore"
-        (i :class "rocket icon") "Explore")
-      (span
-        (cell= (when session/user
-                 (a :class "item" :href "#/events"
-                    (i :class "ticket icon") "Events"))))
-      (a :class "item" :href "#/organizations"
-         (i :class "building icon") "Organizations")
-      (a :class "item" :href "#/calendar"
-        (i :class "calendar icon") "Calendar")
-      (div :class "right menu"
-        (session/control {:class "item"})))
+      (cell=
+        (filter
+          identity
+          (list
+            (a :class "logo item" :href "#/"
+              (img :src "images/logo-menu.png"))
+            (a :class "item" :href "#/explore"
+              (i :class "rocket icon") "Explore")
+            (when session/username
+              (a :class "item" :href "#/events"
+                 (i :class "ticket icon") "Events"))
+            (a :class "item" :href "#/organizations"
+               (i :class "building icon") "Organizations")
+            (a :class "item" :href "#/calendar"
+              (i :class "calendar icon") "Calendar")
+            (div :class "right menu"
+              (cell=
+                (if session/username
+                  (a :class "item" :on-click session/logout!
+                    (text "Logout of ~{session/username}'s account"))
+                  (let [email    (cell nil)
+                        password (cell nil)]
+                    (list
+                      (a :class "item"
+                       :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
+                        (i :class "user icon")
+                        "Login"
+                        (form :class "ui small login modal"
+                              :on-submit (fn []
+                                           (session/login! @email @password)
+                                           false)
+                          (i :class "close icon")
+                          (div :class "header"
+                            "Login")
+                          (div :class "content"
+                            (div :class "description"
+                              (div :class "ui form"
+                                (div :class "two fields"
+                                  (div :class "field"
+                                    (label "Email")
+                                    (input-cell :type "email" :state email))
+                                  (div :class "field"
+                                    (label "Password")
+                                    (input-cell :type "password" :state password))))))
+                          (div :class "actions"
+                            (button :class "ui button" "Cancel")
+                            (input :type "submit" :class "ui button primary"
+                              "Login"))))
+                      (a :class "item right floated" :href "#/register"
+                        "Sign up"))))))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (div :class "ui breadcrumb"
-          (a :class "section" :href "/"
-            "Home")
-          (loop-tpl :bindings [breadcrumb page/breadcrumbs]
+          (span (cell= (if (empty? app/breadcrumbs)
+                         (div :class "active section"
+                           "Home")
+                         (a :class "section" :href "/"
+                           "Home"))))
+          (loop-tpl :bindings [breadcrumb app/breadcrumbs]
             (span
               (div :class "divider" " / ")
               (span
@@ -47,7 +88,7 @@
                         text))
                     (div :class "active section"
                       breadcrumb)))))))))
-    (div (cell= (secretary/dispatch! page/route)))))
+    (div (cell= (secretary/dispatch! app/route)))))
 
 (defroute "*" []
   (set! js/location "#/page-not-found")

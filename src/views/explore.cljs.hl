@@ -1,12 +1,13 @@
 (ns views.explore
   (:require
-    [secretary.core :as secretary :refer-macros [defroute]]
-    [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.coerce :refer [from-string]]
+    [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.format :refer [unparse]]
-    [util :refer [date-formatter]]
+    [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
     [resources]
-    [page]))
+    [util :refer [date-formatter]]))
 
 (defn template []
   (div :class "ui page grid"
@@ -25,17 +26,7 @@
                   "Add Event"))))
           (div :class "ui vertical segment"
             (div :class "ui divided items"
-              (loop-tpl :bindings [event
-                                   (cell=
-                                     (if session/user
-                                       (vals
-                                         (apply
-                                           dissoc
-                                           resources/events
-                                           (map (fn [[_ x]] (:EventId x))
-                                                (get resources/attendees
-                                                     (:UserId session/user)))))
-                                       (vals resources/events)))]
+              (loop-tpl :bindings [event []]
                 (div :class "item"
                   (div :class "content"
                     (a :class "header" :href (str "#/events/" (:EventId @event))
@@ -64,5 +55,5 @@
           (div :class "ui loader"))))))
 
 (defroute events "/explore" []
-  (reset! page/breadcrumbs (list "Explore"))
+  (reset! app/breadcrumbs (list "Explore"))
   (template))

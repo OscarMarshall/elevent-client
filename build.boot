@@ -8,10 +8,12 @@
   :dependencies '[[tailrecursion/boot.task "2.2.4"]
                   [tailrecursion/hoplon "5.10.24"]
                   [garden "1.2.5"]
-                  [com.andrewmcveigh/cljs-time "0.3.0"]
+                  [com.andrewmcveigh/cljs-time "0.3.2"]
                   [cljs-ajax "0.3.9"]
                   [spyscope "0.1.5"]
-                  [secretary "1.2.1"]]
+                  [secretary "1.2.1"]
+                  [org.clojure/clojurescript "0.0-2727"]
+                  [datascript "0.9.0"]]
   :out-path     "resources/public"
   :src-paths    #{"src"})
 

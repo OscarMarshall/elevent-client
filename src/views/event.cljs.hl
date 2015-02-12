@@ -7,7 +7,7 @@
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event (resources/events event-id))
+(defc= event {})
 
 (def breadcrumbs (list [(cell= (if session/user
                                  "Events"
@@ -102,6 +102,6 @@
                     "Edit"))))))))))
 
 (defroute "/events/:EventId" [EventId]
-  (reset! page/breadcrumbs breadcrumbs)
+  (reset! app/breadcrumbs breadcrumbs)
   (reset! event-id (int EventId))
   (template))

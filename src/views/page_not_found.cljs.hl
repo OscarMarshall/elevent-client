@@ -1,7 +1,8 @@
 (ns views.page-not-found
   (:require
     [secretary.core :as secretary :refer-macros [defroute]]
-    [page]))
+
+    [app]))
 
 (def breadcrumbs (list "Page Not Found"))
 
@@ -13,5 +14,5 @@
           "404: Page Not Found")))))
 
 (defroute "/page-not-found" []
-  (reset! page/breadcrumbs breadcrumbs)
+  (reset! app/breadcrumbs breadcrumbs)
   template)

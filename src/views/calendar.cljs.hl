@@ -1,5 +1,8 @@
 (ns views.calendar
-  (:require [secretary.core :as secretary :refer-macros [defroute]]))
+  (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]))
 
 (def breadcrumbs (list "Calendar"))
 
@@ -12,7 +15,7 @@
         (div
           (cell=
             (let [element (div)]
-              page/route
+              app/route
               (doto (js/jQuery element)
                 (.fullCalendar
                   (clj->js
@@ -20,7 +23,7 @@
                                          {:title (:Name activity)
                                           :start (:StartTime activity)
                                           :end   (:EndTime activity)})
-                                       (vals (resources/activities 2))))}))
+                                       []))}))
                 ((fn [$]
                    ; HACK: Figure out a way to do this without a timer.
                    (js/setTimeout #(.fullCalendar $ "render") 64))))

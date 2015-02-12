@@ -1,95 +1,19 @@
 (ns resources
   (:require
-    [ajax.core :refer [GET POST DELETE]]
-    [page]))
+    [datascript]
 
-(defc token nil)
+    [app]
+    [rest :refer-macros [endpoint]]))
 
-(defn get-api-base [params]
-  (if (:secure? params)
-    page/api-base-url-secure
-    page/api-base-url))
-
-(defn get-api-data [params]
-  {:format :json
-   :response-format :json
-   :keywords? true
-   :headers {:Authentication (str "Bearer " @token)
-             :Authorization (when (contains? params :auth-string)
-                              (str "Basic " (:auth-string params)))}
-   :handler (:handler params)
-   :error-handler (:error-handler params)})
-
-(defn api-get [url params]
-  (GET (str (get-api-base params) url)
-       (get-api-data params)))
-
-(defn api-get-secure [url params]
-  (api-get url (assoc params :secure? true)))
-
-(defn api-post [url params]
-  (POST (str (get-api-base params) url)
-        (assoc (get-api-data params)
-          :params (:data params))))
-
-(defn api-post-secure [url params]
-  (api-post url (assoc params :secure? true)))
-
-(defn api-delete [url params]
-  (DELETE (str (get-api-base params) url))
-  (get-api-data params))
-
-
-(defc schedules {})
-(api-get "/schedules"
-         {:handler (fn [json]
-                     (reset! schedules (group-by :UserId json))
-                     (js/console.log (prn-str @schedules)))})
-
-(defc activities {})
-(api-get "/activities"
-         {:handler (fn [json]
-                     (->> (group-by :EventId json)
-                          (map (fn [[event-id activities]]
-                                 (->> activities
-                                      (map #(vector (:ActivityId %) %))
-                                      (into {})
-                                      (vector event-id))))
-                          (into {})
-                          (reset! activities)
-                          (prn-str)
-                          (js/console.log)))
-          :error-handler #(.log js/console "Activities failed")})
-
-(defc organizations {})
-(api-get "/organizations"
-         {:handler (fn [json]
-                     (->> (map #(vector (:OrganizationId %) %) json)
-                          (into {})
-                          (reset! organizations)
-                          (prn-str)
-                          (js/console.log)))})
-
-(defc events {})
-(api-get "/events"
-         {:handler (fn [json]
-                     (->> (map #(vector (:EventId %) %) json)
-                          (into {})
-                          (reset! events)
-                          (prn-str)
-                          (js/console.log)))})
-
-(defc attendees {})
-(api-get "/attendees"
-         {:handler (fn [json]
-                     ;(js/console.log (prn-str json))
-                     (->> (group-by :UserId json)
-                          (map (fn [[user-id events]]
-                                 (->> events
-                                      (map #(vector (:EventId %) %))
-                                      (into {})
-                                      (vector user-id))))
-                          (into {})
-                          (reset! attendees)
-                          (prn-str)
-                          (js/console.log)))})
+(rest/endpoint
+  attendees     (str app/api-base-url "/attendees")     :AttendeeId)
+(rest/endpoint
+  organizations (str app/api-base-url "/organizations") :OrganizationId)
+(rest/endpoint
+  events        (str app/api-base-url "/events")        :EventId)
+(rest/endpoint
+  activities    (str app/api-base-url "/activities")    :ActivityId)
+(rest/endpoint
+  users         (str app/api-base-url "/users")         :UserId)
+(rest/endpoint
+  schedules     (str app/api-base-url "/schedules")     :ScheduleId)

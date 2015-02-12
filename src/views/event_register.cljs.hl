@@ -1,13 +1,25 @@
 (ns views.event-register
   (:require
     [clojure.string :refer [split-lines]]
+    [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
     [elements :refer [input-cell]]
-    [session]
-    [resources]))
+    [resources]
+    [session]))
 
 (defc event-id nil)
-(defc= event (resources/events event-id))
+(defc= event (when-let [[name description]
+                        (when event-id
+                          (first
+                            (d/q '[:find ?name ?description
+                                   :in $ ?event-id
+                                   :where [?event-id :Name ?name]
+                                          [?event-id :Description ?description]]
+                                 resources/events-db event-id)))]
+               {:Name name
+                :Description description}))
 
 (defc= email (:Email session/user))
 (defc= first-name (:FirstName session/user))
@@ -28,7 +40,7 @@
   (reset! phone nil)
   (reset! birth-date nil))
 
-(defn register-event [form-data]
+#_(defn register-event [form-data]
   (resources/api-get
     (str "/users?email=" (:email form-data))
     {:handler
@@ -81,14 +93,14 @@
                 (label "Last Name")
                 (input-cell :type "text" :state last-name)))
             (div :class "ui primary button"
-                 :on-click #(register-event @form-data)
+                 :on-click ;#(register-event @form-data)
               (text "Register"))))))))
 
 (defroute "/events/:EventId/register" [EventId]
-  (if @session/user
+  (if @app/token
     (do
       (reset! event-id (int EventId))
-      (reset! page/breadcrumbs
+      (reset! app/breadcrumbs
               (list ["Events" "#/events"]
                     [(cell= (:Name event)) (str "#/events/" EventId)]
                     "Register"))

@@ -1,15 +1,17 @@
 (ns views.event-activities
   (:require
-    [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
-    [session]
+    [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
     [resources]
+    [session]
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event (resources/events event-id))
-(defc= event-activities (resources/activities event-id))
+(defc= event {})
+(defc= event-activities [])
 
 (def breadcrumbs (list ["Events" "#/events"]
 
@@ -27,7 +29,7 @@
             (text "Activities for ~{(:Name event)}")))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity (cell= (vals event-activities))]
+            (loop-tpl :bindings [activity []]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
@@ -41,6 +43,6 @@
                     (text (:Description activity))))))))))))
 
 (defroute "/events/:EventId/activities" [EventId]
-  (reset! page/breadcrumbs breadcrumbs)
+  (reset! app/breadcrumbs breadcrumbs)
   (reset! event-id (int EventId))
   template)

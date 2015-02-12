@@ -1,10 +1,14 @@
 (ns views.organizations
   (:require
+    [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
-    [page]
+
+    [app]
     [resources]))
 
 (def breadcrumbs (list "Organizations"))
+
+(js/console.log (prn-str resources/organizations-db))
 
 (def template
   (div :class "ui page grid"
@@ -18,18 +22,21 @@
               "Add Organization")))
         (div :class "ui vertical segment"
           (div :class "ui items"
-            (loop-tpl :bindings [organization
-                                 (cell= (vals resources/organizations))]
+            (loop-tpl :bindings [[name] ; TODO: Use datascript entity instead
+                                 (cell= (d/q '[:find ?n
+                                               :in $
+                                               :where [?e :Name ?n]]
+                                             resources/organizations-db))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header"
-                    (text "~{(:Name organization)}"))
+                    (text "~{name}"))
                   (div :class "extra"
                     (a :class "ui right floated small icon button"
                        :href (str "#/events?organization="
-                                  (:OrganizationId @organization))
+                                  #_(:OrganizationId @organization)) ; TODO: fix
                       "View events")))))))))))
 
 (defroute "/organizations" []
-  (reset! page/breadcrumbs breadcrumbs)
+  (reset! app/breadcrumbs breadcrumbs)
   template)

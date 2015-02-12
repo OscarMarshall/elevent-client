@@ -1,15 +1,28 @@
 (ns views.event-activities-add
   (:require
-    [secretary.core :as secretary :refer-macros [defroute]]
-    [cljs-time.core :refer  [after? at-midnight now]]
     [cljs-time.coerce :refer [from-string]]
+    [cljs-time.core :refer  [after? at-midnight now]]
     [cljs-time.format :refer [formatters unparse parse]]
+    [datascript :as d]
+    [secretary.core :as secretary :refer-macros [defroute]]
     [util :refer [input-date-time-formatter]]
+
+    [app]
     [elements :refer [input-cell]]
-    [resources]))
+    [resources]
+    [util :refer [date-formatter]]))
 
 (defc event-id nil)
-(defc= event (resources/events event-id))
+(defc= event (when event-id
+               (when-let [[start-date end-date]
+                          (d/q '[:find ?start-date ?end-date
+                                 :in $ ?event-id
+                                 :where
+                                 [?event-id :StartDate ?start-date]
+                                 [?event-id :EndDate ?end-date]]
+                               resources/events-db event-id)]
+                 {:StartDate start-date
+                  :EndDate end-date})))
 
 (defc activity-name nil)
 (defc location nil)
@@ -47,10 +60,7 @@
   (reset! description nil))
 
 (defn add-activities [form-data]
-  (resources/api-post "/activities"
-                      {:data form-data
-                       :handler (fn [json]
-                                  (.log js/console "Activity added!"))}))
+  (resources/activities-endpoint :create form-data))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -107,8 +117,8 @@
                 (th "Activity")
                 (th "Location")))
             #_(tbody
-              (loop-tpl :bindings [activity (cell= (into [] 
-                                                         (map #((resources/activities event-id) %) 
+              (loop-tpl :bindings [activity (cell= (into []
+                                                         (map #((resources/activities event-id) %)
                                                               (keys (resources/activities event-id)))))]
               (tr
                 (td #_(let [start (from-string (:StartTime @activity))
@@ -118,13 +128,13 @@
                              (str " to " (unparse date-formatter end)))))
                     "(Time)")
                 (td (:Name activity))
-                (td 
+                (td
                   (text "~{(:Location activity)}")))))))))))
 
 (defroute "/events/:EventId/activities/add" [EventId]
-  (if @session/user
+  (if @app/token
     (do
-      (reset! page/breadcrumbs breadcrumbs)
+      (reset! app/breadcrumbs breadcrumbs)
       (reset! event-id (int EventId))
       (template))
     (set! js/location "#/")))

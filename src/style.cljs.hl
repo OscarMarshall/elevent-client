@@ -1,7 +1,6 @@
 (ns style
   (:require
-    [garden.core :refer [css]]
-    [garden.stylesheet :refer [at-media]]))
+    [garden.core :refer [css]]))
 
 (defc= stylesheet
   (css [:.center {:display      "block"

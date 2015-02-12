@@ -1,11 +1,12 @@
 (ns views.event-add
   (:require
-    [secretary.core :as secretary :refer-macros [defroute]]
-    [cljs-time.core :refer  [now]]
     [cljs-time.coerce :refer [from-string]]
+    [cljs-time.core :refer  [now]]
     [cljs-time.format :refer [formatters unparse]]
+    [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
     [elements :refer [input-cell]]
-    [page]
     [resources]))
 
 (defc event-title nil)
@@ -22,7 +23,7 @@
                          (from-string end-date))
    :Description description})
 
-(defn create-event [form-data]
+#_(defn create-event [form-data]
   (resources/api-post "/events"
                       {:data form-data
                        :handler (fn [resp]
@@ -57,12 +58,7 @@
                 (label "Organization")
                 (input-cell :type "select" :class "ui"
                             :state organization
-                            :options (cell=
-                                       (map (fn [[_ v]]
-                                              (vector
-                                                (:Name v)
-                                                (:OrganizationId v)))
-                                            resources/organizations))))
+                            :options (cell= [])))
               (div :class "required field"
                 (label "Venue")
                 (input-cell :type "text" :state venue)))
@@ -76,12 +72,12 @@
             (div :class "field"
               (label "Description")
               (input-cell :type "textarea" :state description))
-            (div :class "ui primary button" :on-click #(create-event @form-data)
+            (div :class "ui primary button" ;:on-click #(create-event @form-data)
               "Add")))))))
 
 (defroute event-add "/events/add" []
-  (if @session/user
+  (if @app/token
     (do
-      (reset! page/breadcrumbs breadcrumbs)
+      (reset! app/breadcrumbs breadcrumbs)
       (template))
     (set! js/location "#/")))

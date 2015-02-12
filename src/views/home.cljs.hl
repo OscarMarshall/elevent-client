@@ -1,7 +1,8 @@
 (ns views.home
   (:require
     [secretary.core :as secretary :refer-macros [defroute]]
-    [page]))
+
+    [app]))
 
 (def breadcrumbs '())
 
@@ -24,5 +25,5 @@
         "event organizers, attendees, and everyone in between."))))
 
 (defroute "/" []
-  (reset! page/breadcrumbs breadcrumbs)
+  (reset! app/breadcrumbs breadcrumbs)
   template)
