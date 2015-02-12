@@ -1,4 +1,6 @@
-(ns page)
+(ns page
+  (:require
+    [cljs-time.format :refer [formatter]]))
 
 (def route (route-cell "#/"))
 
@@ -17,3 +19,4 @@
 (def date-format "MMMM d, yyyy")
 (def time-format "h:mma")
 (def datetime-format "h:mma MMMM d, yyyy")
+(def input-date-time-format "hh:mm a YYYY-MM-dd")

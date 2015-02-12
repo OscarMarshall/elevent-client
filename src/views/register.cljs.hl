@@ -26,7 +26,8 @@
                                      :LastName (:last-name form-data)
                                      :Password (:password form-data)}
                               :handler (fn [json]
-                                         (session/login! (:UserId json)))
+                                         (session/login! (:UserId json))
+                                         (set! js/location "#/"))
                               :error-handler #(.log js/console "An error occured")}))
 
 (def template

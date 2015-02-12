@@ -18,11 +18,11 @@
             (i :class "edit icon")
             "Edit")
           (div
-            (b "Venue:") "WEB 2230")
+            (b "Venue: ") (text "~{(:Venue event)}"))
           (div
-            (b "Date:") "11/05/2014")
+            (b "Date: ") "11/05/2014")
           (p
-            "U of U TAs are great. Let's hold a conference for them."))
+            (text "~{(:Description event)}")))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
               "Schedule")
@@ -56,7 +56,7 @@
                     (div :class "ui small labeled icon button"
                       (i :class "print icon")
                       "Print")))))))
-        (div :class "ui vertical segment"
+        #_(div :class "ui vertical segment"
           (h2 :class "ui header" "Groups")
           (table :class "ui table"
             (thead
@@ -90,18 +90,7 @@
                 (th :colspan "4"
                   (div :class "ui right floated small labeled icon button"
                     (i :class "edit icon")
-                    "Edit"))))))))
-      (div :class "four wide column"
-        (div :class "ui fluid card"
-          (div :class "image"
-            (img :src "images/aasa-logo.png"))
-          (div :class "content"
-            (a :class "header" "University of Utah")
-            (div :class "meta" "Salt Lake City, UT"))
-          (div :class "extra content"
-            (a
-              (i :class "users icon")
-              "9,876 Members"))))))
+                    "Edit"))))))))))
 
 (defroute "/events/:EventId" [EventId]
   (reset! page/breadcrumbs breadcrumbs)

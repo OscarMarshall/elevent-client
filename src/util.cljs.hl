@@ -6,3 +6,4 @@
 (def date-formatter (formatter page/date-format))
 (def time-formatter (formatter page/time-format))
 (def datetime-formatter (formatter page/datetime-format))
+(def input-date-time-formatter (formatter page/input-date-time-format))

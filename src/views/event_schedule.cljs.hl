@@ -8,14 +8,31 @@
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
+(defc= event (resources/events event-id))
 
-(def template
+(defn add-activity [user-id activity-id]
+  (resources/api-post "/schedules"
+                      {:data {:ActivityId activity-id
+                              :UserId user-id}
+                       :handler (fn [] (swap! resources/schedules #(conj % activity-id)))}))
+
+(defn remove-activity [user-id activity-id]
+  (resources/api-delete (str "/schedules/" -1)
+                        {:handler (fn [] (swap! resources/schedules
+                                         #(vec (remove (partial == activity-id)
+                                                       %))))}))
+
+(def breadcrumbs (list ["Events" "#/events"]
+                       [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
+                       "My Schedule"))
+
+(defn template []
   (div :class "ui stackable page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui dividing header"
-            (text "~{(:FirstName session/user)}'s Schedule for ~{(:Title resources/event)}"))
+            (text "~{(:FirstName session/user)}'s Schedule for ~{(:Name event)}"))
           (table :class "ui table"
             (thead
               (tr
@@ -28,8 +45,9 @@
               (loop-tpl :bindings [activity
                                    (cell= (map (get resources/activities
                                                     event-id)
-                                               (get resources/schedule
-                                                    (:UserId session/user))))]
+                                               (map (fn [%] (:ActivityId %))
+                                                      (get resources/schedules
+                                                           (:UserId session/user)))))]
                 (tr
                   (let [start (from-string (:StartTime @activity))]
                     (td :nowrap true (unparse datetime-formatter start)))
@@ -39,7 +57,7 @@
                   (td (text (:Location activity)))
                   (td :class "right aligned" :nowrap true
                     (div :class "ui button"
-                         :on-click #(resources/remove-activity
+                         :on-click #(remove-activity
                                       (:UserId @session/user) (:ActivityId @activity))
                       (i :class "red remove icon") "Remove")))))
             (tfoot
@@ -54,8 +72,9 @@
                                                 dissoc
                                                 (get resources/activities
                                                      event-id)
-                                                (get resources/schedule
-                                                     (:UserId session/user)))))]
+                                                (map (fn [%] (:ActivityId %))
+                                                     (get resources/schedules
+                                                          (:UserId session/user))))))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))
@@ -69,10 +88,11 @@
                     (text (:Description activity)))
                   (div :class "extra"
                     (div :class "ui right floated primary button"
-                         :on-click #(resources/add-activity
+                         :on-click #(add-activity
                                       (:UserId @session/user) (:ActivityId @activity))
                       "Add" (i :class "right chevron icon"))))))))))))
 
 (defroute "/events/:EventId/schedule" [EventId]
-  (reset! event-id EventId)
-  template)
+  (reset! page/breadcrumbs breadcrumbs)
+  (reset! event-id (int EventId))
+  (template))

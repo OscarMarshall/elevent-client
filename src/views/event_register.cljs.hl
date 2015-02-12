@@ -9,9 +9,9 @@
 (defc event-id nil)
 (defc= event (resources/events event-id))
 
-(defc email nil)
-(defc first-name nil)
-(defc last-name nil)
+(defc email (:Email @session/user))
+(defc first-name (:FirstName @session/user))
+(defc last-name (:LastName @session/user))
 (defc phone nil)
 (defc birth-date nil)
 
@@ -80,13 +80,6 @@
               (div :class "required field"
                 (label "Last Name")
                 (input-cell :type "text" :state last-name)))
-            (div :class "two fields"
-              (div :class "required field"
-                (label "Phone Number")
-                (input-cell :type "text" :state phone))
-              (div :class "required field"
-                (label "Date of Birth")
-                (input-cell :type "text" :state birth-date)))
             (div :class "ui primary button"
                  :on-click #(register-event @form-data)
               (text "Register"))))))))

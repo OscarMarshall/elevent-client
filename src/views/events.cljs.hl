@@ -42,7 +42,7 @@
                     (div :class "description"
                       (text "~{(:Description event)}"))
                     (div :class "extra"
-                      (a :class "ui right floated button"
+                      (a :class "ui right floated button" :href (str "#/events/" (:EventId @event) "/schedule")
                         "Schedule"
                         (i :class "right chevron icon")))))))))
         (div :do-class (cell= {:ui true

@@ -35,8 +35,8 @@
    (resources/api-get-secure (str "/users/" user-id)
                              {:handler (fn [json]
                                          (do
-                                           (reset! user (js->clj json :keywordize-keys true))
-                                           (set! js/location "#/")))})))
+                                           (reset! user json)
+                                           #_(set! js/location "#/")))})))
 
 (defn logout! []
   (reset! user nil)

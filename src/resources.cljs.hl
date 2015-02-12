@@ -1,6 +1,6 @@
 (ns resources
   (:require
-    [ajax.core :refer [GET POST]]
+    [ajax.core :refer [GET POST DELETE]]
     [page]))
 
 (defc token nil)
@@ -35,10 +35,16 @@
 (defn api-post-secure [url params]
   (api-post url (assoc params :secure? true)))
 
+(defn api-delete [url params]
+  (DELETE (str (get-api-base params) url))
+  (get-api-data params))
+
 
 (defc schedules {})
 (api-get "/schedules"
-         {:handler (fn [json] (reset! schedules (group-by :UserId json)))})
+         {:handler (fn [json]
+                     (reset! schedules (group-by :UserId json))
+                     (js/console.log (prn-str @schedules)))})
 
 (defc activities {})
 (api-get "/activities"
@@ -52,28 +58,8 @@
                           (into {})
                           (reset! activities)
                           (prn-str)
-                          (js/console.log)))})
-; (defn add-activity [user-id activity-id]
-;   (.post js/jQuery
-;          (str page/api-base-url
-;               "/users"
-;               "/" user-id
-;               "/activity")
-;          (js-obj "ActivityId" activity-id)
-;          (fn [] (swap! resources/schedule #(conj % activity-id)))
-;          "json"))
-; (defn remove-activity [user-id activity-id]
-;   (.ajax js/jQuery
-;          (js-obj "url" (str page/api-base-url
-;                            "/users"
-;                            "/" user-id
-;                            "/activities"
-;                            "/" activity-id)
-;                  "type" "DELETE"
-;                  "success" (fn [] (swap! resources/schedule
-;                                          #(vec (remove (partial == activity-id)
-;                                                        %))))
-;                  "dataType" "json")))
+                          (js/console.log)))
+          :error-handler #(.log js/console "Activities failed")})
 
 (defc organizations {})
 (api-get "/organizations"

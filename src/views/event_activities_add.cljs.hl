@@ -1,33 +1,62 @@
 (ns views.event-activities-add
   (:require
     [secretary.core :as secretary :refer-macros [defroute]]
-    [cljs-time.core :refer [after? at-midnight]]
+    [cljs-time.core :refer  [after? at-midnight now]]
     [cljs-time.coerce :refer [from-string]]
-    [cljs-time.format :refer [unparse]]
-    [util :refer [date-formatter]]
+    [cljs-time.format :refer [formatters unparse parse]]
+    [util :refer [input-date-time-formatter]]
     [elements :refer [input-cell]]
     [resources]))
+
+(defc event-id nil)
+(defc= event (resources/events event-id))
 
 (defc activity-name nil)
 (defc location nil)
 (defc enrollment-cap nil)
+(defc start-date nil #_(when event
+                   (unparse (:date formatters)
+                            (from-string (:StartDate event))))) ; I don't think this is updating
+(defc end-date nil #_(when event
+                    (unparse (:date formatters)
+                             (from-string (:EndDate event)))))
 (defc start-time nil)
 (defc end-time nil)
+(defc description nil)
 
-(defc= form-data {:Name activity-name
+(defc= form-data {:EventId event-id
+                  :Name activity-name
                   :Location location
                   :EnrollmentCap enrollment-cap
-                  :StartTime start-time
-                  :EndTime end-time})
+                  :StartTime (unparse (:date-hour-minute-second formatters) ; this throws errors as the date is being typed
+                                      (parse input-date-time-formatter
+                                             (str start-time " " start-date)))
+                  :EndTime   (unparse (:date-hour-minute-second formatters)
+                                      (parse input-date-time-formatter
+                                             (str end-time " " end-date)))
+                  :Description description})
 
-(defc event-id nil)
-(defc= event (resources/events event-id))
+(defn form-reset! []
+  (reset! activity-name nil)
+  (reset! location nil)
+  (reset! enrollment-cap nil)
+  (reset! start-date nil)
+  (reset! end-date nil)
+  (reset! start-time nil)
+  (reset! end-time nil)
+  (reset! description nil))
+
+(defn add-activities [form-data]
+  (resources/api-post "/activities"
+                      {:data form-data
+                       :handler (fn [json]
+                                  (.log js/console "Activity added!"))}))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
                        "Activities"))
 
-(def template
+(defn template []
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -51,13 +80,23 @@
                 (input-cell :type "text" :state enrollment-cap)))
             (div :class "two fields"
               (div :class "required field"
+                (label "Start date")
+                (input-cell :type "date" :state start-date))
+              (div :class "required field"
+                (label "End date")
+                (input-cell :type "date" :state end-date)))
+            (div :class "two fields"
+              (div :class "required field"
                 (label "Start time")
-                (input-cell :type "password" :state start-time))
+                (input-cell :type "text" :placeholder "hh:mm am/pm" :state start-time))
               (div :class "required field"
                 (label "End time")
-                (input-cell :type "password" :state end-time)))
-            (div :class "ui primary button" :on-click (.log js/console @resources/activities)
-              (text "Register"))))
+                (input-cell :type "text" :placeholder "hh:mm am/pm" :state end-time)))
+            (div :class "field"
+              (label "Description")
+              (input-cell :type "textarea" :state description))
+            (div :class "ui primary button" :on-click #(add-activities @form-data)
+              (text "Create"))))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
               "Schedule")
@@ -67,18 +106,22 @@
                 (th "Time")
                 (th "Activity")
                 (th "Location")))
-            (tbody
-              (loop-tpl :bindings [activity resources/activities]
+            #_(tbody
+              (loop-tpl :bindings [activity (cell= (into [] 
+                                                         (map #((resources/activities event-id) %) 
+                                                              (keys (resources/activities event-id)))))]
               (tr
-                (td (let [start (from-string (:StartTime activity))
-                          end   (from-string (:EndTime   activity))]
+                (td #_(let [start (from-string (:StartTime @activity))
+                          end   (from-string (:EndTime   @activity))]
                       (str (unparse date-formatter start)
                            (when (after? end start)
-                             (str " to " (unparse date-formatter end))))))
+                             (str " to " (unparse date-formatter end)))))
+                    "(Time)")
                 (td (:Name activity))
-                (td (:Location activity)))))))))))
+                (td 
+                  (text "~{(:Location activity)}")))))))))))
 
 (defroute "/events/:EventId/activities/add" [EventId]
   (reset! page/breadcrumbs breadcrumbs)
   (reset! event-id (int EventId))
-  template)
+  (template))
