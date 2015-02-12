@@ -20,7 +20,7 @@
               "Add Organization")))
         (div :class "ui vertical segment"
           (div :class "ui items"
-            (loop-tpl :bindings [[name] ; TODO: Use datascript entity instead
+            (loop-tpl :bindings [[name] ; TODO: get datascript entities instead
                                  (cell= (d/q '[:find ?n
                                                :in $
                                                :where [?e :Name ?n]]
