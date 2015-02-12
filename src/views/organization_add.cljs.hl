@@ -15,10 +15,9 @@
    :AdminId (:UserId session/user)})
 
 (defn create-organization [form-data]
-  nil #_(resources/api-post "/organizations"
-                      {:data form-data
-                       :handler (fn [resp]
-                                  (set! js/location "#/organizations"))}))
+  (resources/organizations-endpoint :create form-data
+                                    (fn [_]
+                                      (set! js/location "#/organizations"))))
 
 (def breadcrumbs (list ["Organizations" "#/organizations"]
                        "Add"))
@@ -43,7 +42,7 @@
               "Add")))))))
 
 (defroute organization-add "/organizations/add" []
-  (if @session/user
+  (if @app/token
     (do
       (reset! app/breadcrumbs breadcrumbs)
       (template))

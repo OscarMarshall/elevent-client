@@ -2,8 +2,10 @@
   (:require [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
-    [session]
+    [datascript :as d]
+
     [resources]
+    [session]
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
@@ -28,11 +30,11 @@
             (i :class "edit icon")
             "Edit")
           (div
-            (b "Venue: ") (text "~{(:Venue event)}"))
+            (b "Venue: ") (text "~(:Venue event)"))
           (div
             (b "Date: ") "11/05/2014")
           (p
-            (text "~{(:Description event)}")))
+            (text "~(:Description event)")))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
               "Schedule")
@@ -45,8 +47,12 @@
                 (th "Location")))
             (tbody
               (loop-tpl :bindings [activity
-                                   (cell= (vals (get resources/activities
-                                                    event-id)))]
+                                   (cell=
+                                     (d/entity resources/activities-db
+                                               (d/q '[:find ?activity-id
+                                                      :where
+                                                      [?activity-id]]
+                                                    resources/activities-db)))]
               (tr
                 (let [start (from-string (:StartTime @activity))]
                   (td :nowrap true (unparse datetime-formatter start)))

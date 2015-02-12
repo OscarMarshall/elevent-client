@@ -8,6 +8,8 @@
 
 (def breadcrumbs (list "Organizations"))
 
+(js/console.log (prn-str resources/organizations-db))
+
 (def template
   (div :class "ui page grid"
     (div :class "sixteen wide column"
@@ -20,15 +22,16 @@
               "Add Organization")))
         (div :class "ui vertical segment"
           (div :class "ui items"
-            (loop-tpl :bindings [[name] ; TODO: get datascript entities instead
-                                 (cell= (d/q '[:find ?n
-                                               :in $
-                                               :where [?e :Name ?n]]
-                                             resources/organizations-db))]
+            (loop-tpl :bindings [organization
+                                 (cell=
+                                   (d/entity resources/organizations-db
+                                             (d/q '[:find ?organization-id
+                                                    :where [?organization-id]]
+                                                  resources/organizations-db)))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header"
-                    (text "~{name}"))
+                    (text "~(:Name organization)"))
                   (div :class "extra"
                     (a :class "ui right floated small icon button"
                        :href (str "#/events?organization="
