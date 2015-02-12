@@ -8,17 +8,21 @@
     [resources]
     [page]))
 
-(def template
+(defn template []
   (div :class "ui page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
         (div
           (div :class "ui vertical segment"
-            (h1 :class "ui header"
-              "Explore Events"
-              (a :href "#/events/add"
-                 :class "ui right floated small button"
-                "Add Event")))
+            (cell=
+              (h1 :class "ui header"
+                "Explore Events"
+                (a :href "#/events/add"
+                   :class (str "ui right floated small button"
+                               (if session/user
+                                 ""
+                                 " disabled"))
+                  "Add Event"))))
           (div :class "ui vertical segment"
             (div :class "ui divided items"
               (loop-tpl :bindings [event
@@ -46,10 +50,14 @@
                     (div :class "description"
                       (text "~{(:Description event)}"))
                     (div :class "extra"
-                      (a :class "ui right floated button"
-                         :href (str "#/events/" (:EventId @event) "/register")
-                        "Register"
-                        (i :class "right chevron icon")))))))))
+                      (cell=
+                        (a :class (str "ui right floated button"
+                                       (if session/user
+                                         ""
+                                         " disabled"))
+                           :href (str "#/events/" (:EventId event) "/register")
+                          "Register"
+                          (i :class "right chevron icon"))))))))))
         (div :do-class (cell= {:ui true
                                :active (empty? resources/events)
                                :dimmer true})
@@ -57,4 +65,4 @@
 
 (defroute events "/explore" []
   (reset! page/breadcrumbs (list "Explore"))
-  template)
+  (template))

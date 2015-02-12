@@ -9,14 +9,14 @@
     [resources]
     [session]))
 
-(def template
+(defn template []
   (div :class "ui page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
         (div
           (div :class "ui vertical segment"
             (h1 :class "ui header"
-              "Upcoming Events"
+              "Your Upcoming Events"
               (a :href "#/events/add"
                  :class "ui right floated small button"
                 "Add Event")))
@@ -54,5 +54,5 @@
   (if @session/user
     (do
       (reset! page/breadcrumbs (list "Events"))
-      template)
+      (template))
     (set! js/location "#/")))

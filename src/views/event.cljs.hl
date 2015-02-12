@@ -1,13 +1,23 @@
 (ns views.event
-  (:require [secretary.core :as secretary :refer-macros [defroute]]))
+  (:require [secretary.core :as secretary :refer-macros [defroute]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [unparse]]
+    [session]
+    [resources]
+    [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
 (defc= event (resources/events event-id))
 
-(def breadcrumbs (list ["Events" "#/events"]
+(def breadcrumbs (list [(cell= (if session/user
+                                 "Events"
+                                 "Explore"))
+                        (cell= (if session/user
+                                 "#/events"
+                                 "#/explore"))]
                        (cell= (:Name event))))
 
-(def template
+(defn template []
   (div :class "ui page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -29,22 +39,21 @@
           (table :class "ui table"
             (thead
               (tr
-                (th "Countdown")
-                (th "Time")
-                (th "Activity")))
+                (th "Start")
+                (th "End")
+                (th "Activity")
+                (th "Location")))
             (tbody
-              (tr :class "negative"
-                (td "Over")
-                (td "11/5/2014 11:35am")
-                (td "Keynote"))
-              (tr :class "positive"
-                (td "Now")
-                (td "11/5/2014 11:45am")
-                (td "UI Presentation"))
+              (loop-tpl :bindings [activity
+                                   (cell= (vals (get resources/activities
+                                                    event-id)))]
               (tr
-                (td "27 minutes")
-                (td "11/5/2014 12:15pm")
-                (td "Connecting With Students Workshop")))
+                (let [start (from-string (:StartTime @activity))]
+                  (td :nowrap true (unparse datetime-formatter start)))
+                (let [end (from-string (:EndTime @activity))]
+                  (td :nowrap true (unparse datetime-formatter end)))
+                (td (text (:Name activity)))
+                (td (text (:Location activity))))))
             (tfoot
               (tr
                 (th :colspan "4"
@@ -95,4 +104,4 @@
 (defroute "/events/:EventId" [EventId]
   (reset! page/breadcrumbs breadcrumbs)
   (reset! event-id (int EventId))
-  template)
+  (template))

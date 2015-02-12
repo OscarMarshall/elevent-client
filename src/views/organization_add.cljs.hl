@@ -1,0 +1,50 @@
+(ns views.organization-add
+  (:require
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [cljs-time.core :refer  [now]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [formatters unparse]]
+    [elements :refer [input-cell]]
+    [page]
+    [resources]))
+
+(defc organization nil)
+
+(defc= form-data
+  {:Name organization
+   :AdminId (:UserId session/user)})
+
+(defn create-organization [form-data]
+  (resources/api-post "/organizations"
+                      {:data form-data
+                       :handler (fn [resp]
+                                  (set! js/location "#/organizations"))}))
+
+(def breadcrumbs (list ["Organizations" "#/organizations"]
+                       "Add"))
+
+(defn template []
+  (div :class "ui stackable page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (div :class "ui form"
+          (div :class "ui vertical segment"
+            (cell=
+              (h2 :class (str "ui dividing header"
+                              (if session/user
+                                ""
+                                " disabled"))
+                "Add an Organization"))
+            (div :class "field"
+              (div :class "required field"
+                (label "Organization Name")
+                (input-cell :type "text" :state organization)))
+            (div :class "ui primary button" :on-click #(create-organization @form-data)
+              "Add")))))))
+
+(defroute organization-add "/organizations/add" []
+  (if @session/user
+    (do
+      (reset! page/breadcrumbs breadcrumbs)
+      (template))
+    (set! js/location "#/")))

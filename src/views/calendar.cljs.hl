@@ -1,7 +1,9 @@
 (ns views.calendar
   (:require [secretary.core :as secretary :refer-macros [defroute]]))
 
-(def template
+(def breadcrumbs (list "Calendar"))
+
+(defn template []
   (div :class "ui page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
@@ -25,4 +27,4 @@
               element)))))))
 
 (defroute "/calendar" []
-  template)
+  (template))

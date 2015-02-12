@@ -26,11 +26,11 @@
                                      :LastName (:last-name form-data)
                                      :Password (:password form-data)}
                               :handler (fn [json]
-                                         (session/login! (:UserId json))
+                                         (session/login! (:email form-data) (:password form-data))
                                          (set! js/location "#/"))
                               :error-handler #(.log js/console "An error occured")}))
 
-(def template
+(defn template []
   (div :class "ui page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
@@ -62,4 +62,4 @@
 (defroute register "/register" []
   (reset! page/breadcrumbs
           (list "Register"))
-  template)
+  (template))

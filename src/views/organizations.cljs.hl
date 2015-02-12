@@ -27,7 +27,7 @@
                   (div :class "extra"
                     (a :class "ui right floated small icon button"
                        :href (str "#/events?organization="
-                                  (:Name @organization))
+                                  (:OrganizationId @organization))
                       "View events")))))))))))
 
 (defroute "/organizations" []

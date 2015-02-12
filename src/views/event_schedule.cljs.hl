@@ -93,6 +93,9 @@
                       "Add" (i :class "right chevron icon"))))))))))))
 
 (defroute "/events/:EventId/schedule" [EventId]
-  (reset! page/breadcrumbs breadcrumbs)
-  (reset! event-id (int EventId))
-  (template))
+  (if @session/user
+    (do
+      (reset! page/breadcrumbs breadcrumbs)
+      (reset! event-id (int EventId))
+      (template))
+    (set! js/location "#/")))

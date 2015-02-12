@@ -35,7 +35,7 @@
 (def breadcrumbs (list ["Events" "#/events"]
                        "Add"))
 
-(def template
+(defn template []
   (div :class "ui stackable page grid"
     (div :class "sixteen wide column"
       (div :class "ui segment"
@@ -80,5 +80,8 @@
               "Add")))))))
 
 (defroute event-add "/events/add" []
-  (reset! page/breadcrumbs breadcrumbs)
-  template)
+  (if @session/user
+    (do
+      (reset! page/breadcrumbs breadcrumbs)
+      (template))
+    (set! js/location "#/")))

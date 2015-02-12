@@ -82,7 +82,7 @@
 (defc attendees {})
 (api-get "/attendees"
          {:handler (fn [json]
-                     (js/console.log (prn-str json))
+                     ;(js/console.log (prn-str json))
                      (->> (group-by :UserId json)
                           (map (fn [[user-id events]]
                                  (->> events

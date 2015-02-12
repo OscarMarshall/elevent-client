@@ -9,9 +9,9 @@
 (defc event-id nil)
 (defc= event (resources/events event-id))
 
-(defc email (:Email @session/user))
-(defc first-name (:FirstName @session/user))
-(defc last-name (:LastName @session/user))
+(defc= email (:Email session/user))
+(defc= first-name (:FirstName session/user))
+(defc= last-name (:LastName session/user))
 (defc phone nil)
 (defc birth-date nil)
 
@@ -58,7 +58,7 @@
 ; TODO: error checking for user
 ; form validation
 
-(def template
+(defn template []
   (div :class "ui stackable page grid"
     (div :class "twelve wide column"
       (div :class "ui segment"
@@ -85,9 +85,12 @@
               (text "Register"))))))))
 
 (defroute "/events/:EventId/register" [EventId]
-  (reset! event-id (int EventId))
-  (reset! page/breadcrumbs
-          (list ["Events" "#/events"]
-                [(cell= (:Name event)) (str "#/events/" EventId)]
-                "Register"))
-  template)
+  (if @session/user
+    (do
+      (reset! event-id (int EventId))
+      (reset! page/breadcrumbs
+              (list ["Events" "#/events"]
+                    [(cell= (:Name event)) (str "#/events/" EventId)]
+                    "Register"))
+      (template))
+    (set! js/location "#/")))
