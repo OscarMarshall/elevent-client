@@ -9,18 +9,13 @@
     [resources]))
 
 (def username (local-storage (cell nil) ::username))
-(defc= user (when-let [[user-id email first-name last-name middle-name]
-                       (when session/username
-                         (first (d/q '[:find ?user-id ?first-name
-                                       :in $ ?email
-                                       :where [?user-id :Email ?email]
-                                              [?user-id :FirstName ?first-name]]
-                                     resources/users session/username)))]
-              {:UserId user-id
-               :Email email
-               :FirstName first-name
-               :LastName last-name
-               :MiddleName middle-name}))
+(defc= user (when username
+              (when-let [user-id (ffirst (d/q '[:find ?e
+                                                :in $ ?u
+                                                :where [?e :Email ?u]]
+                                              resources/users-db
+                                              username))]
+                (into {} (seq (d/entity resources/users-db user-id))))))
 
 (defn logout! []
   (dosync

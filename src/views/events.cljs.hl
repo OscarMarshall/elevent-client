@@ -3,6 +3,7 @@
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.format :refer [unparse]]
+    [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
 
     [app]
@@ -22,18 +23,24 @@
                 "Add Event")))
           (div :class "ui vertical segment"
             (div :class "ui divided items"
-              (loop-tpl :bindings [event []]
+              (loop-tpl :bindings [event
+                                   (cell= (map #(d/entity resources/events-db
+                                                          (first %))
+                                               (d/q '[:find ?event-id
+                                                      :where [?event-id]]
+                                                    resources/events-db)))]
                 (div :class "item"
                   (div :class "content"
                     (a :class "header" :href (str "#/events/" (:EventId @event))
-                      (text "~{(:Name event)}"))
+                      (text "~(:Name event)"))
                     (div :class "meta"
                       (b "Date: ")
-                      (let [start (from-string (:StartDate @event))
-                            end   (from-string (:EndDate   @event))]
-                        (str (unparse date-formatter start)
-                             (when (after? end start)
-                               (str " to " (unparse date-formatter end))))))
+                      (text
+                        (let [start (from-string (:StartDate event))
+                              end   (from-string (:EndDate   event))]
+                          (str (unparse date-formatter start)
+                               (when (after? end start)
+                                 (str " to " (unparse date-formatter end)))))))
                     (div :class "description"
                       (text "~{(:Description event)}"))
                     (div :class "extra"

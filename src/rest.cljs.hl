@@ -12,7 +12,7 @@
                     :json
 
                     :response-format
-                    :json
+                    (when (= operation :read) :json)
 
                     :keywords?
                     true
@@ -24,14 +24,19 @@
                       {})
 
                     :params
-                    params
+                    (when (or (= operation :create)
+                              (= operation :update))
+                      params)
 
                     :handler
                     (if (= operation :read)
-                      #(do (js/console.log (prn-str %)) (reset! state %))
+                      #(do
+                         (js/console.log (prn-str %))
+                         (reset! state %)
+                         (when handler (handler %)))
                       #(do
                          (when handler (handler %))
-                         (dispatch! :read nil handler error-handler)))
+                         (dispatch! :read nil nil nil)))
 
                     :error-handler
                     error-handler}]

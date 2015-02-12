@@ -1,5 +1,7 @@
 (ns views.event-schedule
   (:require
+    [clojure.set :refer [difference]]
+
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
     [datascript :as d]
@@ -20,77 +22,41 @@
                {:Name name}))
 
 (defc= scheduled-activities
-  (map #(vector :ScheduleId  %1
-                :ActivityId  %2
-                :Name        %3
-                :Location    %4
-                :StartTime   %5
-                :EndTime     %6)
-       (d/q '[:find
-              ?schedule-id
-              ?activity-id
-              ?name
-              ?location
-              ?start-time
-              ?end-time
+  (d/q '[:find ?schedule-id ?activity-id
+         :in $activities $schedules ?event-id ?user-id
+         :where
+         [$activities ?activity-id :EventId ?event-id]
+         [$schedules  ?schedule-id :UserId     ?user-id]
+         [$schedules  ?schedule-id :ActivityId ?activity-id]]
+       resources/activities-db
+       resources/schedules-db
+       event-id
+       (:UserId session/user)))
 
-              :in
-              $schedules
-              $activities
-              ?user-id
-
-              :where
-              [$schedules  ?schedule-id :UserId      ?user-id]
-              [$schedules  ?schedule-id :ActivityId  ?activity-id]
-              [$activities ?activity-id :Name        ?name]
-              [$activities ?activity-id :Location    ?location]
-              [$activities ?activity-id :StartTime   ?start-time]
-              [$activities ?activity-id :EndTime     ?end-time]]
-            resources/schedules-db
-            resources/activities-db
-            (:UserId session/user))))
+(defc= event-activities
+  (d/q '[:find ?activity-id
+         :in $ ?event-id
+         :where
+         [?activity-id :EventId ?event-id]]
+       resources/activities-db
+       event-id))
 
 (defc= unscheduled-activities
-  (map #(vector :ActivityId  %1
-                :Name        %2
-                :Location    %3
-                :StartTime   %4
-                :EndTime     %5
-                :Description %6)
-       (d/q '[:find
-              ?activity-id
-              ?name
-              ?location
-              ?start-time
-              ?end-time
-              ?description
-
-              :in
-              $schedules
-              $activities
-              ?user-id
-
-              :where
-              [$schedules  ?schedule-id :UserId      ?user-id]
-              (not [$schedules  ?schedule-id :ActivityId  ?activity-id])
-              [$activities ?activity-id :Name        ?name]
-              [$activities ?activity-id :Location    ?location]
-              [$activities ?activity-id :StartTime   ?start-time]
-              [$activities ?activity-id :EndTime     ?end-time]
-              [$activities ?activity-id :Description ?description]]
-            resources/schedules-db
-            resources/activities-db
-            (:UserId session/user))))
+  (difference event-activities (into #{} (map #(vector (second %))
+                                              scheduled-activities))))
 
 (defn add-activity! [user-id activity-id]
-  (resources/schedules-endpoint :create {:ActivityId activity-id
-                                         :UserId     user-id}))
+  (resources/schedules-endpoint :create
+                                {:ActivityId activity-id
+                                 :UserId     user-id}
+                                nil))
 
-(defn remove-activity [schedule]
-  (resources/schedules-endpoint :delete schedule))
+(defn remove-activity! [schedule]
+  (resources/schedules-endpoint :delete schedule nil))
 
 (def breadcrumbs (list ["Events" "#/events"]
-                       [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
+                       [(cell= (:Name event))
+                        (cell= (str "#/events/" event-id))]
                        "My Schedule"))
 
 (defn template []
@@ -98,8 +64,9 @@
     (div :class "sixteen wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
-          (h2 :class "ui dividing header"
+          (h2 :class "ui header"
             (text "~(:FirstName session/user)'s Schedule for ~(:Name event)")))
+        (div :class "ui vertical segment"
           (table :class "ui table"
             (thead
               (tr
@@ -109,18 +76,28 @@
                 (th "Location")
                 (th)))
             (tbody
-              (loop-tpl :bindings [activity scheduled-activities]
-                (tr
-                  (let [start (from-string (:StartTime @activity))]
-                    (td :nowrap true (unparse datetime-formatter start)))
-                  (let [end (from-string (:EndTime @activity))]
-                    (td :nowrap true (unparse datetime-formatter end)))
-                  (td (text (:Name activity)))
-                  (td (text (:Location activity)))
-                  (td :class "right aligned" :nowrap true
-                    (div :class "ui button"
-                         :on-click #(remove-activity (:ScheduleId @activity))
-                      (i :class "red remove icon") "Remove")))))
+              (loop-tpl :bindings [[schedule-id activity-id]
+                                   scheduled-activities]
+                (let [activity
+                      (cell= (when activity-id
+                               (d/entity resources/activities-db activity-id)))]
+                  (tr
+                    (td :nowrap true
+                      (text (when activity
+                              (unparse datetime-formatter
+                                       (from-string (:StartTime activity))))))
+                    (td :nowrap true
+                      (text (when activity
+                              (unparse datetime-formatter
+                                       (from-string (:EndTime activity))))))
+                    (td (text (:Name activity)))
+                    (td (text (:Location activity)))
+                    (td :class "right aligned" :nowrap true
+                      (div :class "ui button"
+                           :on-click #(remove-activity!
+                                        (d/entity @resources/schedules-db
+                                                  @schedule-id))
+                        (i :class "red remove icon") "Remove"))))))
             (tfoot
               (tr
                 (th :colspan "6"
@@ -128,28 +105,35 @@
                     (i :class "print icon") "Print"))))))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity unscheduled-activities]
-              (div :class "item"
-                (div :class "content"
-                  (a :class "header" (text (:Name activity)))
-                  (div :class "meta" (text (:Location activity)))
-                  (let [start (from-string (:StartTime @activity))
-                        end (from-string (:EndTime @activity))]
-                    (div (str (unparse datetime-formatter start)
-                              " - "
-                              (unparse datetime-formatter end))))
-                  (div :class "description"
-                    (text (:Description activity)))
-                  (div :class "extra"
-                    (div :class "ui right floated primary button"
-                         :on-click #(add-activity! (:UserId @session/user)
-                                                   (:ActivityId @activity))
-                      "Add" (i :class "right chevron icon"))))))))))))
+            (loop-tpl :bindings [[activity-id] unscheduled-activities]
+              (let [activity
+                    (cell= (when activity-id
+                             (d/entity resources/activities-db activity-id)))]
+                (div :class "item"
+                  (div :class "content"
+                    (a :class "header" (text (:Name activity)))
+                    (div :class "meta" (text (:Location activity)))
+                    (div (text "~(when activity
+                                   (unparse datetime-formatter
+                                            (from-string
+                                              (:StartTime activity))))
+                                -
+                                ~(when activity
+                                   (unparse datetime-formatter
+                                            (from-string
+                                              (:EndTime activity))))"))
+                    (div :class "description"
+                      (text (:Description activity)))
+                    (div :class "extra"
+                      (div :class "ui right floated primary button"
+                           :on-click #(add-activity! (:UserId @session/user)
+                                                     (:ActivityId @activity))
+                        "Add" (i :class "right chevron icon")))))))))))))
 
 (defroute "/events/:EventId/schedule" [EventId]
-  (if @session/user
+  (if @app/token
     (do
-      (reset! page/breadcrumbs breadcrumbs)
+      (reset! app/breadcrumbs breadcrumbs)
       (reset! event-id (int EventId))
       (template))
     (set! js/location "#/")))
