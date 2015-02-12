@@ -8,8 +8,6 @@
 
 (def breadcrumbs (list "Organizations"))
 
-(js/console.log (prn-str resources/organizations-db))
-
 (def template
   (div :class "ui page grid"
     (div :class "sixteen wide column"
