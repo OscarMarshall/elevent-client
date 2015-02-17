@@ -13,24 +13,20 @@
 (defc password nil)
 (defc password-confirm nil)
 
-(defc= form-data {:email email
-                  :first-name first-name
-                  :last-name last-name
-                  :password password
-                  :password-confirm password-confirm})
+(defc= form-data {:Email email
+                  :FirstName first-name
+                  :LastName last-name
+                  :Password password})
 
 ; TODO verify passwords match
 ; Also don't send the password in plaintext
-#_(defn register-site [form-data]
-  (resources/api-post-secure "/users"
-                             {:data {:Email (:email form-data)
-                                     :FirstName (:first-name form-data)
-                                     :LastName (:last-name form-data)
-                                     :Password (:password form-data)}
-                              :handler (fn [json]
-                                         (session/login! (:email form-data) (:password form-data))
-                                         (set! js/location "#/"))
-                              :error-handler #(.log js/console "An error occured")}))
+(defn register-site [form-data]
+  (resources/users-endpoint :create
+                            form-data
+                            #(do
+                               (session/login! (:Email form-data)
+                                               (:Password form-data))
+                               (set! js/location "#/"))))
 
 (defn template []
   (div :class "ui page grid"
@@ -58,7 +54,8 @@
               (div :class "required field"
                 (label "Confirm password")
                 (input-cell :type "password" :state password-confirm)))
-            (div :class "ui primary button" ;:on-click #(register-site @form-data)
+            (div :class "ui primary button"
+                 :on-click #(register-site @form-data)
               (text "Register"))))))))
 
 (defroute register "/register" []

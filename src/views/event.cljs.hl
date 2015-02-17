@@ -9,35 +9,35 @@
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event {})
+(defc= event (when event-id (d/entity resources/events-db event-id)))
 
-(def breadcrumbs (list [(cell= (if session/user
+(def breadcrumbs (list [(cell= (if app/token
                                  "Events"
                                  "Explore"))
-                        (cell= (if session/user
+                        (cell= (if app/token
                                  "#/events"
                                  "#/explore"))]
                        (cell= (:Name event))))
 
 (defn template []
   (div :class "ui page grid"
-    (div :class "twelve wide column"
+    (div :class "sixteen wide column"
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui dividing header"
-              (cell= (:Name event)))
+            (text (:Name event)))
           (div :class "ui right floated small labeled icon button"
             (i :class "edit icon")
             "Edit")
           (div
-            (b "Venue: ") (text "~(:Venue event)"))
+            (b "Venue: ") (text (:Venue event)))
           (div
             (b "Date: ") "11/05/2014")
           (p
-            (text "~(:Description event)")))
+            (text (:Description event))))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
-              "Schedule")
+              "Upcoming Activities")
           (table :class "ui table"
             (thead
               (tr
@@ -48,11 +48,13 @@
             (tbody
               (loop-tpl :bindings [activity
                                    (cell=
-                                     (d/entity resources/activities-db
-                                               (d/q '[:find ?activity-id
-                                                      :where
-                                                      [?activity-id]]
-                                                    resources/activities-db)))]
+                                     (map #(d/entity resources/activities-db %)
+                                          (d/q '[:find [?e ...]
+                                                 :in $ ?event-id
+                                                 :where
+                                                 [?e :EventId ?event-id]]
+                                               resources/activities-db
+                                               event-id)))]
               (tr
                 (let [start (from-string (:StartTime @activity))]
                   (td :nowrap true (unparse datetime-formatter start)))
@@ -67,10 +69,7 @@
                     (a :class "ui right floated small labeled icon button"
                       :href (str "#/events/" (:EventId event) "/activities/add")
                       (i :class "edit icon")
-                      "Edit")
-                    (div :class "ui small labeled icon button"
-                      (i :class "print icon")
-                      "Print")))))))
+                      "Edit")))))))
         #_(div :class "ui vertical segment"
           (h2 :class "ui header" "Groups")
           (table :class "ui table"
@@ -97,9 +96,19 @@
                 (th "Name")
                 (th "Location")))
             (tbody
-              (tr
-                (td "Leslie Baker")
-                (td "WEB 2230")))
+              (loop-tpl :bindings [attendee
+                                   (cell=
+                                     (map #(d/entity resources/users-db %)
+                                          (d/q '[:find [?e ...]
+                                                 :in $ ?event-id
+                                                 :where
+                                                 [?a :EventId ?event-id]
+                                                 [?a :UserId ?e]]
+                                               resources/attendees-db
+                                               event-id)))]
+                (tr
+                  (td (text "~(:FirstName attendee) ~(:LastName attendee)"))
+                  (td "WEB 2230"))))
             (tfoot
               (tr
                 (th :colspan "4"

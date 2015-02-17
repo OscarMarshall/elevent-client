@@ -14,6 +14,6 @@
 (rest/endpoint
   activities    (str app/api-base-url "/activities")    :ActivityId)
 (rest/endpoint
-  users         (str app/api-base-url "/users")         :UserId)
+  users         (str app/api-base-url-secure "/users")  :UserId)
 (rest/endpoint
   schedules     (str app/api-base-url "/schedules")     :ScheduleId)

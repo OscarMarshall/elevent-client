@@ -2,6 +2,7 @@
   (:require
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
+    [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
 
     [app]
@@ -10,8 +11,7 @@
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event {})
-(defc= event-activities [])
+(defc= event (when event-id (d/entity resources/events-db event-id)))
 
 (def breadcrumbs (list ["Events" "#/events"]
 
@@ -26,10 +26,17 @@
       (div :class "ui segment"
         (div :class "ui vertical segment"
           (h2 :class "ui header"
-            (text "Activities for ~{(:Name event)}")))
+            (text "Activities for ~(:Name event)")))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
-            (loop-tpl :bindings [activity []]
+            (loop-tpl :bindings [activity
+                                 (cell=
+                                   (map #(d/entity resources/activities-db %)
+                                        (d/q '[:find [?e ...]
+                                               :in $ ?event-id
+                                               :where [?e :EventId ?event-id]]
+                                             resources/activities-db
+                                             event-id)))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header" (text (:Name activity)))

@@ -3,6 +3,7 @@
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.core :refer  [now]]
     [cljs-time.format :refer [formatters unparse]]
+    [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
 
     [app]
@@ -23,15 +24,10 @@
                          (from-string end-date))
    :Description description})
 
-#_(defn create-event [form-data]
-  (resources/api-post "/events"
-                      {:data form-data
-                       :handler (fn [resp]
-                                  (swap! resources/events
-                                         #(assoc %
-                                            (:EventId resp)
-                                            (merge resp form-data)))
-                                  (set! js/location "#/events"))}))
+(defn create-event [form-data]
+  (resources/events-endpoint :create
+                             form-data
+                             #(set! js/location "#/events")))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        "Add"))
@@ -58,7 +54,16 @@
                 (label "Organization")
                 (input-cell :type "select" :class "ui"
                             :state organization
-                            :options (cell= [])))
+                            :options (cell=
+                                       (map #(let [organization
+                                                   (d/entity
+                                                     resources/organizations-db
+                                                     %)]
+                                               [(:Name organization)
+                                                (:OrganizationId organization)])
+                                        (d/q '[:find [?organization-id ...]
+                                              :where [?organization-id]]
+                                            resources/organizations-db)))))
               (div :class "required field"
                 (label "Venue")
                 (input-cell :type "text" :state venue)))
@@ -72,7 +77,7 @@
             (div :class "field"
               (label "Description")
               (input-cell :type "textarea" :state description))
-            (div :class "ui primary button" ;:on-click #(create-event @form-data)
+            (div :class "ui primary button" :on-click #(create-event @form-data)
               "Add")))))))
 
 (defroute event-add "/events/add" []

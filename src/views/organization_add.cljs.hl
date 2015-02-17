@@ -15,9 +15,9 @@
    :AdminId (:UserId session/user)})
 
 (defn create-organization [form-data]
-  (resources/organizations-endpoint :create form-data
-                                    (fn [_]
-                                      (set! js/location "#/organizations"))))
+  (resources/organizations-endpoint :create
+                                    form-data
+                                    #(set! js/location "#/organizations")))
 
 (def breadcrumbs (list ["Organizations" "#/organizations"]
                        "Add"))

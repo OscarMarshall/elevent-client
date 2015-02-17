@@ -22,10 +22,11 @@
           (div :class "ui items"
             (loop-tpl :bindings [organization
                                  (cell=
-                                   (d/entity resources/organizations-db
-                                             (d/q '[:find ?organization-id
-                                                    :where [?organization-id]]
-                                                  resources/organizations-db)))]
+                                   (map #(d/entity resources/organizations-db
+                                                   %)
+                                        (d/q '[:find [?organization-id ...]
+                                              :where [?organization-id]]
+                                            resources/organizations-db)))]
               (div :class "item"
                 (div :class "content"
                   (a :class "header"

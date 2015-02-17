@@ -10,19 +10,10 @@
     [app]
     [elements :refer [input-cell]]
     [resources]
-    [util :refer [date-formatter]]))
+    [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event (when event-id
-               (when-let [[start-date end-date]
-                          (d/q '[:find ?start-date ?end-date
-                                 :in $ ?event-id
-                                 :where
-                                 [?event-id :StartDate ?start-date]
-                                 [?event-id :EndDate ?end-date]]
-                               resources/events-db event-id)]
-                 {:StartDate start-date
-                  :EndDate end-date})))
+(defc= event (when event-id (d/entity resources/events-db event-id)))
 
 (defc activity-name nil)
 (defc location nil)
@@ -60,7 +51,7 @@
   (reset! description nil))
 
 (defn add-activities [form-data]
-  (resources/activities-endpoint :create form-data))
+  (resources/activities-endpoint :create form-data #(set! js/location "#/")))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -109,27 +100,31 @@
               (text "Create"))))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
-              "Schedule")
+              "Activities")
           (table :class "ui table"
             (thead
               (tr
                 (th "Time")
                 (th "Activity")
                 (th "Location")))
-            #_(tbody
-              (loop-tpl :bindings [activity (cell= (into []
-                                                         (map #((resources/activities event-id) %)
-                                                              (keys (resources/activities event-id)))))]
+            (tbody
+              (loop-tpl :bindings [activity
+                                   (cell=
+                                     (map #(d/entity resources/activities-db %)
+                                          (d/q '[:find [?e ...]
+                                                 :in $ ?event-id
+                                                 :where [?e :EventId ?event-id]]
+                                               resources/activities-db
+                                               event-id)))]
               (tr
-                (td #_(let [start (from-string (:StartTime @activity))
-                          end   (from-string (:EndTime   @activity))]
-                      (str (unparse date-formatter start)
-                           (when (after? end start)
-                             (str " to " (unparse date-formatter end)))))
-                    "(Time)")
-                (td (:Name activity))
-                (td
-                  (text "~{(:Location activity)}")))))))))))
+                (td (text (let [start (from-string (:StartTime activity))
+                                end   (from-string (:EndTime   activity))]
+                            (str (unparse datetime-formatter start)
+                                 (when (after? end start)
+                                   (str " to "
+                                        (unparse datetime-formatter end)))))))
+                (td (text (:Name activity)))
+                (td (text (:Location activity))))))))))))
 
 (defroute "/events/:EventId/activities/add" [EventId]
   (if @app/token

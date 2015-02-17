@@ -1,13 +1,32 @@
 (ns views.explore
   (:require
+    [clojure.set :refer [difference]]
+
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.core :refer [after? at-midnight]]
     [cljs-time.format :refer [unparse]]
+    [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
 
     [app]
     [resources]
+    [session]
     [util :refer [date-formatter]]))
+
+(defc= attending-events (d/q '[:find ?event-id
+                               :in $events $attendees ?user-id
+                               :where
+                               [$events ?event-id]
+                               [$attendees ?attendee-id :EventId ?event-id]
+                               [$attendees ?attendee-id :UserId ?user-id]]
+                             resources/events-db
+                             resources/attendees-db
+                             (:UserId session/user)))
+
+(defc= unattending-events (difference (d/q '[:find ?event-id
+                                             :where [?event-id]]
+                                           resources/events-db)
+                                      attending-events))
 
 (defn template []
   (div :class "ui page grid"
@@ -20,17 +39,19 @@
                 "Explore Events"
                 (a :href "#/events/add"
                    :class (str "ui right floated small button"
-                               (if session/user
-                                 ""
+                               (when app/token
                                  " disabled"))
                   "Add Event"))))
           (div :class "ui vertical segment"
             (div :class "ui divided items"
-              (loop-tpl :bindings [event []]
+              (loop-tpl :bindings [event (cell=
+                                           (map #(d/entity resources/events-db
+                                                           (first %))
+                                                unattending-events))]
                 (div :class "item"
                   (div :class "content"
                     (a :class "header" :href (str "#/events/" (:EventId @event))
-                      (text "~{(:Name event)}"))
+                      (text (:Name event)))
                     (div :class "meta"
                       (b "Date: ")
                       (let [start (from-string (:StartDate @event))
@@ -39,7 +60,7 @@
                              (when (after? end start)
                                (str " to " (unparse date-formatter end))))))
                     (div :class "description"
-                      (text "~{(:Description event)}"))
+                      (text (:Description event)))
                     (div :class "extra"
                       (cell=
                         (a :class (str "ui right floated button"

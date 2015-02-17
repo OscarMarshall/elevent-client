@@ -4,17 +4,17 @@
   (case type
     "textarea"
     (textarea (assoc (dissoc attr :state)
-                :value (cell= state)
+                :value @state
                 :on-input #(reset! state @%)))
 
     "select"
     (select (assoc (dissoc attr :state :options)
-              :value (cell= state)
+              :value @state
               :on-input #(reset! state @%))
       (loop-tpl :bindings [[name value] options]
         (option :value value
           name)))
 
     (input (assoc (dissoc attr :state)
-             :value (cell= state)
+             :value @state
              :on-input #(reset! state @%)))))

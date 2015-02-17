@@ -24,11 +24,18 @@
           (div :class "ui vertical segment"
             (div :class "ui divided items"
               (loop-tpl :bindings [event
-                                   (cell= (map #(d/entity resources/events-db
-                                                          (first %))
-                                               (d/q '[:find ?event-id
-                                                      :where [?event-id]]
-                                                    resources/events-db)))]
+                                   (cell=
+                                     (map #(d/entity resources/events-db
+                                                     (first %))
+                                          (d/q '[:find ?event-id
+                                                 :in $events $attendees ?user-id
+                                                 :where
+                                                 [$events ?event-id]
+                                                 [$attendees ?attendee-id :EventId ?event-id]
+                                                 [$attendees ?attendee-id :UserId ?user-id]]
+                                               resources/events-db
+                                               resources/attendees-db
+                                               (:UserId session/user))))]
                 (div :class "item"
                   (div :class "content"
                     (a :class "header" :href (str "#/events/" (:EventId @event))
