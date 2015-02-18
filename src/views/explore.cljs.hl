@@ -39,7 +39,7 @@
                 "Explore Events"
                 (a :href "#/events/add"
                    :class (str "ui right floated small button"
-                               (when app/token
+                               (when (not app/token)
                                  " disabled"))
                   "Add Event"))))
           (div :class "ui vertical segment"
@@ -64,8 +64,7 @@
                     (div :class "extra"
                       (cell=
                         (a :class (str "ui right floated button"
-                                       (if session/user
-                                         ""
+                                       (when (not app/token)
                                          " disabled"))
                            :href (str "#/events/" (:EventId event) "/register")
                           "Register"
