@@ -1,1 +1,109 @@
-(ns views.event-checkin)
+(ns views.event-checkin
+  (:require
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.core :refer [after? at-midnight now]]
+    [cljs-time.format :refer [formatters unparse]]
+    [ajax.core :refer [PUT]]
+    [datascript :as d]
+    [secretary.core :as secretary :refer-macros [defroute]]
+
+    [app]
+    [util :refer [date-formatter]]
+    [resources]))
+
+(defc event-id nil)
+(defc= event (when event-id (d/entity resources/events-db event-id)))
+
+(defc attendee-id nil)
+(defc= attendee (when attendee-id
+                  (first (map (fn [[user-id attendee-id]]
+                                (merge (into {} (d/entity resources/users-db user-id))
+                                       (into {} (d/entity resources/attendees-db attendee-id))))
+                              (d/q '[:find ?e ?a
+                                     :in $ ?attendee-id
+                                     :where
+                                     [?a :AttendeeId ?attendee-id]
+                                     [?a :UserId ?e]]
+                                   resources/attendees-db
+                                   attendee-id)))))
+
+(defn check-in [event-id attendee-id user-id]
+  (PUT (str app/api-base-url "/attendees/checkin")
+       {:format :json
+        :keywords? true
+        :headers
+        (if @app/token
+          {:Authentication
+           (str "Bearer " @app/token)}
+          {})
+        :params {:AttendeeId attendee-id
+                 :EventId event-id
+                 :UserId user-id
+                 :CheckinTime (unparse (:date-hour-minute-second formatters)
+                                       (now))}
+        :handler #(do
+                    (js/console.log "Checked in!")
+                    (resources/attendees-endpoint :read nil nil))}))
+
+(def breadcrumbs (list ["Events" "#/events"]
+                       [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
+                       "Attendees"
+                       (cell= (str (:FirstName attendee) " " (:LastName attendee)))
+                       "Check-in"))
+
+(defn template []
+  (div :class "ui page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (div
+          (div :class "ui vertical segment"
+            (h1 :class "ui header"
+              (text "~{(:FirstName attendee)} ~{(:LastName attendee)}")))
+          (div :class "ui vertical segment"
+            (div :class "ui divided items"
+              (loop-tpl :bindings [event
+                                   (cell=
+                                     (map #(d/entity resources/events-db
+                                                     (first %))
+                                          (d/q '[:find ?event-id
+                                                 :in $events $attendees ?user-id
+                                                 :where
+                                                 [$events ?event-id]
+                                                 [$attendees ?attendee-id :EventId ?event-id]
+                                                 [$attendees ?attendee-id :UserId ?user-id]]
+                                               resources/events-db
+                                               resources/attendees-db
+                                               (:UserId session/user))))]
+                (div :class "item"
+                  (div :class "content"
+                    (a :class "header" :href (str "#/events/" (:EventId @event))
+                      (text "~(:Name event)"))
+                    (div :class "meta"
+                      (b "Date: ")
+                      (text
+                        (let [start (from-string (:StartDate event))
+                              end   (from-string (:EndDate   event))]
+                          (str (unparse date-formatter start)
+                               (when (after? end start)
+                                 (str " to " (unparse date-formatter end)))))))
+                    (div :class "description"
+                      (text "~{(:Description event)}"))
+                    (div :class "extra"
+                      (div :class (str "ui right floated button" (when (:CheckinTime @attendee) " disabled"))
+                           :on-click #(check-in @event-id @attendee-id (:UserId @attendee))
+                        (if (:CheckinTime @attendee)
+                          "Checked in"
+                          "Check in")))))))))
+        (div :do-class (cell= {:ui true
+                               :active (empty? resources/events)
+                               :dimmer true})
+          (div :class "ui loader"))))))
+
+(defroute checkin "/events/:EventId/attendees/:AttendeeId/checkin" [EventId AttendeeId]
+  (if @app/token
+    (do
+      (reset! app/breadcrumbs breadcrumbs)
+      (reset! event-id (int EventId))
+      (reset! attendee-id (int AttendeeId))
+      (template))
+    (set! js/location "#/")))

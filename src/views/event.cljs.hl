@@ -94,12 +94,15 @@
             (thead
               (tr
                 (th "Name")
-                (th "Location")))
+                (th "Location")
+                (th)))
             (tbody
               (loop-tpl :bindings [attendee
                                    (cell=
-                                     (map #(d/entity resources/users-db %)
-                                          (d/q '[:find [?e ...]
+                                     (map (fn [[user-id attendee-id]]
+                                            (merge (into {} (d/entity resources/users-db user-id))
+                                                   (into {} (d/entity resources/attendees-db attendee-id))))
+                                          (d/q '[:find ?e ?a
                                                  :in $ ?event-id
                                                  :where
                                                  [?a :EventId ?event-id]
@@ -108,7 +111,12 @@
                                                event-id)))]
                 (tr
                   (td (text "~(:FirstName attendee) ~(:LastName attendee)"))
-                  (td "WEB 2230"))))
+                  (td "WEB 2230")
+                  (td (a :class (str "ui right floated small labeled button" (when (:CheckinTime @attendee) " disabled"))
+                         :href (str "#/events/" @event-id "/attendees/" (:AttendeeId @attendee) "/checkin")
+                         (if (:CheckinTime @attendee)
+                           "Checked in"
+                           "Check in"))))))
             (tfoot
               (tr
                 (th :colspan "4"
