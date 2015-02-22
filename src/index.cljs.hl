@@ -4,7 +4,6 @@
     [tailrecursion.hoplon.reload :refer [reload-all]]
 
     [app]
-    [elements :refer [input-cell]]
     [session]
     [style]
     [views.calendar]
@@ -18,6 +17,7 @@
     [views.events]
     [views.explore]
     [views.home]
+    [views.login]
     [views.organization-add]
     [views.organizations]
     [views.page-not-found]
@@ -36,54 +36,48 @@
   (body
     (nav :class "ui fixed menu"
       (cell=
-        (filter
-          identity
-          (list
-            (a :class "logo item" :href "#/"
-              (img :src "images/logo-menu.png"))
-            (a :class "item" :href "#/explore"
-              (i :class "rocket icon") "Explore")
-            (when app/token
-              (a :class "item" :href "#/events"
-                 (i :class "ticket icon") "Events"))
-            (a :class "item" :href "#/organizations"
-               (i :class "building icon") "Organizations")
-            (a :class "item" :href "#/calendar"
-              (i :class "calendar icon") "Calendar")
+        (list
+          (a :class "logo item" :href "#/"
+            (img :src "images/logo-menu.png"))
+          (a :class "item" :href "#/explore"
+            (i :class "rocket icon") "Explore")
+          (when app/token
+            (a :class "item" :href "#/events"
+              (i :class "ticket icon") "Events"))
+          (a :class "item" :href "#/organizations"
+             (i :class "building icon") "Organizations")
+          (a :class "item" :href "#/calendar"
+            (i :class "calendar icon") "Calendar")
+          (div :class "right menu"
+          (cell=
             (if app/token
-              (div :class "right menu"
-                (a :class "item" :on-click session/logout!
-                  (text "Logout of ~{session/username}'s account")))
-              (let [email    (cell nil)
-                    password (cell nil)]
-                (div :class "right menu"
-                  (a :class "item"
-                   :on-click #(.modal (js/jQuery ".ui.login.modal") "show")
-                    (i :class "user icon")
-                    "Login"
-                    (form :class "ui small login modal"
-                          :on-submit (fn []
-                                       (session/login! @email @password)
-                                       false)
-                      (i :class "close icon")
-                      (div :class "header"
-                        "Login")
-                      (div :class "content"
-                        (div :class "description"
-                          (div :class "ui form"
-                            (div :class "two fields"
-                              (div :class "field"
-                                (label "Email")
-                                (input-cell :type "email" :state email))
-                              (div :class "field"
-                                (label "Password")
-                                (input-cell :type "password" :state password))))))
-                      (div :class "actions"
-                        (button :class "ui button" "Cancel")
-                        (input :type "submit" :class "ui button primary"
-                          "Login"))))
-                  (a :class "item right floated" :href "#/register"
-                    "Sign up"))))))))
+              (a :class "item" :on-click session/logout!
+                (text "Logout of ~{session/username}'s account"))
+              (list
+                (a :class "item"
+                   :on-click
+                   (fn []
+                     (.modal
+                       (js/jQuery
+                         (let [login-form (views.login/login-form)]
+                           (div :class "ui small modal"
+                             (i :class "close icon")
+                             (div :class "header"
+                               "Login")
+                             (div :class "content"
+                               (div :class "description"
+                                 login-form))
+                             (div :class "actions"
+                               (button :class "ui button" "Cancel")
+                               (button :class "ui button primary"
+                                       :on-click #(.submit
+                                                    (js/jQuery login-form))
+                                 "Login")))))
+                       "show"))
+                  (i :class "user icon")
+                  "Login")
+                (a :class "item" :href "#/register"
+                  "Sign up"))))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (div :class "ui breadcrumb"
@@ -106,5 +100,5 @@
     (div (cell= (secretary/dispatch! app/route)))))
 
 (defroute "*" []
-  (set! js/location "#/page-not-found")
+  (js/location.replace "#/page-not-found")
   nil)

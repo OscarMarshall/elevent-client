@@ -1,0 +1,36 @@
+(ns views.login
+  (:require
+    [secretary.core :refer-macros [defroute]]
+
+    [elements :refer [input-cell]]
+    [session]))
+
+(defn login-form []
+  (let [email (cell nil), password (cell nil)]
+    (form :class "ui form"
+          :on-submit (fn []
+                       (session/login! @email @password)
+                       false)
+      (div :class "two fields"
+        (div :class "field"
+          (label "Email")
+          (input-cell :type "email" :state email))
+        (div :class "field"
+          (label "Password")
+          (input-cell :type "password" :state password)))
+      (input :type "submit" :style "display:none"))))
+
+(defn template []
+  (div :class "ui page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (let [login-form (login-form)]
+          (list
+            login-form
+            (button :class "ui button" "Cancel")
+            (button :class "ui button primary"
+                    :on-click #(.submit (js/jQuery login-form))
+              "Login")))))))
+
+(defroute "/login" []
+  (template))
