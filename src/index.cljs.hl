@@ -4,6 +4,7 @@
     [tailrecursion.hoplon.reload :refer [reload-all]]
 
     [app]
+    [elements :refer [input-cell]]
     [session]
     [style]
     [views.calendar]
@@ -59,19 +60,29 @@
                    (fn []
                      (.modal
                        (js/jQuery
-                         (let [login-form (views.login/login-form)]
-                           (div :class "ui small modal"
+                         (let [email (cell nil), password (cell nil)]
+                           (form :class "ui small modal"
+                                 :on-submit (fn []
+                                              (session/login! @email @password)
+                                              false)
                              (i :class "close icon")
                              (div :class "header"
                                "Login")
                              (div :class "content"
                                (div :class "description"
-                                 login-form))
+                                 (div :class "ui form"
+                                   (div :class "two fields"
+                                     (div :class "field"
+                                       (label "Email")
+                                       (input-cell :type "email"
+                                                   :state email))
+                                     (div :class "field"
+                                       (label "Password")
+                                       (input-cell :type "password"
+                                                   :state password))))))
                              (div :class "actions"
                                (button :class "ui button" "Cancel")
-                               (button :class "ui button primary"
-                                       :on-click #(.submit
-                                                    (js/jQuery login-form))
+                               (input :type "submit" :class "ui button primary"
                                  "Login")))))
                        "show"))
                   (i :class "user icon")
@@ -96,7 +107,15 @@
                       (a :class "section" :href url
                         text))
                     (div :class "active section"
-                      breadcrumb)))))))))
+                      breadcrumb)))))))
+        (loop-tpl :bindings [[type message] app/messages]
+          (div :do-class {:ui true
+                          :warning  (= @type :warning)
+                          :info     (= @type :info)
+                          :positive (= @type :success)
+                          :negative (= @type :error)
+                          :message true }
+            @message))))
     (div (cell= (secretary/dispatch! app/route)))))
 
 (defroute "*" []

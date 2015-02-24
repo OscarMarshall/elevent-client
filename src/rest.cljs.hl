@@ -17,6 +17,9 @@
                     :keywords?
                     true
 
+                    :timeout
+                    1000
+
                     :headers
                     (if @app/token
                       {:Authentication
@@ -39,7 +42,10 @@
                          (dispatch! :read nil nil nil)))
 
                     :error-handler
-                    error-handler}]
+                    #(do
+                       (when (= (:failure %) :timeout)
+                         (swap! app/messages conj [:error "Timeout"]))
+                       (when error-handler (error-handler %)))}]
        (let [check-id (fn [op] (if (contains? params element-id)
                                  (op (str uri "/" (params element-id)) options)
                                  (throw (str "Element doesn't contain key \""
@@ -53,4 +59,4 @@
            :delete (check-id DELETE)
            (POST (str uri "/" (name operation)) options)))))
     ([operation params handler]
-     (dispatch! operation params handler #(throw (prn-str %))))))
+     (dispatch! operation params handler nil))))

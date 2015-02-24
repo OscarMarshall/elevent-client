@@ -2,6 +2,7 @@
   (:require
     [tailrecursion.hoplon.storage-atom :refer [local-storage]]))
 
+;; Cell that's synchronized to the hash-fragment
 (def route (route-cell "#/"))
 
 (def api-base-url "http://elevent.solutions:8860")
@@ -12,9 +13,17 @@
 
 (defn title-prepare [page] (str title-base title-seperator page))
 
+;; String used for page title
 (defc title-string title-base)
 
+;; Expects a collection of either a vector of a display text string and a url
+;; string or a non-link display text string.
+;;     (list ["Example" "example.com"] | "Name" ...)
 (defc breadcrumbs nil)
+
+;; Expects a collection of vectors of message-type string and message string.
+;;     (list [:message|:warning|:info|:success|:error "text"] ...)
+(defc messages nil)
 
 (def token (local-storage (cell nil) ::token))
 
