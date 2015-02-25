@@ -18,7 +18,7 @@
                     true
 
                     :timeout
-                    1000
+                    8000
 
                     :headers
                     (if @app/token
@@ -44,7 +44,8 @@
                     :error-handler
                     #(do
                        (when (= (:failure %) :timeout)
-                         (swap! app/messages conj [:error "Timeout"]))
+                         (swap! app/messages conj [:error
+                                                   (str uri " timed out")]))
                        (when error-handler (error-handler %)))}]
        (let [check-id (fn [op] (if (contains? params element-id)
                                  (op (str uri "/" (params element-id)) options)

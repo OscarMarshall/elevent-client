@@ -1,4 +1,4 @@
-(ns views.login
+(ns views.sign-in
   (:require
     [secretary.core :refer-macros [defroute]]
 
@@ -32,5 +32,5 @@
                     :on-click #(.submit (js/jQuery login-form))
               "Login")))))))
 
-(defroute "/login" []
+(defroute "/sign-in" []
   (template))

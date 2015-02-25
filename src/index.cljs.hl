@@ -18,12 +18,12 @@
     [views.events]
     [views.explore]
     [views.home]
-    [views.login]
     [views.organization-add]
     [views.organizations]
     [views.page-not-found]
-    [views.register]
-    [views.sidebar]))
+    [views.sidebar]
+    [views.sign-in]
+    [views.sign-up]))
 
 (reload-all)
 
@@ -36,59 +36,56 @@
     (style style/stylesheet))
   (body
     (nav :class "ui fixed menu"
-      (cell=
-        (list
-          (a :class "logo item" :href "#/"
-            (img :src "images/logo-menu.png"))
-          (a :class "item" :href "#/explore"
-            (i :class "rocket icon") "Explore")
-          (when app/token
-            (a :class "item" :href "#/events"
-              (i :class "ticket icon") "Events"))
-          (a :class "item" :href "#/organizations"
-             (i :class "building icon") "Organizations")
-          (a :class "item" :href "#/calendar"
-            (i :class "calendar icon") "Calendar")
-          (div :class "right menu"
-          (cell=
-            (if app/token
-              (a :class "item" :on-click session/logout!
-                (text "Logout of ~{session/username}'s account"))
-              (list
-                (a :class "item"
-                   :on-click
-                   (fn []
-                     (.modal
-                       (js/jQuery
-                         (let [email (cell nil), password (cell nil)]
-                           (form :class "ui small modal"
-                                 :on-submit (fn []
-                                              (session/login! @email @password)
-                                              false)
-                             (i :class "close icon")
-                             (div :class "header"
-                               "Login")
-                             (div :class "content"
-                               (div :class "description"
-                                 (div :class "ui form"
-                                   (div :class "two fields"
-                                     (div :class "field"
-                                       (label "Email")
-                                       (input-cell :type "email"
-                                                   :state email))
-                                     (div :class "field"
-                                       (label "Password")
-                                       (input-cell :type "password"
-                                                   :state password))))))
-                             (div :class "actions"
-                               (button :class "ui button" "Cancel")
-                               (input :type "submit" :class "ui button primary"
-                                 "Login")))))
-                       "show"))
-                  (i :class "user icon")
-                  "Login")
-                (a :class "item" :href "#/register"
-                  "Sign up"))))))))
+      (a :class "logo item" :href "#/"
+        (img :src "images/logo-menu.png"))
+      (a :class "item" :href "#/explore"
+        (i :class "rocket icon") "Explore")
+      (a :class (cell= {:item app/token}) :href "#/events"
+        (i :class "ticket icon") "Events")
+      (a :class "item" :href "#/organizations"
+         (i :class "building icon") "Organizations")
+      (a :class "item" :href "#/calendar"
+        (i :class "calendar icon") "Calendar")
+      (div :class "right menu"
+        (cell=
+          (if app/token
+            (a :class "item" :on-click session/logout!
+              (text "Sign out of ~(:FirstName session/user)'s account"))
+            (list
+              (a :class "item"
+                 :on-click
+                 (fn []
+                   (.modal
+                     (js/jQuery
+                       (let [email (cell nil), password (cell nil)]
+                         (form :class "ui small modal"
+                               :on-submit (fn []
+                                            (session/login! @email @password)
+                                            false)
+                           (i :class "close icon")
+                           (div :class "header"
+                             "Login")
+                           (div :class "content"
+                             (div :class "description"
+                               (div :class "ui form"
+                                 (div :class "two fields"
+                                   (div :class "field"
+                                     (label "Email")
+                                     (input-cell :type "email"
+                                                 :state email))
+                                   (div :class "field"
+                                     (label "Password")
+                                     (input-cell :type "password"
+                                                 :state password))))))
+                           (div :class "actions"
+                             (button :class "ui button" "Cancel")
+                             (input :type "submit" :class "ui button primary"
+                               "Login")))))
+                     "show"))
+                (i :class "user icon")
+                "Sign in")
+              (a :class "item" :href "#/register"
+                "Sign up"))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
         (div :class "ui breadcrumb"

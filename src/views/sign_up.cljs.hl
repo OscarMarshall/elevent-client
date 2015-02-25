@@ -1,4 +1,4 @@
-(ns views.register
+(ns views.sign-up
   (:require
     [elements :refer [input-cell input-field submit]]
     [validateur.validation :as val]
@@ -41,7 +41,7 @@
                   nil))))
 
 ; TODO don't send the password in plaintext
-(defn register-site [form-data]
+(defn sign-up-site [form-data]
   #_(js/console.log (prn-str (@app/validator form-data)))
   (resources/users-endpoint :create
                             (dissoc form-data :PasswordConfirm)
@@ -55,7 +55,7 @@
     (div :class "sixteen wide column"
       (div :class "ui segment"
         (h1 :class "ui header"
-          "Create an account")
+          "Sign up for an account")
         (div :class "ui vertical segment"
           (div :class "ui form"
             (div :class "one field"
@@ -78,10 +78,10 @@
                 (input-cell :type "password" :state password-confirm :on-blur #(app/validate! :Password form-data))))
             (submit :class "ui primary button" :form-data form-data
                  :on-click #(register-site @form-data)
-              "Register")))))))
+              "Sign Up")))))))
 
-(defroute register "/register" []
+(defroute "/sign-up" []
   (reset! app/breadcrumbs
-          (list "Register"))
+          (list "Sign up"))
   (app/reset-validation! validator)
   (template))
