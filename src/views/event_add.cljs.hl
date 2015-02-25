@@ -7,26 +7,40 @@
     [secretary.core :as secretary :refer-macros [defroute]]
 
     [app]
-    [elements :refer [input-cell]]
+    [elements :refer [input-cell input-field submit]]
+    [validateur.validation :as val]
     [resources]))
 
 (defc event-title nil)
 (defc organization nil)
 (defc venue nil)
-(defc start-date (unparse (:date formatters) (now)))
-(defc end-date   (unparse (:date formatters) (now)))
+(defc start-date (unparse (:date-hour-minute-second formatters) (now)))
+(defc end-date   (unparse (:date-hour-minute-second formatters) (now)))
 (defc description nil)
 (defc= form-data
   {:Name event-title
-   :StartDate   (unparse (:date-hour-minute-second formatters)
-                         (from-string start-date))
-   :EndDate     (unparse (:date-hour-minute-second formatters)
-                         (from-string end-date))
-   :Description description})
+   :StartDate   start-date
+   :EndDate     end-date
+   :Venue venue
+   :Description description
+   :Organization organization})
+
+(def validator (val/validation-set
+                 (val/presence-of :Name :message "Required field")
+                 (val/presence-of :StartDate :message "Required field")
+                 (val/presence-of :EndDate :message "Required field")
+                 (val/presence-of :Venue :message "Required field")))
 
 (defn create-event [form-data]
+  #_(js/console.log (prn-str (@app/validator form-data)))
   (resources/events-endpoint :create
-                             form-data
+                             (let [start-date (:StartDate form-data)
+                                   end-date   (:EndDate form-data)]
+                               (assoc form-data
+                                 :StartDate (unparse (:date-hour-minute-second formatters)
+                                                     (from-string start-date))
+                                 :EndDate (unparse (:date-hour-minute-second formatters)
+                                                   (from-string end-date))))
                              #(set! js/location "#/events")))
 
 (def breadcrumbs (list ["Events" "#/events"]
@@ -41,7 +55,7 @@
             (h2 :class "ui dividing header"
               "Add an Event")
             (div :class "two fields"
-              (div :class "required field"
+              (input-field :class "required field" :field :Name :form-data form-data
                 (label "Title")
                 (input-cell :type "text" :state event-title))
               (div :class "field"
@@ -64,25 +78,27 @@
                                         (d/q '[:find [?organization-id ...]
                                               :where [?organization-id]]
                                             resources/organizations-db)))))
-              (div :class "required field"
+              (input-field :class "required field" :field :Venue :form-data form-data
                 (label "Venue")
                 (input-cell :type "text" :state venue)))
             (div :class "two fields"
-              (div :class "required field"
+              (input-field :class "required field" :field :StartDate :form-data form-data
                 (label "Start Date")
-                (input-cell :type "date" :state start-date))
-              (div :class "required field"
+                (input-cell :type "datetime-local" :state start-date))
+              (input-field :class "required field" :field :EndDate :form-data form-data
                 (label "End Date")
-                (input-cell :type "date" :state end-date)))
+                (input-cell :type "datetime-local" :state end-date)))
             (div :class "field"
               (label "Description")
               (input-cell :type "textarea" :state description))
-            (div :class "ui primary button" :on-click #(create-event @form-data)
+            (submit :class "ui primary button" :form-data form-data
+                    :on-click #(create-event @form-data)
               "Add")))))))
 
 (defroute event-add "/events/add" []
   (if @app/token
     (do
       (reset! app/breadcrumbs breadcrumbs)
+      (app/reset-validation! validator)
       (template))
     (set! js/location "#/")))

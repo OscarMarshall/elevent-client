@@ -4,7 +4,8 @@
     [cljs-time.core :refer  [now]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [formatters unparse]]
-    [elements :refer [input-cell]]
+    [elements :refer [input-cell input-field submit]]
+    [validateur.validation :as val]
     [app]
     [resources]))
 
@@ -13,6 +14,9 @@
 (defc= form-data
   {:Name organization
    :AdminId (:UserId session/user)})
+
+(def validator (val/validation-set
+                 (val/presence-of :Name :message "Required field")))
 
 (defn create-organization [form-data]
   (resources/organizations-endpoint :create
@@ -28,22 +32,20 @@
       (div :class "ui segment"
         (div :class "ui form"
           (div :class "ui vertical segment"
-            (cell=
-              (h2 :class (str "ui dividing header"
-                              (if session/user
-                                ""
-                                " disabled"))
-                "Add an Organization"))
+            (h2 :class "ui dividing header"
+              "Add an Organization")
             (div :class "field"
-              (div :class "required field"
+              (input-field :class "required field" :field :Name :form-data form-data
                 (label "Organization Name")
                 (input-cell :type "text" :state organization)))
-            (div :class "ui primary button" :on-click #(create-organization @form-data)
+            (submit :class "ui primary button" :form-data form-data
+                    :on-click #(create-organization @form-data)
               "Add")))))))
 
 (defroute organization-add "/organizations/add" []
   (if @app/token
     (do
       (reset! app/breadcrumbs breadcrumbs)
+      (app/reset-validation! validator)
       (template))
     (set! js/location "#/")))

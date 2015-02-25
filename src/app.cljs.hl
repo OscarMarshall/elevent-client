@@ -22,3 +22,13 @@
 (def time-format "h:mma")
 (def datetime-format "h:mma MMMM d, yyyy")
 (def input-date-time-format "hh:mm a YYYY-MM-dd")
+
+(defc validation-errors {})
+(defc validator (fn [] nil))
+
+(defn validate! [field form-data]
+  (reset! validation-errors (merge @validation-errors {field (field (@validator @form-data))})))
+
+(defn reset-validation! [page-validator]
+  (reset! validator page-validator)
+  (reset! validation-errors {}))

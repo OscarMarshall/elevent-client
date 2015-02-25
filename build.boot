@@ -13,7 +13,8 @@
                   [spyscope "0.1.5"]
                   [secretary "1.2.1"]
                   [org.clojure/clojurescript "0.0-2727"]
-                  [datascript "0.9.0"]]
+                  [datascript "0.9.0"]
+                  [com.novemberain/validateur "2.4.2"]]
   :out-path     "resources/public"
   :src-paths    #{"src"})
 

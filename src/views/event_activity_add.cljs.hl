@@ -8,9 +8,10 @@
     [util :refer [input-date-time-formatter]]
 
     [app]
-    [elements :refer [input-cell]]
+    [elements :refer [input-cell input-field submit]]
     [resources]
-    [util :refer [datetime-formatter]]))
+    [util :refer [datetime-formatter]]
+    [validateur.validation :as val]))
 
 (defc event-id nil)
 (defc= event (when event-id (d/entity resources/events-db event-id)))
@@ -18,12 +19,6 @@
 (defc activity-name nil)
 (defc location nil)
 (defc enrollment-cap nil)
-(defc start-date nil #_(when event
-                   (unparse (:date formatters)
-                            (from-string (:StartDate event))))) ; I don't think this is updating
-(defc end-date nil #_(when event
-                    (unparse (:date formatters)
-                             (from-string (:EndDate event)))))
 (defc start-time nil)
 (defc end-time nil)
 (defc description nil)
@@ -32,10 +27,10 @@
                   :Name activity-name
                   :Location location
                   :EnrollmentCap enrollment-cap
-                  :StartTime (unparse (:date-hour-minute-second formatters) ; this throws errors as the date is being typed
+                  :StartTime start-time #_(unparse (:date-hour-minute-second formatters)
                                       (parse input-date-time-formatter
                                              (str start-time " " start-date)))
-                  :EndTime   (unparse (:date-hour-minute-second formatters)
+                  :EndTime   end-time #_(unparse (:date-hour-minute-second formatters)
                                       (parse input-date-time-formatter
                                              (str end-time " " end-date)))
                   :Description description})
@@ -44,14 +39,31 @@
   (reset! activity-name nil)
   (reset! location nil)
   (reset! enrollment-cap nil)
-  (reset! start-date nil)
-  (reset! end-date nil)
   (reset! start-time nil)
   (reset! end-time nil)
   (reset! description nil))
 
+(def validator (val/validation-set
+                 (val/presence-of :Name :message "Required field")
+                 (val/presence-of :Location :message "Required field")
+                 (val/presence-of :StartTime :message "Required field")
+                 (val/presence-of :EndTime :message "Required field")
+                 (val/format-of :EnrollmentCap :format #"[0-9_]"
+                                :allow-nil true
+                                :allow-blank true
+                                :message "Please enter a number")))
+
 (defn add-activities [form-data]
-  (resources/activities-endpoint :create form-data #(set! js/location "#/")))
+  #_(js/console.log (prn-str (@app/validator form-data)))
+  (resources/activities-endpoint :create
+                                 (let [start-time (:StartTime form-data)
+                                       end-time   (:EndTime form-data)]
+                                   (assoc form-data
+                                     :StartTime (unparse (:date-hour-minute-second formatters)
+                                                         (from-string start-time))
+                                     :EndTime (unparse (:date-hour-minute-second formatters)
+                                                       (from-string end-time))))
+                                 #(set! js/location "#/")))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -69,35 +81,29 @@
               "Add activity")
           (div :class "ui form"
             (div :class "one field"
-              (div :class "required field"
+              (input-field :class "required field" :field :Name :form-data form-data
                 (label "Name")
                 (input-cell :type "text" :state activity-name)))
             (div :class "two fields"
-              (div :class "required field"
+              (input-field :class "required field" :field :Location :form-data form-data
                 (label "Location")
                 (input-cell :type "text" :state location))
-              (div :class "field"
+              (input-field :class "field" :field :EnrollmentCap :form-data form-data
                 (label "Enrollment Cap")
                 (input-cell :type "text" :state enrollment-cap)))
             (div :class "two fields"
-              (div :class "required field"
-                (label "Start date")
-                (input-cell :type "date" :state start-date))
-              (div :class "required field"
-                (label "End date")
-                (input-cell :type "date" :state end-date)))
-            (div :class "two fields"
-              (div :class "required field"
-                (label "Start time")
-                (input-cell :type "text" :placeholder "hh:mm am/pm" :state start-time))
-              (div :class "required field"
-                (label "End time")
-                (input-cell :type "text" :placeholder "hh:mm am/pm" :state end-time)))
+              (input-field :class "required field" :field :StartTime :form-data form-data
+                (label "Start Time")
+                (input-cell :type "datetime-local" :state start-time))
+              (input-field :class "required field" :field :EndTime :form-data form-data
+                (label "End Time")
+                (input-cell :type "datetime-local" :state end-time)))
             (div :class "field"
               (label "Description")
               (input-cell :type "textarea" :state description))
-            (div :class "ui primary button" :on-click #(add-activities @form-data)
-              (text "Create"))))
+            (submit :class "ui primary button" :form-data form-data
+                    :on-click #(add-activities @form-data)
+              "Create")))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
               "Activities")
@@ -130,6 +136,7 @@
   (if @app/token
     (do
       (reset! app/breadcrumbs breadcrumbs)
+      (app/reset-validation! validator)
       (reset! event-id (int EventId))
       (template))
     (set! js/location "#/")))
