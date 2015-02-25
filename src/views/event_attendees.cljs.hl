@@ -1,0 +1,125 @@
+(ns views.event-attendees
+  (:require
+    [clojure.string :refer [lower-case]]
+
+    [secretary.core :as secretary :refer-macros [defroute]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.format :refer [unparse]]
+    [datascript :as d]
+
+    [elements :refer [input-cell]]
+    [resources]
+    [session]
+    [util :refer [datetime-formatter]]))
+
+(defc event-id nil)
+(defc= event (when event-id (d/entity resources/events-db event-id)))
+
+(defc= attendees
+  (sort-by (juxt :HighSchool :LastName :FirstName)
+           (map (fn [[user-id attendee-id]]
+                  (merge (into {} (d/entity resources/users-db
+                                            user-id))
+                         (into {} (d/entity resources/attendees-db
+                                            attendee-id))))
+                (d/q '[:find ?e ?a
+                       :in $ ?event-id
+                       :where
+                       [?a :EventId ?event-id]
+                       [?a :UserId ?e]]
+                     resources/attendees-db
+                     event-id))))
+
+(defc email-filter       nil)
+(defc last-name-filter   nil)
+(defc first-name-filter  nil)
+(defc gender-filter      nil)
+(defc high-school-filter nil)
+(defc class-year-filter  nil)
+(defc group-filter       nil)
+(let [create-filter (fn [[keywords attribute]]
+                      #(or (nil? keywords)
+                           (re-find
+                             (re-pattern (lower-case keywords))
+                             (lower-case (% attribute)))))]
+  (defc= filtered-attendees
+    (let [filters         (map create-filter
+                               [[email-filter       :Email]
+                                [last-name-filter   :LastName]
+                                [first-name-filter  :FirstName]
+                                [gender-filter      :Gender]
+                                [high-school-filter :HighSchool]
+                                [class-year-filter  :ClassYear]
+                                [group-filter       :Group]])
+          passes-filters? #(every? identity ((apply juxt filters) %))]
+      (filter passes-filters? attendees))))
+
+(def breadcrumbs (list [(cell= (if app/token "Events" "Explore"))
+                        (cell= (if app/token "#/events" "#/explore"))]
+                       [(cell= (:Name event)) (str "#/events/" event-id)]
+                       "Attendees"))
+
+(defn template []
+  (div :class "ui page grid"
+    (div :class "sixteen wide column"
+      (div :class "ui segment"
+        (h2 :class "ui header"
+            "Attendees")
+        (div :class "ui form"
+          (div :class "seven fields"
+            (div :class "field"
+              (label "Email")
+              (input-cell :type "text" :state email-filter))
+            (div :class "field"
+              (label "Last Name")
+              (input-cell :type "text" :state last-name-filter))
+            (div :class "field"
+              (label "First Name")
+              (input-cell :type "text" :state first-name-filter))
+            (div :class "field"
+              (label "Gender")
+              (input-cell :type "text" :state gender-filter))
+            (div :class "field"
+              (label "High School")
+              (input-cell :type "text" :state high-school-filter))
+            (div :class "field"
+              (label "Class Year")
+              (input-cell :type "text" :state class-year-filter))
+            (div :class "field"
+              (label "Group")
+              (input-cell :type "text" :state group-filter))))
+        (table :class "ui table"
+          (thead
+            (tr
+              (th "Email")
+              (th "Last Name")
+              (th "First Name")
+              (th "Gender")
+              (th "High School")
+              (th "Class Year")
+              (th "Group")
+              (th)))
+          (tbody
+            (loop-tpl :bindings [attendee filtered-attendees]
+              (tr
+                (td (cell= (:Email      attendee)))
+                (td (cell= (:FirstName  attendee)))
+                (td (cell= (:LastName   attendee)))
+                (td (cell= (:Gender     attendee)))
+                (td (cell= (:HighSchool attendee)))
+                (td (cell= (:ClassYear  attendee)))
+                (td (cell= (:Group      attendee)))
+                (td (a :class "ui right floated small labeled button"
+                       :href (cell= (str "#/events/"
+                                         event-id
+                                         "/attendees/"
+                                         (:AttendeeId attendee)
+                                         "/checkin"))
+                       (cell= (if (:CheckinTime attendee)
+                                "Checked in"
+                                "Check in"))))))))))))
+
+(defroute "/events/:EventId/attendees" [EventId]
+  (reset! app/breadcrumbs breadcrumbs)
+  (reset! event-id (int EventId))
+  (template))
