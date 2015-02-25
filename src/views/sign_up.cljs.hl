@@ -77,7 +77,7 @@
                 (label "Confirm password")
                 (input-cell :type "password" :state password-confirm :on-blur #(app/validate! :Password form-data))))
             (submit :class "ui primary button" :form-data form-data
-                 :on-click #(register-site @form-data)
+                 :on-click #(sign-up-site @form-data)
               "Sign Up")))))))
 
 (defroute "/sign-up" []
