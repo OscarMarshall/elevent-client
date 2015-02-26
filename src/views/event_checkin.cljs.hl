@@ -3,7 +3,7 @@
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.core :refer [after? at-midnight now]]
     [cljs-time.format :refer [formatters unparse]]
-    [ajax.core :refer [PUT]]
+    [ajax.core :refer [PUT DELETE]]
     [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
 
@@ -27,8 +27,16 @@
                                    resources/attendees-db
                                    attendee-id)))))
 
-(defn check-in [event-id attendee-id user-id]
-  (PUT (str app/api-base-url "/attendees/checkin")
+(defc button-loading? false)
+(defc= button-text (if button-loading?
+                     (list (i :class "spinner loading icon"))
+                     (if (:CheckinTime attendee)
+                       "Check out"
+                       "Check in")))
+
+(defn check-in [attendee-id]
+  (reset! button-loading? true)
+  (PUT (str app/api-base-url "/attendees/" attendee-id "/checkin")
        {:format :json
         :keywords? true
         :headers
@@ -36,14 +44,23 @@
           {:Authentication
            (str "Bearer " @app/token)}
           {})
-        :params {:AttendeeId attendee-id
-                 :EventId event-id
-                 :UserId user-id
-                 :CheckinTime (unparse (:date-hour-minute-second formatters)
-                                       (now))}
-        :handler #(do
-                    (js/console.log "Checked in!")
-                    (resources/attendees-endpoint :read nil nil))}))
+        :handler (fn []
+                   (js/console.log "Checked in!")
+                   (resources/attendees-endpoint :read nil #(reset! button-loading? false)))}))
+
+(defn check-out [attendee-id]
+  (reset! button-loading? true)
+  (DELETE (str app/api-base-url "/attendees/" attendee-id "/checkin")
+               {:format :json
+                :keywords? true
+                :headers
+                (if @app/token
+                  {:Authentication
+                   (str "Bearer " @app/token)}
+                  {})
+                :handler (fn []
+                           (js/console.log "Checked out!")
+                           (resources/attendees-endpoint :read nil #(reset! button-loading? false)))}))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -89,11 +106,33 @@
                     (div :class "description"
                       (text "~{(:Description event)}"))
                     (div :class "extra"
-                      (div :class (str "ui right floated button" (when (:CheckinTime @attendee) " disabled"))
-                           :on-click #(check-in @event-id @attendee-id (:UserId @attendee))
-                        (if (:CheckinTime @attendee)
-                          "Checked in"
-                          "Check in")))))))))
+                      (cell=
+                        (div :class "ui right floated button"
+                             :on-click #(if (:CheckinTime attendee)
+                                          (check-out attendee-id)
+                                          (check-in attendee-id))
+                            button-text))))))))
+          (div :class "ui vertical segment"
+            (h2 :class "ui header"
+              "Attendee Info")
+            (table :class "ui definition table attendee-info"
+              (cell=
+                (tbody
+                  (tr
+                    (td "Email")
+                    (td (:Email attendee)))
+                  (tr
+                    (td "Gender")
+                    (td (:Gender attendee)))
+                  (tr
+                    (td "High School")
+                    (td (:HighSchool attendee)))
+                  (tr
+                    (td "Class Year")
+                    (td (:ClassYear attendee)))
+                  (tr
+                    (td "Group")
+                    (td (:Group attendee))))))))
         (div :do-class (cell= {:ui true
                                :active (empty? resources/events)
                                :dimmer true})

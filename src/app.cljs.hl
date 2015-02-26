@@ -5,7 +5,7 @@
 ;; Cell that's synchronized to the hash-fragment
 (def route (route-cell "#/"))
 
-(def api-base-url "http://elevent.solutions:8860")
+(def api-base-url "https://elevent.solutions:44300")
 (def api-base-url-secure "https://elevent.solutions:44300")
 
 (def title-base "Elevent")

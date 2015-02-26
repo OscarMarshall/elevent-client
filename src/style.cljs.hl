@@ -14,4 +14,5 @@
        ; Fixes
        [:.ui.menu.fixed {:top "0"}]
        [:.right.menu {:display "inline-block"}]
-       [:.right.menu [:.item {:cursor "pointer"}]]))
+       [:.right.menu [:.item {:cursor "pointer"}]]
+       [:.attendee-info {:max-width "300px"}]))

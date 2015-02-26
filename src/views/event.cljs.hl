@@ -2,11 +2,12 @@
   (:require [secretary.core :as secretary :refer-macros [defroute]]
     [cljs-time.coerce :refer [from-string]]
     [cljs-time.format :refer [unparse]]
+    [cljs-time.core :refer [after? at-midnight]]
     [datascript :as d]
 
     [resources]
     [session]
-    [util :refer [datetime-formatter]]))
+    [util :refer [date-formatter datetime-formatter]]))
 
 (defc event-id nil)
 (defc= event (when event-id (d/entity resources/events-db event-id)))
@@ -32,12 +33,20 @@
           (div
             (b "Venue: ") (text (:Venue event)))
           (div
-            (b "Date: ") "11/05/2014")
+            (b "Date: ") (text
+                           (let [start (from-string (:StartDate event))
+                                 end   (from-string (:EndDate   event))]
+                             (str (unparse date-formatter start)
+                                  (when (after? end start)
+                                    (str " to " (unparse date-formatter end)))))))
           (p
             (text (:Description event))))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
-              "Upcoming Activities")
+            "Activities"
+            (a :href (str "#/events/" (:EventId @event) "/activities/add")
+               :class "ui right floated small button"
+              "View/Edit"))
           (table :class "ui table"
             (thead
               (tr
@@ -89,7 +98,10 @@
                        "Edit"))))))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
-              "Attendees")
+            "Attendees"
+            (a :href (str "#/events/" (:EventId @event) "/attendees")
+               :class "ui right floated small button"
+              "View"))
           (table :class "ui table"
             (thead
               (tr
