@@ -3,17 +3,12 @@
     [datascript]
 
     [app]
-    [rest :refer-macros [endpoint]]))
+    [rest :refer-macros [endpoints]]))
 
-(rest/endpoint
-  attendees     (str app/api-base-url "/attendees")     :AttendeeId)
-(rest/endpoint
-  organizations (str app/api-base-url "/organizations") :OrganizationId)
-(rest/endpoint
-  events        (str app/api-base-url "/events")        :EventId)
-(rest/endpoint
-  activities    (str app/api-base-url "/activities")    :ActivityId)
-(rest/endpoint
-  users         (str app/api-base-url-secure "/users")  :UserId)
-(rest/endpoint
-  schedules     (str app/api-base-url "/schedules")     :ScheduleId)
+(endpoints
+  [attendees     (str app/api-base-url "/attendees")     :AttendeeId     true]
+  [organizations (str app/api-base-url "/organizations") :OrganizationId false]
+  [events        (str app/api-base-url "/events")        :EventId        false]
+  [activities    (str app/api-base-url "/activities")    :ActivityId     false]
+  [users         (str app/api-base-url-secure "/users")  :UserId         true]
+  [schedules     (str app/api-base-url "/schedules")     :ScheduleId     true])

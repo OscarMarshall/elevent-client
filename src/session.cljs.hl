@@ -21,7 +21,8 @@
   (dosync
     (reset! app/token nil)
     (reset! username  nil))
-  (set! js/location "#/"))
+  (resources/refresh)
+  (js/location.replace "#/"))
 
 (defn login! [username password]
   (let [auth-string (b64/encodeString (str username ":" password))]
@@ -30,7 +31,11 @@
           :response-format :json
           :keywords?       true
           :headers         {:Authorization (str "Basic " auth-string)}
-          :handler         #(dosync
-                              (reset! session/username username)
-                              (reset! app/token (:Token %)))
-          :error-handler   #(logout!)}))) ;TODO: Create error handler.
+          :handler         #(do
+                              (dosync
+                                (reset! session/username username)
+                                (reset! app/token (:Token %)))
+                              (resources/refresh))
+          :error-handler   #(do
+                              (swap! app/messages conj [:error "Login failed"])
+                              (logout!))})))

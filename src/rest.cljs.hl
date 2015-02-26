@@ -5,7 +5,7 @@
 
     [app]))
 
-(defn endpoint* [uri element-id state]
+(defn endpoint [uri element-id state _]
   (fn dispatch!
     ([operation params handler error-handler]
      (let [options {:format
@@ -53,6 +53,7 @@
                                              (prn-str element-id)
                                              "\": "
                                              (prn-str params)))))]
+         (js/console.log "*-endpoint")
          (case operation
            :create (POST uri options)
            :read   (GET  uri options)

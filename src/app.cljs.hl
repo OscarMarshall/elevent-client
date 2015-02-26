@@ -22,8 +22,8 @@
 (defc breadcrumbs nil)
 
 ;; Expects a collection of vectors of message-type string and message string.
-;;     (list [:message|:warning|:info|:success|:error "text"] ...)
-(defc messages nil)
+;;     #{[:message|:warning|:info|:success|:error "text"] ...}
+(defc messages #{})
 
 (def token (local-storage (cell nil) ::token))
 

@@ -38,7 +38,7 @@
 (defc class-year-filter  nil)
 (defc group-filter       nil)
 (let [create-filter (fn [[keywords attribute]]
-                      #(or (nil? keywords)
+                      #(or (empty? keywords)
                            (re-find
                              (re-pattern (lower-case keywords))
                              (lower-case (% attribute)))))]
@@ -103,8 +103,8 @@
             (loop-tpl :bindings [attendee filtered-attendees]
               (tr
                 (td (cell= (:Email      attendee)))
-                (td (cell= (:FirstName  attendee)))
                 (td (cell= (:LastName   attendee)))
+                (td (cell= (:FirstName  attendee)))
                 (td (cell= (:Gender     attendee)))
                 (td (cell= (:HighSchool attendee)))
                 (td (cell= (:ClassYear  attendee)))

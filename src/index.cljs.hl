@@ -78,13 +78,13 @@
                                      (input-cell :type "password"
                                                  :state password))))))
                            (div :class "actions"
-                             (button :class "ui button" "Cancel")
+                             (div :class "ui button" :on-click (fn [] false) "Cancel")
                              (input :type "submit" :class "ui button primary"
                                "Login")))))
                      "show"))
                 (i :class "user icon")
                 "Sign in")
-              (a :class "item" :href "#/register"
+              (a :class "item" :href "#/sign-up"
                 "Sign up"))))))
     (div :class "ui page grid"
       (div :class "sixteen wide column"
@@ -106,12 +106,13 @@
                     (div :class "active section"
                       breadcrumb)))))))
         (loop-tpl :bindings [[type message] app/messages]
-          (div :do-class {:ui true
-                          :warning  (= @type :warning)
-                          :info     (= @type :info)
-                          :positive (= @type :success)
-                          :negative (= @type :error)
-                          :message true }
+          (div :class {:ui true
+                       :warning  (= @type :warning)
+                       :info     (= @type :info)
+                       :positive (= @type :success)
+                       :negative (= @type :error)
+                       :message true }
+            (i :class "close icon" :on-click #(swap! app/messages (partial remove (partial = [@type @message]))))
             @message))))
     (div (cell= (secretary/dispatch! app/route)))))
 
