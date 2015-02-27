@@ -65,29 +65,6 @@
       (div :class "ui segment"
         (h2 :class "ui header"
             "Attendees")
-        (div :class "ui form"
-          (div :class "seven fields"
-            (div :class "field"
-              (label "Email")
-              (input-cell :type "text" :state email-filter))
-            (div :class "field"
-              (label "Last Name")
-              (input-cell :type "text" :state last-name-filter))
-            (div :class "field"
-              (label "First Name")
-              (input-cell :type "text" :state first-name-filter))
-            (div :class "field"
-              (label "Gender")
-              (input-cell :type "text" :state gender-filter))
-            (div :class "field"
-              (label "High School")
-              (input-cell :type "text" :state high-school-filter))
-            (div :class "field"
-              (label "Class Year")
-              (input-cell :type "text" :state class-year-filter))
-            (div :class "field"
-              (label "Group")
-              (input-cell :type "text" :state group-filter))))
         (table :class "ui table"
           (thead
             (tr
@@ -100,6 +77,27 @@
               (th "Group")
               (th)))
           (tbody
+            (tr :class "ui form"
+              (td
+                (input-cell :type "text" :state email-filter))
+              (td
+                (input-cell :type "text" :state last-name-filter))
+              (td
+                (input-cell :type "text" :state first-name-filter))
+              (td
+                (input-cell :type "text" :state gender-filter))
+              (td
+                (input-cell :type "text" :state high-school-filter))
+              (td
+                (input-cell :type "text" :state class-year-filter))
+              (td
+                (input-cell :type "text" :state group-filter))
+              (td :style "text-align: center"
+                (text "~(reduce #(if (:CheckinTime %2)
+                                   (inc %1)
+                                   %1)
+                                0
+                                attendees)/~(count attendees)")))
             (loop-tpl :bindings [attendee filtered-attendees]
               (tr
                 (td (cell= (:Email      attendee)))
@@ -109,15 +107,18 @@
                 (td (cell= (:HighSchool attendee)))
                 (td (cell= (:ClassYear  attendee)))
                 (td (cell= (:Group      attendee)))
-                (td (a :class "ui right floated small labeled button"
-                       :href (cell= (str "#/events/"
-                                         event-id
-                                         "/attendees/"
-                                         (:AttendeeId attendee)
-                                         "/checkin"))
-                       (cell= (if (:CheckinTime attendee)
-                                "Checked in"
-                                "Check in"))))))))))))
+                (td :nowrap true
+                  (a :class "ui right floated small labeled button"
+                     :do-class (cell= {:green (:CheckinTime attendee)})
+                     :style "width: 100%"
+                     :href (cell= (str "#/events/"
+                                       event-id
+                                       "/attendees/"
+                                       (:AttendeeId attendee)
+                                       "/checkin"))
+                    (cell= (if (:CheckinTime attendee)
+                             "Checked in"
+                             "Check in"))))))))))))
 
 (defroute "/events/:EventId/attendees" [EventId]
   (reset! app/breadcrumbs breadcrumbs)

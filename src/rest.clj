@@ -21,6 +21,6 @@
        ~@(map (fn [[collection _ _ requires-token]]
                 `(if (or (not ~requires-token) @app/token)
                    (~(symbol (str collection "-endpoint")) :read nil nil)
-                   (reset! (symbol collection) [])))
+                   (reset! ~(symbol collection) [])))
               endpoints))
      (~'refresh)))
