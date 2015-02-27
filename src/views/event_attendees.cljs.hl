@@ -42,17 +42,15 @@
                            (re-find
                              (re-pattern (lower-case keywords))
                              (lower-case (% attribute)))))]
-  (defc= filtered-attendees
-    (let [filters         (map create-filter
-                               [[email-filter       :Email]
-                                [last-name-filter   :LastName]
-                                [first-name-filter  :FirstName]
-                                [gender-filter      :Gender]
-                                [high-school-filter :HighSchool]
-                                [class-year-filter  :ClassYear]
-                                [group-filter       :Group]])
-          passes-filters? #(every? identity ((apply juxt filters) %))]
-      (filter passes-filters? attendees))))
+  (defc= passes-filters?
+    #(every? identity ((apply juxt (map create-filter
+                                        [[email-filter       :Email]
+                                         [last-name-filter   :LastName]
+                                         [first-name-filter  :FirstName]
+                                         [gender-filter      :Gender]
+                                         [high-school-filter :HighSchool]
+                                         [class-year-filter  :ClassYear]
+                                         [group-filter       :Group]])) %))))
 
 (def breadcrumbs (list [(cell= (if app/token "Events" "Explore"))
                         (cell= (if app/token "#/events" "#/explore"))]
@@ -98,8 +96,9 @@
                                    %1)
                                 0
                                 attendees)/~(count attendees)")))
-            (loop-tpl :bindings [attendee filtered-attendees]
-              (tr
+            (loop-tpl :bindings [attendee attendees]
+              (tr :style (cell= (when-not (passes-filters? attendee)
+                                  "display: none"))
                 (td (cell= (:Email      attendee)))
                 (td (cell= (:LastName   attendee)))
                 (td (cell= (:FirstName  attendee)))
