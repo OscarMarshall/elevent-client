@@ -35,7 +35,9 @@
                               (dosync
                                 (reset! session/username username)
                                 (reset! app/token (:Token %)))
-                              (resources/refresh))
+                              (resources/refresh)
+                              #_(app/add-message :success "Login succeeded!")
+                              (app/remove-message :error "Login failed."))
           :error-handler   #(do
-                              (swap! app/messages conj [:error "Login failed"])
+                              (app/add-message :error "Login failed.") ; TODO don't reset all messages
                               (logout!))})))

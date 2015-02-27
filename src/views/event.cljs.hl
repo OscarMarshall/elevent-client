@@ -124,7 +124,7 @@
                 (tr
                   (td (text "~(:FirstName attendee) ~(:LastName attendee)"))
                   (td "WEB 2230")
-                  (td (a :class (str "ui right floated small labeled button" (when (:CheckinTime @attendee) " disabled"))
+                  (td (a :class (str "ui right floated small labeled button")
                          :href (str "#/events/" @event-id "/attendees/" (:AttendeeId @attendee) "/checkin")
                          (if (:CheckinTime @attendee)
                            "Checked in"

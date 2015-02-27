@@ -46,7 +46,10 @@
           {})
         :handler (fn []
                    (js/console.log "Checked in!")
-                   (resources/attendees-endpoint :read nil #(reset! button-loading? false)))}))
+                   (resources/attendees-endpoint :read nil #(reset! button-loading? false)))
+        :error-handler (fn []
+                         (reset! button-loading? false)
+                         (swap! app/messages conj [:error "Check in failed. Please try again."]))}))
 
 (defn check-out [attendee-id]
   (reset! button-loading? true)
@@ -60,7 +63,10 @@
                   {})
                 :handler (fn []
                            (js/console.log "Checked out!")
-                           (resources/attendees-endpoint :read nil #(reset! button-loading? false)))}))
+                           (resources/attendees-endpoint :read nil #(reset! button-loading? false)))
+                :error-handler (fn []
+                                 (reset! button-loading? false)
+                                (swap! app/messages conj [:error "Check out failed. Please try again."]))}))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -78,40 +84,27 @@
               (text "~{(:FirstName attendee)} ~{(:LastName attendee)}")))
           (div :class "ui vertical segment"
             (div :class "ui divided items"
-              (loop-tpl :bindings [event
-                                   (cell=
-                                     (map #(d/entity resources/events-db
-                                                     (first %))
-                                          (d/q '[:find ?event-id
-                                                 :in $events $attendees ?user-id
-                                                 :where
-                                                 [$events ?event-id]
-                                                 [$attendees ?attendee-id :EventId ?event-id]
-                                                 [$attendees ?attendee-id :UserId ?user-id]]
-                                               resources/events-db
-                                               resources/attendees-db
-                                               (:UserId session/user))))]
-                (div :class "item"
-                  (div :class "content"
-                    (a :class "header" :href (str "#/events/" (:EventId @event))
-                      (text "~(:Name event)"))
-                    (div :class "meta"
-                      (b "Date: ")
-                      (text
-                        (let [start (from-string (:StartDate event))
-                              end   (from-string (:EndDate   event))]
-                          (str (unparse date-formatter start)
-                               (when (after? end start)
-                                 (str " to " (unparse date-formatter end)))))))
-                    (div :class "description"
-                      (text "~{(:Description event)}"))
-                    (div :class "extra"
-                      (cell=
-                        (div :class "ui right floated button"
-                             :on-click #(if (:CheckinTime attendee)
-                                          (check-out attendee-id)
-                                          (check-in attendee-id))
-                            button-text))))))))
+              (div :class "item"
+                (div :class "content"
+                  (a :class "header" :href (str "#/events/" (:EventId @event))
+                    (text "~(:Name event)"))
+                  (div :class "meta"
+                    (b "Date: ")
+                    (text
+                      (let [start (from-string (:StartDate event))
+                            end   (from-string (:EndDate   event))]
+                        (str (unparse date-formatter start)
+                             (when (after? end start)
+                               (str " to " (unparse date-formatter end)))))))
+                  (div :class "description"
+                    (text "~{(:Description event)}"))
+                  (div :class "extra"
+                    (cell=
+                      (div :class "ui right floated button"
+                           :on-click #(if (:CheckinTime attendee)
+                                        (check-out attendee-id)
+                                        (check-in attendee-id))
+                          button-text)))))))
           (div :class "ui vertical segment"
             (h2 :class "ui header"
               "Attendee Info")

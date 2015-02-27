@@ -112,7 +112,7 @@
                        :positive (= @type :success)
                        :negative (= @type :error)
                        :message true }
-            (i :class "close icon" :on-click #(swap! app/messages (partial remove (partial = [@type @message]))))
+            (i :class "close icon" :on-click #(app/remove-message @type @message))
             @message))))
     (div (cell= (secretary/dispatch! app/route)))))
 

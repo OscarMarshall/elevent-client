@@ -24,6 +24,16 @@
 ;; Expects a collection of vectors of message-type string and message string.
 ;;     #{[:message|:warning|:info|:success|:error "text"] ...}
 (defc messages #{})
+(defn add-message [type message]
+  (swap! messages conj [type message]))
+(defn remove-message [type message]
+  (swap! messages (partial remove (partial = [type message]))))
+(defn swap-message [remove-type remove-message add-type add-message]
+  (do
+    #_(reset! messages (disj (swap! messages conj [add-type add-message]) [remove-type remove-message]))
+    (js/console.log (prn-str (reset! messages (conj (disj @messages [remove-type remove-message]) [add-type add-message]))))))
+(defn reset-messages [type message]
+  (reset! messages #{[type message]}))
 
 (def token (local-storage (cell nil) ::token))
 
