@@ -14,7 +14,10 @@
     [validateur.validation :as val]))
 
 (defc event-id nil)
-(defc= event (when event-id (d/entity resources/events-db event-id)))
+(defc= event (when event-id
+               (let [entity (d/entity resources/events-db event-id)]
+                 (when (seq entity)
+                   entity))))
 
 (defc activity-name nil)
 (defc location nil)

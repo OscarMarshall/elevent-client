@@ -10,7 +10,10 @@
     [util :refer [date-formatter datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event (when event-id (d/entity resources/events-db event-id)))
+(defc= event (when event-id
+               (let [entity (d/entity resources/events-db event-id)]
+                 (when (seq entity)
+                   entity))))
 
 (def breadcrumbs (list [(cell= (if app/token
                                  "Events"
@@ -34,17 +37,22 @@
             (b "Venue: ") (text (:Venue event)))
           (div
             (b "Date: ") (text
-                           (let [start (from-string (:StartDate event))
-                                 end   (from-string (:EndDate   event))]
-                             (str (unparse date-formatter start)
-                                  (when (after? end start)
-                                    (str " to " (unparse date-formatter end)))))))
+                           (when event
+                             (let [start (from-string (:StartDate event))
+                                   end   (from-string (:EndDate   event))]
+                               (str (unparse date-formatter start)
+                                    (when (after? end start)
+                                      (str " to "
+                                           (unparse date-formatter end))))))))
           (p
             (text (:Description event))))
         (div :class "ui vertical segment"
           (h2 :class "ui header"
             "Activities"
-            (a :href (str "#/events/" (:EventId @event) "/activities/add")
+            (a :href (cell= (str "#/events"
+                                 "/" (:EventId event)
+                                 "/activities"
+                                 "/add"))
                :class "ui right floated small button"
               "View/Edit"))
           (table :class "ui table"
@@ -65,10 +73,12 @@
                                                resources/activities-db
                                                event-id)))]
               (tr
-                (let [start (from-string (:StartTime @activity))]
-                  (td :nowrap true (unparse datetime-formatter start)))
-                (let [end (from-string (:EndTime @activity))]
-                  (td :nowrap true (unparse datetime-formatter end)))
+                (td :nowrap true
+                  (cell= (unparse datetime-formatter
+                                  (from-string (:StartTime activity)))))
+                (td :nowrap true
+                  (cell= (unparse datetime-formatter
+                                  (from-string (:EndTime activity)))))
                 (td (text (:Name activity)))
                 (td (text (:Location activity))))))
             (tfoot
@@ -99,7 +109,7 @@
         (div :class "ui vertical segment"
           (h2 :class "ui header"
             "Attendees"
-            (a :href (str "#/events/" (:EventId @event) "/attendees")
+            (a :href (cell= (str "#/events/" (:EventId event) "/attendees"))
                :class "ui right floated small button"
               "View"))
           (table :class "ui table"
@@ -109,26 +119,40 @@
                 (th "Location")
                 (th)))
             (tbody
-              (loop-tpl :bindings [attendee
-                                   (cell=
-                                     (map (fn [[user-id attendee-id]]
-                                            (merge (into {} (d/entity resources/users-db user-id))
-                                                   (into {} (d/entity resources/attendees-db attendee-id))))
-                                          (d/q '[:find ?e ?a
-                                                 :in $ ?event-id
-                                                 :where
-                                                 [?a :EventId ?event-id]
-                                                 [?a :UserId ?e]]
-                                               resources/attendees-db
-                                               event-id)))]
+              (loop-tpl :bindings
+                        [attendee
+                         (cell=
+                           (take 10
+                                 (sort-by (juxt :HighSchool
+                                                :LastName
+                                                :FirstName)
+                                          (map (fn [[user-id attendee-id]]
+                                                 (merge
+                                                   (into
+                                                     {}
+                                                     (d/entity
+                                                       resources/users-db
+                                                       user-id))
+                                                   (into
+                                                     {}
+                                                     (d/entity
+                                                       resources/attendees-db
+                                                       attendee-id))))
+                                               (d/q '[:find ?e ?a
+                                                      :in $ ?event-id
+                                                      :where
+                                                      [?a :EventId ?event-id]
+                                                      [?a :UserId ?e]]
+                                                    resources/attendees-db
+                                                    event-id)))))]
                 (tr
                   (td (text "~(:FirstName attendee) ~(:LastName attendee)"))
                   (td "WEB 2230")
                   (td (a :class (str "ui right floated small labeled button")
-                         :href (str "#/events/" @event-id "/attendees/" (:AttendeeId @attendee) "/checkin")
-                         (if (:CheckinTime @attendee)
-                           "Checked in"
-                           "Check in"))))))
+                         :href (cell= (str "#/events/" event-id "/attendees/" (:AttendeeId attendee) "/checkin"))
+                        (cell= (if (:CheckinTime attendee)
+                                 "Checked in"
+                                 "Check in")))))))
             (tfoot
               (tr
                 (th :colspan "4"
