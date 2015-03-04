@@ -10,5 +10,5 @@
   [organizations (str app/api-base-url "/organizations") :OrganizationId false]
   [events        (str app/api-base-url "/events")        :EventId        false]
   [activities    (str app/api-base-url "/activities")    :ActivityId     false]
-  [users         (str app/api-base-url-secure "/users")  :UserId         true]
+  [users         (str app/api-base-url "/users")         :UserId         true]
   [schedules     (str app/api-base-url "/schedules")     :ScheduleId     true])

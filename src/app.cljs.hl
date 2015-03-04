@@ -6,7 +6,9 @@
 (def route (route-cell "#/"))
 
 (def api-base-url "https://elevent.solutions:44300")
-(def api-base-url-secure "https://elevent.solutions:44300")
+
+(defc view-width js/innerWidth)
+(js/addEventListener "resize" #(reset! view-width js/innerWidth))
 
 (def title-base "Elevent")
 (def title-seperator " | ")

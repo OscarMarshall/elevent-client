@@ -41,7 +41,7 @@
                       #(or (empty? keywords)
                            (re-find
                              (re-pattern (lower-case keywords))
-                             (lower-case (% attribute)))))]
+                             (lower-case (or (% attribute) "")))))]
   (defc= passes-filters?
     #(every? identity ((apply juxt (map create-filter
                                         [[email-filter       :Email]
