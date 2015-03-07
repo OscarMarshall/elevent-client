@@ -157,7 +157,7 @@
                                :dimmer true})
           (div :class "ui loader"))))))
 
-(defroute "/events/:EventId/attendees/:AttendeeId/checkin" [EventId AttendeeId]
+(defroute "/events/:EventId/attendees/:AttendeeId/check-in" [EventId AttendeeId]
   (if @app/token
     (do
       (reset! app/breadcrumbs breadcrumbs)
