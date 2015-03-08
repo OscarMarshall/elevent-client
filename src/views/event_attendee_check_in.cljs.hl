@@ -8,7 +8,7 @@
     [secretary.core :as secretary :refer-macros [defroute]]
 
     [app]
-    [util :refer [date-formatter]]
+    [util :refer [date-formatter datetime-formatter]]
     [resources]))
 
 (defc event-id nil)
@@ -32,6 +32,21 @@
                                    resources/attendees-db
                                    attendee-id)))))
 
+(defc= attendee-activities
+  (d/q '[:find ?schedule-id ?activity-id
+         :in $activities $schedules $attendees ?event-id ?attendee-id
+         :where
+         [$activities ?activity-id :EventId ?event-id]
+         [$attendees  ?a :AttendeeId ?attendee-id]
+         [$attendees  ?a :UserId ?user-id]
+         [$schedules  ?schedule-id :UserId     ?user-id]
+         [$schedules  ?schedule-id :ActivityId ?activity-id]]
+       resources/activities-db
+       resources/schedules-db
+       resources/attendees-db
+       event-id
+       attendee-id))
+
 (defc button-loading? false)
 (defc= button-text (if button-loading?
                      (list (i :class "spinner loading icon"))
@@ -39,9 +54,9 @@
                        "Check out"
                        "Check in")))
 
-(defn check-in [attendee-id]
-  (reset! button-loading? true)
-  (PUT (str app/api-base-url "/attendees/" attendee-id "/checkin")
+(defn check-in-or-out [op url init callback]
+  (init)
+  (op (str app/api-base-url url)
        {:format :json
         :keywords? true
         :headers
@@ -49,39 +64,50 @@
           {:Authentication
            (str "Bearer " @app/token)}
           {})
-        :handler
-        (fn []
-          (js/console.log "Checked in!")
-          (resources/attendees-endpoint
-            :read nil #(reset! button-loading? false)))
-        :error-handler
-        (fn []
-          (reset! button-loading? false)
-          (swap! app/messages
-                 conj
-                 [:error "Check-in failed. Please try again."]))}))
+        :handler callback
+        :error-handler (fn []
+                         (swap! app/messages conj [:error "Check in failed. Please try again."]))}))
+
+(defn check-in [attendee-id]
+  (check-in-or-out PUT
+                   (str "/attendees/" attendee-id "/checkin")
+                   #(reset! button-loading? true)
+                   (fn []
+                     (prn "Checked in!")
+                     (resources/attendees-endpoint :read nil #(reset! button-loading? false)))))
 
 (defn check-out [attendee-id]
-  (reset! button-loading? true)
-  (DELETE (str app/api-base-url "/attendees/" attendee-id "/checkin")
-               {:format :json
-                :keywords? true
-                :headers
-                (if @app/token
-                  {:Authentication
-                   (str "Bearer " @app/token)}
-                  {})
-                :handler
-                (fn []
-                  (js/console.log "Checked out!")
-                  (resources/attendees-endpoint
-                    :read nil #(reset! button-loading? false)))
-                :error-handler
-                (fn []
-                  (reset! button-loading? false)
-                  (swap! app/messages
-                         conj
-                         [:error "Check-out failed. Please try again."]))}))
+  (check-in-or-out DELETE
+                   (str "/attendees/" attendee-id "/checkin")
+                   #(reset! button-loading? true)
+                   (fn []
+                     (prn "Checked out!")
+                     (resources/attendees-endpoint :read nil #(reset! button-loading? false)))))
+
+(defn activity-check-in [schedule-id checking-in checked-in]
+  (check-in-or-out PUT
+                   (str "/schedules/" schedule-id "/checkin")
+                   #(reset! checking-in true)
+                   (fn []
+                     (prn "Checked in!")
+                     (resources/schedules-endpoint :read nil #(do
+                                                                (reset! checking-in false)
+                                                                (reset! checked-in true))))))
+
+(defn activity-check-out [schedule-id checking-in checked-in]
+  (check-in-or-out DELETE
+                   (str "/schedules/" schedule-id "/checkin")
+                   #(reset! checking-in true)
+                   (fn []
+                     (prn "Checked out!")
+                     (resources/schedules-endpoint :read nil #(do
+                                                                (reset! checking-in false)
+                                                                (reset! checked-in false))))))
+
+(defn activity-check-in-out [schedule-id checking-in checked-in]
+  (if @checked-in
+    (activity-check-out @schedule-id checking-in checked-in)
+    (activity-check-in @schedule-id checking-in checked-in)))
 
 (def breadcrumbs (list ["Events"              "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events"
@@ -151,7 +177,61 @@
                            :on-click #(if (:CheckinTime attendee)
                                         (check-out attendee-id)
                                         (check-in attendee-id))
-                          button-text))))))))
+                          button-text)))))))
+          (div :class "ui vertical segment"
+            (table :class "ui table"
+              (thead
+                (tr
+                  (th "Start")
+                  (th "End")
+                  (th "Activity")
+                  (th "Location")
+                  (th)))
+              (tbody
+                (loop-tpl :bindings [[schedule-id activity-id]
+                                     attendee-activities]
+                  (let [activity
+                        (cell= (when activity-id
+                                 (d/entity resources/activities-db activity-id)))
+                        schedule
+                        (cell= (when schedule-id
+                                 (d/entity resources/schedules-db schedule-id)
+                                 #_(d/q '[:find [?e ?user-id ?check-in-time]
+                                        :in $ ?schedule-id
+                                        :where
+                                        [?e :ScheduleId ?schedule-id]
+                                        [?e :UserId ?user-id]
+                                        [?e :CheckinTime ?check-in-time]]
+                                      resources/schedules-db
+                                      schedule-id)))]
+                    (let
+                      [checked-in (cell (not (nil? (:CheckinTime @schedule))))
+                       checking-in (cell false)]
+                      (tr
+                        (td :nowrap true
+                            (text (when activity
+                                    (unparse datetime-formatter
+                                             (from-string (:StartTime activity))))))
+                        (td :nowrap true
+                            (text (when activity
+                                    (unparse datetime-formatter
+                                             (from-string (:EndTime activity))))))
+                        (td (text (:Name activity)))
+                        (td (text (:Location activity)))
+                        (td :class "right aligned" :nowrap true
+                          (div :class "ui button"
+                               :on-click (fn []
+                                           (activity-check-in-out schedule-id checking-in checked-in))
+                               (cell= (if checking-in
+                                        (i :class "spinner loading icon")
+                                        (if checked-in
+                                          "Check out"
+                                          "Check in"))))))))))
+              (tfoot
+                (tr
+                  (th :colspan "6"
+                      (div :class "ui small labeled icon button"
+                           (i :class "print icon") "Print")))))))
         (div :do-class (cell= {:ui true
                                :active (empty? resources/events)
                                :dimmer true})
