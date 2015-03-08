@@ -1,10 +1,22 @@
 (ns views.calendar
   (:require
     [secretary.core :as secretary :refer-macros [defroute]]
+    [datascript :as d]
 
     [app]))
 
 (def breadcrumbs (list "Calendar"))
+
+(defc= user-activities
+  (d/q '[:find ?schedule-id ?activity-id
+         :in $schedules $activities ?user-id
+         :where
+         [$schedules  ?schedule-id :UserId     ?user-id]
+         [$schedules  ?schedule-id :ActivityId ?activity-id]
+         [$activities ?activity-id :ActivityId ?activity-id]]
+       resources/schedules-db
+       resources/activities-db
+       (:UserId session/user)))
 
 (defn template []
   (div :class "ui page grid"
@@ -19,15 +31,26 @@
               (doto (js/jQuery element)
                 (.fullCalendar
                   (clj->js
-                    {:events (vec (map (fn [activity]
-                                         {:title (:Name activity)
-                                          :start (:StartTime activity)
-                                          :end   (:EndTime activity)})
-                                       []))}))
+                    {:events (vec (map (fn [[schedule-id activity-id]]
+                                         (let [activity
+                                               (when activity-id
+                                                 (d/entity resources/activities-db activity-id))]
+                                           {:title (:Name activity)
+                                            :start (:StartTime activity)
+                                            :end   (:EndTime activity)}))
+                                       user-activities))
+                     :header {:left "title"
+                              :center ""
+                              :right "today prev,next month,agendaWeek,agendaDay"}
+                     :defaultView "agendaWeek"}))
                 ((fn [$]
                    ; HACK: Figure out a way to do this without a timer.
                    (js/setTimeout #(.fullCalendar $ "render") 64))))
               element)))))))
 
 (defroute "/calendar" []
-  (template))
+  (if @app/token
+    (do
+      (reset! app/breadcrumbs breadcrumbs)
+      (template))
+    (set! js/location "#/")))
