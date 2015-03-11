@@ -24,6 +24,37 @@
    :Venue venue
    :Description description
    :Organization organization})
+(defc clone-id nil)
+(defc= clone-event
+  (when clone-id
+    (let [entity (d/entity resources/events-db (int clone-id))]
+      (when (seq entity)
+        entity))))
+
+(defn fill-form [field-name field]
+  (->
+    (str "#" field-name)
+    js/jQuery
+    (.val @field)))
+
+(defn populate-form-from-clone! [clone-id elt]
+  (prn (int clone-id))
+  (prn @clone-event)
+  (reset! event-title (:Name @clone-event))
+  (prn @event-title)
+  (reset! venue (:Venue @clone-event))
+  (reset! start-date (:StartDate @clone-event))
+  (reset! end-date (:EndDate @clone-event))
+  (reset! description (:Description @clone-event))
+  (reset! organization (:OrganizationId @clone-event))
+  
+  ; Populate form fields. I know this is terrible, but it works
+  (fill-form "event-title" event-title)
+  (fill-form "venue" venue)
+  (fill-form "organization" organization)
+  (fill-form "start-date" start-date)
+  (fill-form "end-date" end-date)
+  (fill-form "description" description))
 
 (def validator (val/validation-set
                  (val/presence-of :Name :message "Required field")
@@ -43,6 +74,15 @@
                                                    (from-string end-date))))
                              #(set! js/location "#/events")))
 
+; TODO: eventually filter based on permissions
+(defc= events
+  (d/q '[:find ?event-id
+         :in $ ?user-id
+         :where
+         [?event-id]]
+       resources/events-db
+       (:UserId session/user)))
+
 (def breadcrumbs (list ["Events" "#/events"]
                        "Add"))
 
@@ -57,16 +97,23 @@
             (div :class "two fields"
               (input-field :class "required field" :field :Name :form-data form-data
                 (label "Title")
-                (input-cell :type "text" :state event-title))
+                (input-cell :type "text" :id "event-title" :state event-title))
               (div :class "field"
                 (label "Clone From")
-                (select :class "ui"
-                  (option :value "" "None")))))
+                (input-cell :type "select" :class "ui"
+                            :state clone-id
+                            :on-change #(populate-form-from-clone! @clone-id %)
+                            :options (cell= (cons ["None" "val"]
+                                                  (map (fn [[event-id]]
+                                                         (let [event (when event-id
+                                                                       (d/entity resources/events-db event-id))]
+                                                           [(:Name event) (:EventId event)]))
+                                                       events)))))))
           (div :class "ui vertical segment"
             (div :class "two fields"
               (div :class "required field"
                 (label "Organization")
-                (input-cell :type "select" :class "ui"
+                (input-cell :type "select" :class "ui" :id "organization"
                             :state organization
                             :options (cell=
                                        (map #(let [organization
@@ -80,17 +127,17 @@
                                             resources/organizations-db)))))
               (input-field :class "required field" :field :Venue :form-data form-data
                 (label "Venue")
-                (input-cell :type "text" :state venue)))
+                (input-cell :type "text" :id "venue" :state venue)))
             (div :class "two fields"
               (input-field :class "required field" :field :StartDate :form-data form-data
                 (label "Start Date")
-                (input-cell :type "datetime-local" :state start-date))
+                (input-cell :type "datetime-local" :id "start-date" :state start-date))
               (input-field :class "required field" :field :EndDate :form-data form-data
                 (label "End Date")
-                (input-cell :type "datetime-local" :state end-date)))
+                (input-cell :type "datetime-local" :id "end-date" :state end-date)))
             (div :class "field"
               (label "Description")
-              (input-cell :type "textarea" :state description))
+              (input-cell :type "textarea" :id "description" :state description))
             (submit :class "ui primary button" :form-data form-data
                     :on-click #(create-event @form-data)
               "Add")))))))
