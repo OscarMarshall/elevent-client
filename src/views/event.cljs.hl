@@ -34,16 +34,17 @@
             (i :class "edit icon")
             "Edit")
           (div
-            (b "Venue: ") (text (:Venue event)))
-          (div
             (b "Date: ") (text
-                           (when event
+                           (when (and (:StartDate event)
+                                      (:EndDate event))
                              (let [start (from-string (:StartDate event))
                                    end   (from-string (:EndDate   event))]
-                               (str (unparse date-formatter start)
+                               (str (unparse datetime-formatter start)
                                     (when (after? end start)
                                       (str " to "
-                                           (unparse date-formatter end))))))))
+                                           (unparse datetime-formatter end))))))))
+          (div
+            (b "Venue: ") (text (:Venue event)))
           (p
             (text (:Description event))))
         (div :class "ui vertical segment"
@@ -74,11 +75,13 @@
                                                event-id)))]
               (tr
                 (td :nowrap true
-                  (cell= (unparse datetime-formatter
-                                  (from-string (:StartTime activity)))))
+                  (cell= (when activity
+                           (unparse datetime-formatter
+                                    (from-string (:StartTime activity))))))
                 (td :nowrap true
-                  (cell= (unparse datetime-formatter
-                                  (from-string (:EndTime activity)))))
+                  (cell= (when activity
+                           (unparse datetime-formatter
+                                    (from-string (:EndTime activity))))))
                 (td (text (:Name activity)))
                 (td (text (:Location activity))))))
             (tfoot
@@ -116,7 +119,6 @@
             (thead
               (tr
                 (th "Name")
-                (th "Location")
                 (th)))
             (tbody
               (loop-tpl :bindings
@@ -147,8 +149,8 @@
                                                     event-id)))))]
                 (tr
                   (td (text "~(:FirstName attendee) ~(:LastName attendee)"))
-                  (td "WEB 2230")
                   (td (a :class (str "ui right floated small labeled button")
+                         :do-class (cell= {:green (:CheckinTime attendee)})
                          :href (cell= (str "#/events/" event-id "/attendees/" (:AttendeeId attendee) "/check-in"))
                         (cell= (if (:CheckinTime attendee)
                                  "Checked in"

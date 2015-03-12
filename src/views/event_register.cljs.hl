@@ -3,14 +3,21 @@
     [clojure.string :refer [split-lines]]
     [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
+    [cljs-time.coerce :refer [from-string]]
+    [cljs-time.core :refer [after? at-midnight]]
+    [cljs-time.format :refer [unparse]]
 
     [app]
     [elements :refer [input-cell]]
+    [util :refer [datetime-formatter]]
     [resources]
     [session]))
 
 (defc event-id nil)
-(defc= event (when event-id (d/entity resources/events-db event-id)))
+(defc= event (when event-id
+               (let [entity (d/entity resources/events-db event-id)]
+                 (when (seq entity)
+                   entity))))
 
 (defc= email (:Email session/user))
 (defc= first-name (:FirstName session/user))
@@ -29,7 +36,7 @@
   (resources/attendees-endpoint :create
                                 {:UserId (:UserId @session/user)
                                  :EventId @event-id}
-                                nil))
+                                #(js/location.replace (str "#/events/" @event-id "/schedule"))))
 
 (defn template []
   (div :class "ui stackable page grid"
@@ -38,6 +45,18 @@
         (div :class "ui vertical segment"
           (h2 :class "ui header"
             (text "Register for ~{(:Name event)}"))
+          (div :class "meta"
+            (b "Date: ")
+            (text
+              (when (:StartDate event)
+                (let [start (from-string (:StartDate event))
+                      end   (from-string (:EndDate   event))]
+                  (str (unparse datetime-formatter start)
+                       (when (after? end start)
+                         (str " to " (unparse datetime-formatter end))))))))
+          (div :class "meta"
+               (b "Venue: ")
+               (text "~{(:Venue event)}"))
           (loop-tpl :bindings [line (cell= (split-lines (:Description event)))]
             (p line)))
         (div :class "ui vertical segment"

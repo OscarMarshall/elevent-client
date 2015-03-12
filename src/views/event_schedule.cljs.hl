@@ -83,26 +83,27 @@
                                (d/entity resources/activities-db activity-id)))]
                   (tr
                     (td :nowrap true
-                      (text (when activity
-                              (unparse datetime-formatter
-                                       (from-string (:StartTime activity))))))
+                        (text (when activity
+                                (unparse datetime-formatter
+                                         (from-string (:StartTime activity))))))
                     (td :nowrap true
-                      (text (when activity
-                              (unparse datetime-formatter
-                                       (from-string (:EndTime activity))))))
+                        (text (when activity
+                                (unparse datetime-formatter
+                                         (from-string (:EndTime activity))))))
                     (td (text (:Name activity)))
                     (td (text (:Location activity)))
                     (td :class "right aligned" :nowrap true
-                      (div :class "ui button"
-                           :on-click #(remove-activity!
-                                        (d/entity @resources/schedules-db
-                                                  @schedule-id))
-                        (i :class "red remove icon") "Remove"))))))
+                        (div :class "ui button"
+                             :on-click #(remove-activity!
+                                          (d/entity @resources/schedules-db
+                                                    @schedule-id))
+                             (i :class "red remove icon")
+                             "Remove"))))))
             (tfoot
               (tr
                 (th :colspan "6"
-                  (div :class "ui small labeled icon button"
-                    (i :class "print icon") "Print"))))))
+                    (div :class "ui small labeled icon button"
+                         (i :class "print icon") "Print"))))))
         (div :class "ui vertical segment"
           (div :class "ui divided items"
             (loop-tpl :bindings [[activity-id] unscheduled-activities]

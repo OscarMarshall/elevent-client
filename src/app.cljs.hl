@@ -41,7 +41,7 @@
 
 (def date-format "MMMM d, yyyy")
 (def time-format "h:mma")
-(def datetime-format "h:mma MMMM d, yyyy")
+(def datetime-format "h:mm a MMMM d, yyyy")
 (def input-date-time-format "hh:mm a YYYY-MM-dd")
 
 (defc validation-errors {})

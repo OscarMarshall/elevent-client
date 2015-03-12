@@ -8,10 +8,11 @@
 
 (def template
   (div :class "ui page grid"
-    (div :class "sixteen wide column"
+    (div :class "twelve wide column"
       (div :class "ui segment"
-        (h2 :class "ui header"
-          "Home")
+        (h2 :class "ui dividing header"
+          "Welcome to Elevent Solutions!")
+        (div
         "Elevent is a large-event management application that provides a smooth "
         "experience for all stages of the event lifecycle. From planning "
         "activities for your next corporate convention, to handling check-in at "
@@ -22,7 +23,14 @@
         "statistics about their events. Attendees are able to use Elevent to "
         "register and pay for events, and plan out the activities they will "
         "attend. Elevent Solutions provides the best possible experience for "
-        "event organizers, attendees, and everyone in between."))))
+        "event organizers, attendees, and everyone in between.")))
+    (div :class "four wide column"
+      (div :class "ui fluid card"
+        (div :class "image"
+          (img :src "images/logo-image-floating.jpg"))
+        (div :class "extra content"
+          (a
+            "Powered by Elevent"))))))
 
 (defroute "/" []
   (reset! app/breadcrumbs breadcrumbs)

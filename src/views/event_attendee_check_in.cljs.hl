@@ -133,27 +133,6 @@
             (h1 :class "ui header"
               (text "~{(:FirstName attendee)} ~{(:LastName attendee)}")))
           (div :class "ui vertical segment"
-            (h2 :class "ui header"
-              "Attendee Info")
-            (table :class "ui definition table attendee-info"
-              (cell=
-                (tbody
-                  (tr
-                    (td "Email")
-                    (td (:Email attendee)))
-                  (tr
-                    (td "Gender")
-                    (td (:Gender attendee)))
-                  (tr
-                    (td "High School")
-                    (td (:HighSchool attendee)))
-                  (tr
-                    (td "Class Year")
-                    (td (:ClassYear attendee)))
-                  (tr
-                    (td "Group")
-                    (td (:Group attendee)))))))
-          (div :class "ui vertical segment"
             (div :class "ui divided items"
               (div :class "item"
                 (div :class "content"
@@ -166,9 +145,12 @@
                       (when event
                         (let [start (from-string (:StartDate event))
                               end   (from-string (:EndDate   event))]
-                          (str (unparse date-formatter start)
+                          (str (unparse datetime-formatter start)
                                (when (after? end start)
-                                 (str " to " (unparse date-formatter end))))))))
+                                 (str " to " (unparse datetime-formatter end))))))))
+                  (div :class "meta"
+                       (b "Venue: ")
+                       (text "~{(:Venue event)}"))
                   (div :class "description"
                     (text "~{(:Description event)}"))
                   (div :class "extra"
@@ -179,6 +161,17 @@
                                         (check-in attendee-id))
                           button-text)))))))
           (div :class "ui vertical segment"
+            (h3 :class "ui header"
+              "Attendee Info")
+            (table :class "ui definition table attendee-info"
+              (cell=
+                (tbody
+                  (tr
+                    (td "Email")
+                    (td (:Email attendee)))))))
+          (div :class "ui vertical segment"
+            (h3 :class "ui header"
+              "Attendee Schedule")
             (table :class "ui table"
               (thead
                 (tr

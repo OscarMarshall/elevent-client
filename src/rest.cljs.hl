@@ -34,7 +34,7 @@
                     :handler
                     (if (= operation :read)
                       #(do
-                         (js/console.log (prn-str %))
+                         #_(js/console.log (prn-str %))
                          (reset! state %)
                          (when handler (handler %)))
                       #(do

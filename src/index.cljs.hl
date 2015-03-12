@@ -24,7 +24,8 @@
     [views.page-not-found]
     [views.sidebar]
     [views.sign-in]
-    [views.sign-up]))
+    [views.sign-up]
+    [views.statistics]))
 
 (reload-all)
 
@@ -47,6 +48,8 @@
          (i :class "building icon") "Organizations")
       (a :class "item" :href "#/calendar"
         (i :class "calendar icon") "Calendar")
+      (a :class "item" :href "#/statistics"
+         (i :class "bar chart icon") "Statistics")
       (div :class "right menu"
         (cell=
           (if app/token

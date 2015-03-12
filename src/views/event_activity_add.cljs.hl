@@ -8,7 +8,7 @@
     [util :refer [input-date-time-formatter]]
 
     [app]
-    [elements :refer [input-cell input-field submit]]
+    [elements :refer [input-cell input-field submit state-input-cell]]
     [resources]
     [util :refer [datetime-formatter]]
     [validateur.validation :as val]))
@@ -22,8 +22,14 @@
 (defc activity-name nil)
 (defc location nil)
 (defc enrollment-cap nil)
-(defc start-time nil)
-(defc end-time nil)
+(defc start-time-input nil)
+(defc= start-time (if start-time-input
+                    start-time-input
+                    (:StartDate event)))
+(defc end-time-input nil)
+(defc= end-time   (if end-time-input
+                    end-time-input
+                    (:EndDate event)))
 (defc description nil)
 
 (defc= form-data {:EventId event-id
@@ -38,13 +44,23 @@
                                              (str end-time " " end-date)))
                   :Description description})
 
+(defn fill-form [field-name field]
+  (->
+    (str "#" field-name)
+    js/jQuery
+    (.val @field)))
+
 (defn form-reset! []
   (reset! activity-name nil)
   (reset! location nil)
   (reset! enrollment-cap nil)
-  (reset! start-time nil)
-  (reset! end-time nil)
-  (reset! description nil))
+  (reset! start-time-input nil)
+  (reset! end-time-input nil)
+  (reset! description nil)
+  (fill-form "activity-name" activity-name)
+  (fill-form "location" location)
+  (fill-form "enrollment-cap" enrollment-cap)
+  (fill-form "description" description))
 
 (def validator (val/validation-set
                  (val/presence-of :Name :message "Required field")
@@ -66,7 +82,7 @@
                                                          (from-string start-time))
                                      :EndTime (unparse (:date-hour-minute-second formatters)
                                                        (from-string end-time))))
-                                 #(set! js/location "#/")))
+                                 #(form-reset!)))
 
 (def breadcrumbs (list ["Events" "#/events"]
                        [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
@@ -86,24 +102,24 @@
             (div :class "one field"
               (input-field :class "required field" :field :Name :form-data form-data
                 (label "Name")
-                (input-cell :type "text" :state activity-name)))
+                (input-cell :id "activity-name" :type "text" :state activity-name)))
             (div :class "two fields"
               (input-field :class "required field" :field :Location :form-data form-data
                 (label "Location")
-                (input-cell :type "text" :state location))
+                (input-cell :id "location" :type "text" :state location))
               (input-field :class "field" :field :EnrollmentCap :form-data form-data
                 (label "Enrollment Cap")
-                (input-cell :type "text" :state enrollment-cap)))
+                (input-cell :id "enrollment-cap" :type "text" :state enrollment-cap)))
             (div :class "two fields"
               (input-field :class "required field" :field :StartTime :form-data form-data
                 (label "Start Time")
-                (input-cell :type "datetime-local" :state start-time))
+                (state-input-cell :type "datetime-local" :state start-time :state-input start-time-input))
               (input-field :class "required field" :field :EndTime :form-data form-data
                 (label "End Time")
-                (input-cell :type "datetime-local" :state end-time)))
+                (state-input-cell :type "datetime-local" :state end-time :state-input end-time-input)))
             (div :class "field"
               (label "Description")
-              (input-cell :type "textarea" :state description))
+              (input-cell :id "description" :type "textarea" :state description))
             (submit :class "ui primary button" :form-data form-data
                     :on-click #(add-activities @form-data)
               "Create")))
@@ -113,7 +129,8 @@
           (table :class "ui table"
             (thead
               (tr
-                (th "Time")
+                (th "Start Time")
+                (th "End Time")
                 (th "Activity")
                 (th "Location")))
             (tbody
@@ -126,12 +143,10 @@
                                                resources/activities-db
                                                event-id)))]
               (tr
-                (td (text (let [start (from-string (:StartTime activity))
-                                end   (from-string (:EndTime   activity))]
-                            (str (unparse datetime-formatter start)
-                                 (when (after? end start)
-                                   (str " to "
-                                        (unparse datetime-formatter end)))))))
+                (td (text (let [start (from-string (:StartTime activity))]
+                            (unparse datetime-formatter start))))
+                (td (text (let [end   (from-string (:EndTime   activity))]
+                            (unparse datetime-formatter end))))
                 (td (text (:Name activity)))
                 (td (text (:Location activity))))))))))))
 

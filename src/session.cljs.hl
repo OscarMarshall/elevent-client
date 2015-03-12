@@ -15,7 +15,9 @@
                                                 :where [?e :Email ?u]]
                                               resources/users-db
                                               username))]
-                (into {} (seq (d/entity resources/users-db user-id))))))
+                (let [entity (d/entity resources/users-db user-id)]
+                  (when (seq entity)
+                    (into {} (seq entity)))))))
 
 (defn logout! []
   (dosync

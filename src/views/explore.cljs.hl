@@ -11,7 +11,7 @@
     [app]
     [resources]
     [session]
-    [util :refer [date-formatter]]))
+    [util :refer [datetime-formatter]]))
 
 (defc= attending-events (d/q '[:find ?event-id
                                :in $events $attendees ?user-id
@@ -56,9 +56,12 @@
                       (b "Date: ")
                       (let [start (from-string (:StartDate @event))
                             end   (from-string (:EndDate   @event))]
-                        (str (unparse date-formatter start)
+                        (str (unparse datetime-formatter start)
                              (when (after? end start)
-                               (str " to " (unparse date-formatter end))))))
+                               (str " to " (unparse datetime-formatter end))))))
+                    (div :class "meta"
+                      (b "Venue: ")
+                      (text "~{(:Venue event)}"))
                     (div :class "description"
                       (text (:Description event)))
                     (div :class "extra"

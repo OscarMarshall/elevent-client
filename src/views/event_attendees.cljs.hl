@@ -13,7 +13,10 @@
     [util :refer [datetime-formatter]]))
 
 (defc event-id nil)
-(defc= event (when event-id (d/entity resources/events-db event-id)))
+(defc= event (when event-id
+               (let [entity (d/entity resources/events-db event-id)]
+                 (when (seq entity)
+                   entity))))
 
 (defc= attendees
   (sort-by (juxt :HighSchool :LastName :FirstName)
@@ -54,7 +57,7 @@
 
 (def breadcrumbs (list [(cell= (if app/token "Events" "Explore"))
                         (cell= (if app/token "#/events" "#/explore"))]
-                       [(cell= (:Name event)) (str "#/events/" event-id)]
+                       [(cell= (:Name event)) (cell= (str "#/events/" event-id))]
                        "Attendees"))
 
 (defn template []
@@ -114,12 +117,12 @@
                                        event-id
                                        "/attendees/"
                                        (:AttendeeId attendee)
-                                       "/checkin"))
+                                       "/check-in"))
                     (cell= (if (:CheckinTime attendee)
                              "Checked in"
                              "Check in"))))))))))))
 
 (defroute "/events/:EventId/attendees" [EventId]
-  (reset! app/breadcrumbs breadcrumbs)
   (reset! event-id (int EventId))
+  (reset! app/breadcrumbs breadcrumbs)
   (template))

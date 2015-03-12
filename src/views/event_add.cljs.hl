@@ -14,8 +14,8 @@
 (defc event-title nil)
 (defc organization nil)
 (defc venue nil)
-(defc start-date (unparse (:date-hour-minute-second formatters) (now)))
-(defc end-date   (unparse (:date-hour-minute-second formatters) (now)))
+(defc start-date (unparse (:date-hour-minute formatters) (now)))
+(defc end-date   (unparse (:date-hour-minute formatters) (now)))
 (defc description nil)
 (defc= form-data
   {:Name event-title
@@ -68,11 +68,11 @@
                              (let [start-date (:StartDate form-data)
                                    end-date   (:EndDate form-data)]
                                (assoc form-data
-                                 :StartDate (unparse (:date-hour-minute-second formatters)
+                                 :StartDate (unparse (:date-hour-minute formatters)
                                                      (from-string start-date))
-                                 :EndDate (unparse (:date-hour-minute-second formatters)
+                                 :EndDate (unparse (:date-hour-minute formatters)
                                                    (from-string end-date))))
-                             #(set! js/location "#/events")))
+                             #(set! js/location "#/explore")))
 
 ; TODO: eventually filter based on permissions
 (defc= events

@@ -19,6 +19,11 @@
              :value @state
              :on-input #(reset! state @%)))))
 
+(defelem state-input-cell [{:keys [type state state-input options] :as attr} _]
+  (input (assoc (dissoc attr :state :state-input)
+             :value state
+             :on-input #(reset! state-input @%))))
+
 (defelem input-field [{:keys [class field form-data] :as attr} [label input]]
   ((div (dissoc attr :field :form-data))
    :class (cell= {:error (not (empty? (field app/validation-errors)))})
