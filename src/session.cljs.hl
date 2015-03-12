@@ -23,8 +23,8 @@
   (dosync
     (reset! app/token nil)
     (reset! username  nil))
-  (resources/refresh)
-  (js/location.replace "#/"))
+  (js/location.replace "#/")
+  (resources/refresh))
 
 (defn login! [username password]
   (let [auth-string (b64/encodeString (str username ":" password))]

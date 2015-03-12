@@ -1,7 +1,7 @@
 (ns views.event-activities-add
   (:require
     [cljs-time.coerce :refer [from-string]]
-    [cljs-time.core :refer  [after? at-midnight now]]
+    [cljs-time.core :refer  [after? at-midnight now plus hours]]
     [cljs-time.format :refer [formatters unparse parse]]
     [datascript :as d]
     [secretary.core :as secretary :refer-macros [defroute]]
@@ -29,7 +29,12 @@
 (defc end-time-input nil)
 (defc= end-time   (if end-time-input
                     end-time-input
-                    (:EndDate event)))
+                    (when (:StartDate event)
+                      (unparse (:date-hour-minute-second formatters)
+                               (plus
+                                 (parse (:date-hour-minute-second formatters)
+                                        (:StartDate event))
+                                 (hours 1))))))
 (defc description nil)
 
 (defc= form-data {:EventId event-id
