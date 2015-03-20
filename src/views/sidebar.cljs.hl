@@ -1,9 +1,0 @@
-(ns views.sidebar)
-
-(def template
-  (div :class "ui fluid card"
-    (div :class "image"
-      (img :src "images/logo-image-floating.jpg"))
-    (div :class "extra content"
-      (a
-        "Powered by Elevent"))))
