@@ -15,7 +15,7 @@
                      (def ~db-symbol (reagent.core/atom []))
                      (add-watch ~(symbol "elevent-client.core" (str collection))
                                 ~(keyword (gensym))
-                                (fn [~'_ ~'reference ~'_ ~'_]
+                                (fn [~'_ ~'_ ~'_ ~'elements]
                                   (reset! ~(symbol "elevent-client.core"
                                                    (str db-symbol))
                                           (datascript/db-with
@@ -26,7 +26,7 @@
                                                                        second))
                                                          (into {}))
                                                     :db/id (~element-id %))
-                                                 @~'reference))))))))
+                                                 ~'elements))))))))
                  endpoints)
      (defn ~'refresh! []
        ~@(map (fn [[collection _ _ requires-token]]

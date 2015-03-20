@@ -12,8 +12,8 @@
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
       [cljs-time.coerce :refer [from-string]]
-      [cljs-time.core :refer [after? at-midnight]]
-      [cljs-time.format :refer [formatter unparse]]
+      [cljs-time.core :refer [after? at-midnight now]]
+      [cljs-time.format :refer [formatter formatters unparse]]
       [datascript :as d]
       [garden.core :refer [css]]
       [secretary.core :as secretary :refer-macros [defroute]]
@@ -159,90 +159,90 @@
 
 (defroute home-route
   "/" []
-  (reset! current-page [home-page]))
+  (reset! current-page [#'home-page]))
 
 (defroute events-route
   "/events" []
-  (reset! current-page [events-page]))
+  (reset! current-page [#'events-page]))
 
 (defroute events-explore-route
   "/events/explore" []
-  (reset! current-page [events-explore-page]))
+  (reset! current-page [#'events-explore-page]))
 
 (defroute event-add-route
   "/events/add" []
-  (reset! current-page [event-edit-page]))
+  (reset! current-page [#'event-edit-page]))
 
 (defroute event-route
   "/events/:EventId" [EventId]
-  (reset! current-page [event-page (int EventId)]))
+  (reset! current-page [#'event-page (int EventId)]))
 
 (defroute event-edit-route
   "/events/:EventId/edit" [EventId]
-  (reset! current-page [event-edit-page (int EventId)]))
+  (reset! current-page [#'event-edit-page (int EventId)]))
 
 (defroute event-activities-route
   "/events/:EventId/activities" [EventId]
-  (reset! current-page [event-activities-page (int EventId)]))
+  (reset! current-page [#'event-activities-page (int EventId)]))
 
 (defroute event-activities-explore-route
   "/events/:EventId/activities/explore" [EventId]
-  (reset! current-page [event-activities-explore-page (int EventId)]))
+  (reset! current-page [#'event-activities-explore-page (int EventId)]))
 
 (defroute event-activity-add-route
   "/events/:EventId/activities/add" [EventId]
-  (reset! current-page [event-activity-edit-page (int EventId)]))
+  (reset! current-page [#'event-activity-edit-page (int EventId)]))
 
 (defroute event-activity-route
   "/events/:EventId/activities/:ActivityId" [EventId ActivityId]
-  (reset! current-page [event-activity-page (int EventId) (int ActivityId)]))
+  (reset! current-page [#'event-activity-page (int EventId) (int ActivityId)]))
 
 (defroute event-activity-edit-route
   "/events/:EventId/activities/:ActivityId/edit" [EventId ActivityId]
   (reset! current-page
-          [event-activity-edit-page (int EventId) (int ActivityId)]))
+          [#'event-activity-edit-page (int EventId) (int ActivityId)]))
 
 (defroute event-attendees-route
   "/events/:EventId/attendees" [EventId]
-  (reset! current-page [event-attendees-page (int EventId)]))
+  (reset! current-page [#'event-attendees-page (int EventId)]))
 
 (defroute event-attendee-route
   "/events/:EventId/attendees/:AttendeeId" [EventId AttendeeId]
-  (reset! current-page [event-attendee-page (int EventId) (int AttendeeId)]))
+  (reset! current-page [#'event-attendee-page (int EventId) (int AttendeeId)]))
 
 (defroute event-register-route
   "/events/:EventId/register" [EventId]
-  (reset! current-page [event-register-page (int EventId)]))
+  (reset! current-page [#'event-register-page (int EventId)]))
 
 (defroute organizations-route
   "/organizations" []
-  (reset! current-page [organizations-page]))
+  (reset! current-page [#'organizations-page]))
 
 (defroute organizations-explore-route
   "/organizations/explore" []
-  (reset! current-page [organizations-explore-page]))
+  (reset! current-page [#'organizations-explore-page]))
 
 (defroute organization-add-route
   "/organizations/add" []
-  (reset! current-page [organization-edit-page]))
+  (reset! current-page [#'organization-edit-page]))
 
 (defroute organization-route
   "/organizations/:OrganizationId" [OrganizationId]
-  (reset! current-page [organization-page (int OrganizationId)]))
+  (reset! current-page [#'organization-page (int OrganizationId)]))
 
 (defroute organization-edit-route
   "/organizations/:OrganizationId/edit" [OrganizationId]
-  (reset! current-page [organization-edit-page (int OrganizationId)]))
+  (reset! current-page [#'organization-edit-page (int OrganizationId)]))
 
 (defroute statistics-route
   "/statistics" []
-  (reset! current-page [statistics-page]))
+  (reset! current-page [#'statistics-page]))
 
 (defroute sign-in-route "/sign-in" []
-  (reset! current-page [sign-in-page]))
+  (reset! current-page [#'sign-in-page]))
 
 (defroute sign-up-route "/sign-up" []
-  (reset! current-page [sign-up-page]))
+  (reset! current-page [#'sign-up-page]))
 
 
 ;; User Account
@@ -305,16 +305,48 @@
 ;; =============================================================================
 
 (defn input-atom
+  ([type options state in out]
+   (let [in  (or in  identity)
+         out (or out identity)]
+     (r/create-class
+       {:component-did-update
+        (fn [this]
+          (when (= type :select)
+            (-> this
+                r/dom-node
+                js/jQuery
+                (.dropdown (clj->js {:onChange #(when % (reset! state
+                                                                (out %)))})))))
+
+        :reagent-render
+        (fn render
+          ([_ options state _ _]
+           (let [attributes {:value     (in @state)
+                             :on-change #(reset! state
+                                                 (out (.-value (.-target %))))}]
+             (case type
+               :textarea [:textarea attributes]
+               :select [:div.ui.dropdown.selection
+                        [:input (assoc attributes :type :hidden)]
+                        [:div.text "None"]
+                        [:i.dropdown.icon]
+                        [:div.menu
+                         (for [[name value] options]
+                           ^{:key (or value 0)} [:div.item {:data-value value}
+                                                 name])]]
+               [:input (assoc attributes :type type)])))
+          ([_ state _ _]
+           (render nil nil state nil nil))
+          ([_ options state]
+           (render nil options state nil nil))
+          ([_ state]
+           (render nil nil state nil nil)))})))
+  ([type state in out]
+   (input-atom type nil state in out))
   ([type options state]
-   (let [attributes {:value     @state
-                     :on-change #(reset! state (.-value (.-target %)))}]
-     (case type
-       :textarea [:textarea attributes]
-       :select   [:select attributes
-                  (for [[name value] options] [:option {:value value} name])]
-       [:input (assoc attributes :type type)])))
+   (input-atom type options state nil nil))
   ([type state]
-   (input-atom type nil state)))
+   (input-atom type nil state nil nil)))
 
 
 ;; Compenents
@@ -391,60 +423,7 @@
      "attend. Elevent Solutions provides the best possible experience for "
      "event organizers, attendees, and everyone in between."]]])
 
-(defn events-explore-page []
-  (let [attending-events (d/q '[:find [?event-id ...]
-                                :in $events $attendees ?user-id
-                                :where
-                                [$events ?event-id]
-                                [$attendees ?attendee-id :EventId ?event-id]
-                                [$attendees ?attendee-id :UserId ?user-id]]
-                              @events-db
-                              @attendees-db
-                              (get-in @session [:user :UserId]))
-        unattending-events (difference (d/q '[:find [?event-id ...]
-                                              :where [?event-id]]
-                                            @events-db)
-                                       attending-events)]
-    [:div.sixteen.wide.column
-     [:div.ui.segment
-      [:div
-       [:div.ui.vertical.segment
-        [:div.ui.two.column.grid
-         [:div.column
-          [:h1.ui.header "Explore Events"]]
-         [:div.right.aligned.column
-          [:a.ui.tiny.labeled.icon.button
-           [:i.plus.icon]
-           "Add event"]]]]
-       [:div.ui.vertical.segment
-        [:div.ui.divided.items
-         (for [event (map (partial d/entity @events-db) unattending-events)]
-           ^{:key (:EventId event)}
-           [:div.item
-            [:div.content
-             [:a.header {:href (event-route event)}
-              (:Name event)]
-             [:div.meta
-              [:strong "Date:"]
-              (let [start (from-string (:StartDate event))
-                    end   (from-string (:EndDate   event))]
-                (str " " (unparse datetime-formatter start)
-                     (when (after? end start)
-                       (str " to " (unparse datetime-formatter end)))))]
-             [:div.meta
-              [:strong "Venue:"]
-              " "
-              (:Venue event)]
-             [:div.description
-              (:Description event)]
-             [:div.extra
-              [:a.ui.right.floated.tiny.button
-               {:href (event-register-route event)}
-               "Register"
-               [:i.right.chevron.icon]]]]])]]]
-      [:div.ui.dimmer {:class (when-not @events "active")}
-       [:div.ui.loader]]]]))
-
+; TODO: abstract events and events-explore into single component
 (defn events-page []
   [:div.sixteen.wide.column
    [:div.ui.segment
@@ -454,7 +433,7 @@
          [:div.column
           [:h1.ui.header "Your Events"]]
          [:div.right.aligned.column
-          [:a.ui.tiny.labeled.icon.button
+          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
            [:i.plus.icon]
            "Add event"]]]]
      [:div.ui.vertical.segment
@@ -491,6 +470,146 @@
              [:i.right.chevron.icon]]]]])]]]
     [:div.ui.dimmer {:class (when (empty? @events) "active")}
      [:div.ui.loader]]]])
+
+(defn events-explore-page []
+  (let [attending-events (d/q '[:find [?event-id ...]
+                                :in $events $attendees ?user-id
+                                :where
+                                [$events ?event-id]
+                                [$attendees ?attendee-id :EventId ?event-id]
+                                [$attendees ?attendee-id :UserId ?user-id]]
+                              @events-db
+                              @attendees-db
+                              (get-in @session [:user :UserId]))
+        unattending-events (difference (d/q '[:find [?event-id ...]
+                                              :where [?event-id]]
+                                            @events-db)
+                                       attending-events)]
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:div
+       [:div.ui.vertical.segment
+        [:div.ui.two.column.grid
+         [:div.column
+          [:h1.ui.header "Explore Events"]]
+         [:div.right.aligned.column
+          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
+           [:i.plus.icon]
+           "Add event"]]]]
+       [:div.ui.vertical.segment
+        [:div.ui.divided.items
+         (for [event (map (partial d/entity @events-db) unattending-events)]
+           ^{:key (:EventId event)}
+           [:div.item
+            [:div.content
+             [:a.header {:href (event-route event)}
+              (:Name event)]
+             [:div.meta
+              [:strong "Date:"]
+              (let [start (from-string (:StartDate event))
+                    end   (from-string (:EndDate   event))]
+                (str " " (unparse datetime-formatter start)
+                     (when (after? end start)
+                       (str " to " (unparse datetime-formatter end)))))]
+             [:div.meta
+              [:strong "Venue:"]
+              " "
+              (:Venue event)]
+             [:div.description
+              (:Description event)]
+             [:div.extra
+              [:a.ui.right.floated.tiny.button
+               {:href (event-register-route event)}
+               "Register"
+               [:i.right.chevron.icon]]]]])]]]
+      [:div.ui.dimmer {:class (when-not @events "active")}
+       [:div.ui.loader]]]]))
+
+(defn event-edit-page []
+  (let [form (atom {})
+        validator (validation-set (presence-of :Name)
+                                  (presence-of :Organization)
+                                  (presence-of :Venue)
+                                  (presence-of :StartDate)
+                                  (presence-of :EndDate))
+        clone-id (atom 0)]
+    (add-watch clone-id :clone
+               (fn [_ _ _ id]
+                 (when-not (zero? (int id))
+                   (reset! form (dissoc (->> id
+                                             int
+                                             (d/entity @events-db)
+                                             seq
+                                             (into {}))
+                                        :EventId)))))
+    (fn []
+      (let [{:keys [Name OrganizationId Venue StartDate EndDate Description]}
+            @form
+
+            errors
+            (validator @form)
+
+            clonable-events
+            (cons ["None" 0]
+                  (d/q '[:find ?name ?id
+                         :where [?id :Name ?name]]
+                       @events-db))
+
+            associated-organizations
+            (cons ["None" 0]
+                  (d/q '[:find ?name ?id
+                         :where [?id :Name ?name]]
+                       @organizations-db))
+
+            create-event
+            (fn [form]
+              (events-endpoint :create
+                               form
+                               #(set! js/location (events-explore-route))))]
+        [:div.sixteen.wide.column
+         [:div.ui.segment
+          [:form.ui.form
+           [:div.ui.vertical.segment
+            [:h2.ui.dividing.header "Add an Event"]
+            [:p (prn-str @form)]
+            [:div.two.fields
+             [:div.required.field {:class (when (and Name (:Name errors))
+                                            "error")}
+              [:label "Name"]
+              [input-atom :text (r/wrap Name swap! form assoc :Name)]]
+             [:div.field
+              [:label "Clone From"]
+              [input-atom :select clonable-events clone-id]]]
+            [:div.two.fields
+             [:div.field
+              [:label "Organization"]
+              [input-atom :select associated-organizations
+               (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
+             [:div.required.field {:class (when (and Venue (:Venue errors))
+                                            "error")}
+              [:div.field
+               [:label "Venue"]
+               [input-atom :text (r/wrap Venue swap! form assoc :Venue)]]]]
+            [:div.two.fields
+             [:div.field
+              [:label "Start Date"]
+              [input-atom :datetime-local
+               (r/wrap StartDate swap! form assoc :StartDate)
+               #(or % (unparse (:date-hour-minute formatters) (now)))
+               #(unparse (:date-hour-minute formatters) (from-string %))]]
+             [:div.field
+              [:label "End Date"]
+              [input-atom :datetime-local
+               (r/wrap EndDate swap! form assoc :EndDate)
+               #(or % (unparse (:date-hour-minute formatters) (now)))
+               #(unparse (:date-hour-minute formatters) (from-string %))]]]
+            [:div.field
+             [:label "Description"]
+             [input-atom :textarea
+              (r/wrap Description swap! form assoc :Description)]]
+            [:button.ui.primary.button
+             {:type :submit :on-click #(create-event @form)}
+             "Add"]]]]]))))
 
 (defn sign-in-page []
   (let [form (atom {})
