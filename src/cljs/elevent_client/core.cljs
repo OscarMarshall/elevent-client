@@ -564,9 +564,10 @@
 
             create-event
             (fn [form]
-              (events-endpoint :create
-                               form
-                               #(set! js/location (events-explore-route))))]
+              (when (empty? errors)
+                (events-endpoint :create
+                                 form
+                                 #(set! js/location (events-explore-route)))))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:form.ui.form
@@ -608,8 +609,9 @@
              [:label "Description"]
              [input-atom :textarea
               (r/wrap Description swap! form assoc :Description)]]
-            [:button.ui.primary.button
-             {:type :submit :on-click #(create-event @form)}
+            [:button.ui.primary.button {:class (when (seq errors) "disabled")
+                                        :type :submit
+                                        :on-click #(create-event @form)}
              "Add"]]]]]))))
 
 (defn event-register-page [event-id]
