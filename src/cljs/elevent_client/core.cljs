@@ -481,10 +481,11 @@
                               @events-db
                               @attendees-db
                               (get-in @session [:user :UserId]))
-        unattending-events (difference (d/q '[:find [?event-id ...]
-                                              :where [?event-id]]
-                                            @events-db)
-                                       attending-events)]
+        unattending-events (difference (into #{}
+                                             (d/q '[:find [?event-id ...]
+                                                    :where [?event-id]]
+                                                  @events-db))
+                                       (into #{} attending-events))]
     [:div.sixteen.wide.column
      [:div.ui.segment
       [:div
@@ -610,6 +611,64 @@
             [:button.ui.primary.button
              {:type :submit :on-click #(create-event @form)}
              "Add"]]]]]))))
+
+(defn event-register-page [event-id]
+  (let [form (atom {:Email (get-in @session [:user :Email])
+                    :FirstName (get-in @session [:user :FirstName])
+                    :LastName (get-in @session [:user :LastName])})
+        validator (validation-set (presence-of :Email)
+                                  (presence-of :FirstName)
+                                  (presence-of :LastName)
+                                  (format-of :Email :format #"@"))
+        event (d/entity @events-db event-id)]
+    (fn []
+      (let [{:keys [Email FirstName LastName]}
+            @form
+
+            errors
+            (validator @form)
+            
+            register
+            (fn [form]
+              (attendees-endpoint :create
+                                  {:UserId (get-in @session [:user :UserId])
+                                   :EventId event-id}
+                                  #(js/location.replace (events-route))))]
+        [:div.ui.stackable.page.grid
+         [:div.sixteen.wide.column
+          [:div.ui.segment
+           [:div.ui.vertical.segment
+            [:h2.ui.dividing.header
+             (str "Register for " (:Name event))]
+            [:div.meta
+             [:strong "Date:"]
+             (let [start (from-string (:StartDate event))
+                   end   (from-string (:EndDate   event))]
+               (str " " (unparse datetime-formatter start)
+                    (when (after? end start)
+                      (str " to " (unparse datetime-formatter end)))))]
+            [:div.meta
+             [:strong "Venue:"]
+             " "
+             (:Venue event)]
+            [:div.description
+             (:Description event)]]
+           [:div.ui.vertical.segment
+            [:form.ui.form
+             [:div.one.field
+              [:div.required.field
+               [:label "Email"]
+               [input-atom :text (r/wrap Email swap! form assoc :Email)]]]
+             [:div.two.fields
+              [:div.required.field
+               [:label "First Name"]
+               [input-atom :text (r/wrap FirstName swap! form assoc :FirstName)]]
+              [:div.required.field
+               [:label "Last Name"]
+               [input-atom :text (r/wrap LastName swap! form assoc :LastName)]]]]
+            [:button.ui.primary.button
+             {:type :submit :on-click #(register @form)}
+             "Register"]]]]]))))
 
 (defn sign-in-page []
   (let [form (atom {})
