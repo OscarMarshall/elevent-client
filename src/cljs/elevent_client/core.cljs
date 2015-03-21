@@ -722,6 +722,123 @@
                                         :on-click #(create-event @form)}
              "Add"]]]]]))))
 
+(defn event-page [event-id]
+  (let [event (d/entity @events-db event-id)
+
+        activities (map #(d/entity @activities-db %)
+                        (d/q '[:find [?e ...]
+                               :in $ ?event-id
+                               :where
+                               [?e :EventId ?event-id]]
+                             @activities-db
+                             event-id))
+        attendees (take 10
+                        (map (fn [[user-id attendee-id]]
+                               (merge
+                                 (into
+                                   {}
+                                   (d/entity
+                                     @users-db
+                                     user-id))
+                                 (into
+                                   {}
+                                   (d/entity
+                                     @attendees-db
+                                     attendee-id))))
+                             (d/q '[:find ?e ?a
+                                    :in $ ?event-id
+                                    :where
+                                    [?a :EventId ?event-id]
+                                    [?a :UserId ?e]]
+                                  @attendees-db
+                                  event-id)))]
+    (when (seq event)
+      [:div.ui.page.grid
+       [:div.sixteen.wide.column
+        [:div.ui.segment
+         [:div.ui.vertical.segment
+          [:h2.ui.dividing.header
+           (:Name event)]
+          [:div.ui.right.floated.small.labeled.icon.button
+           [:i.edit.icon]
+           "Edit"]
+          [:div
+           [:b "Date: "]
+           (when (and (:StartDate event)
+                      (:EndDate event))
+             (let [start (from-string (:StartDate event))
+                   end   (from-string (:EndDate   event))]
+               (str (unparse datetime-formatter start)
+                    (when (after? end start)
+                      (str " to "
+                           (unparse datetime-formatter end))))))]
+          [:div
+           [:b "Venue: "] (:Venue event)]
+          [:p (:Description event)]]
+         [:div.ui.vertical.segment
+          [:h2.ui.header
+           "Activities"
+           [:a.ui.right.floated.small.button
+            {:href (event-activity-add-route event)}
+            "View/Edit"]]
+          [:table.ui.table
+           [:thead
+            [:tr
+             [:th "Start"]
+             [:th "End"]
+             [:th "Activity"]
+             [:th "Location"]]]
+           [:tbody
+            (for [activity activities]
+                ^{:key (:ActivityId activity)}
+                [:tr
+                 [:td {:noWrap true}
+                  (when activity
+                    (unparse datetime-formatter
+                             (from-string (:StartTime activity))))]
+                 [:td {:noWrap true}
+                  (when activity
+                    (unparse datetime-formatter
+                             (from-string (:EndTime activity))))]
+                 [:td (:Name activity)]
+                 [:td (:Location activity)]])]
+           [:tfoot
+            [:tr
+             [:th {:colSpan "4"}
+              [:a.ui.right.floated.small.labeled.icon.button
+               {:href (event-activity-add-route event)}
+               [:i.edit.icon]
+               "Edit"]]]]]]
+         [:div.ui.vertical.segment
+          [:h2.ui.header
+           "Attendees"
+           [:a.ui.right.floated.small.button
+            {:href (event-attendees-route event)}
+            "View"]]
+          [:table.ui.table
+           [:thead
+            [:tr
+             [:th "Name"]
+             [:th]]]
+           [:tbody
+            (for [attendee attendees]
+              ^{:key (:AttendeeId attendee)}
+              [:tr
+               [:td (str (:FirstName attendee) " " (:LastName attendee))]
+               [:td [:a.ui.right.floated.small.labeled.button
+                     {:href (event-attendee-route {:EventId (:EventId event)
+                                                   :AttendeeId (:AttendeeId attendee)})
+                      :class (when (:CheckinTime attendee) :green)}
+                     (if (:CheckinTime attendee)
+                       "Checked in"
+                       "Check in")]]])]
+           [:tfoot
+            [:tr
+             [:th {:colSpan "4"}
+              [:div.ui.right.floated.small.labeled.icon.button
+               [:i.edit.icon]
+               "Edit"]]]]]]]]])))
+
 (defn event-register-page [event-id]
   (let [form (atom {:Email (get-in @session [:user :Email])
                     :FirstName (get-in @session [:user :FirstName])
