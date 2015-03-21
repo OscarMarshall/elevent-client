@@ -12,7 +12,7 @@
                                                      ~(symbol
                                                         "elevent-client.core"
                                                         (str collection))))
-                     (def ~db-symbol (reagent.core/atom []))
+                     (def ~db-symbol (reagent.core/atom (datascript/empty-db)))
                      (add-watch ~(symbol "elevent-client.core" (str collection))
                                 ~(keyword (gensym))
                                 (fn [~'_ ~'_ ~'_ ~'elements]

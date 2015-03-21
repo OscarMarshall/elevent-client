@@ -729,8 +729,7 @@
         validator (validation-set (presence-of :Email)
                                   (presence-of :FirstName)
                                   (presence-of :LastName)
-                                  (format-of :Email :format #"@"))
-        event (d/entity @events-db event-id)]
+                                  (format-of :Email :format #"@"))]
     (fn []
       (let [{:keys [Email FirstName LastName]}
             @form
@@ -738,47 +737,54 @@
             errors
             (validator @form)
 
+            event
+            (into {} (seq (d/entity @events-db event-id)))
+
             register
             (fn [form]
               (attendees-endpoint :create
                                   {:UserId (get-in @session [:user :UserId])
                                    :EventId event-id}
                                   #(js/location.replace (events-route))))]
-        [:div.ui.stackable.page.grid
-         [:div.sixteen.wide.column
-          [:div.ui.segment
-           [:div.ui.vertical.segment
-            [:h2.ui.dividing.header
-             (str "Register for " (:Name event))]
-            [:div.meta
-             [:strong "Date:"]
-             (let [start (from-string (:StartDate event))
-                   end   (from-string (:EndDate   event))]
-               (str " " (unparse datetime-formatter start)
-                    (when (after? end start)
-                      (str " to " (unparse datetime-formatter end)))))]
-            [:div.meta
-             [:strong "Venue:"]
-             " "
-             (:Venue event)]
-            [:div.description
-             (:Description event)]]
-           [:div.ui.vertical.segment
-            [:form.ui.form
-             [:div.one.field
-              [:div.required.field
-               [:label "Email"]
-               [input-atom :text (r/wrap Email swap! form assoc :Email)]]]
-             [:div.two.fields
-              [:div.required.field
-               [:label "First Name"]
-               [input-atom :text (r/wrap FirstName swap! form assoc :FirstName)]]
-              [:div.required.field
-               [:label "Last Name"]
-               [input-atom :text (r/wrap LastName swap! form assoc :LastName)]]]]
-            [:button.ui.primary.button
-             {:type :submit :on-click #(register @form)}
-             "Register"]]]]]))))
+        (when (seq event)
+          [:div.ui.stackable.page.grid
+           [:div.sixteen.wide.column
+            [:div.ui.segment
+             [:div.ui.vertical.segment
+              [:h2.ui.dividing.header
+               (str "Register for " (:Name event))]
+              [:div.meta
+               [:strong "Date:"]
+               (let [start (from-string (:StartDate event))
+                     end   (from-string (:EndDate   event))]
+                 (str " " (unparse datetime-formatter start)
+                      (when (after? end start)
+                        (str " to " (unparse datetime-formatter end)))))]
+              [:div.meta
+               [:strong "Venue:"]
+               " "
+               (:Venue event)]
+              [:div.description
+               (:Description event)]]
+             [:div.ui.vertical.segment
+              [:form.ui.form
+               [:div.one.field
+                [:div.required.field
+                 [:label "Email"]
+                 [input-atom :text
+                  (r/wrap Email swap! form assoc :Email)]]]
+               [:div.two.fields
+                [:div.required.field
+                 [:label "First Name"]
+                 [input-atom :text
+                  (r/wrap FirstName swap! form assoc :FirstName)]]
+                [:div.required.field
+                 [:label "Last Name"]
+                 [input-atom :text
+                  (r/wrap LastName swap! form assoc :LastName)]]]]
+              [:button.ui.primary.button
+               {:type :submit :on-click #(register @form)}
+               "Register"]]]]])))))
 
 (defn sign-in-page []
   (let [form (atom {})
