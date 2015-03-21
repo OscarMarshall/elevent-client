@@ -1,6 +1,7 @@
 (ns elevent-client.core
     (:require
-      [clojure.set :refer [difference]]
+      [clojure.set :as set]
+      [clojure.string :as str]
 
       [goog.crypt.base64 :as b64]
       [goog.events :as events]
@@ -138,13 +139,13 @@
          events-explore-page
          event-page
          event-edit-page
+         event-register-page
          event-activities-page
          event-activities-explore-page
          event-activity-page
          event-activity-edit-page
          event-attendees-page
          event-attendee-page
-         event-register-page
          organizations-page
          organizations-explore-page
          organization-page
@@ -181,6 +182,10 @@
   "/events/:EventId/edit" [EventId]
   (reset! current-page [#'event-edit-page (int EventId)]))
 
+(defroute event-register-route
+  "/events/:EventId/register" [EventId]
+  (reset! current-page [#'event-register-page (int EventId)]))
+
 (defroute event-activities-route
   "/events/:EventId/activities" [EventId]
   (reset! current-page [#'event-activities-page (int EventId)]))
@@ -209,10 +214,6 @@
 (defroute event-attendee-route
   "/events/:EventId/attendees/:AttendeeId" [EventId AttendeeId]
   (reset! current-page [#'event-attendee-page (int EventId) (int AttendeeId)]))
-
-(defroute event-register-route
-  "/events/:EventId/register" [EventId]
-  (reset! current-page [#'event-register-page (int EventId)]))
 
 (defroute organizations-route
   "/organizations" []
@@ -383,15 +384,122 @@
        "Sign up"]])])
 
 (defn breadcrumbs-component []
-  [:div.sixteen.wide.column
-   [:div.ui.breadcrumb
-    #_(interpose [:div.divider "/"]
-                 (map (fn [[name hash]]
-                        (if (= hash @location)
-                          [:div.active.section name]
-                          [:a.section {:href hash} name]))
-                      (cons ["Home" (home-route)]
-                            (:breadcrumbs @session))))]])
+  (let [breadcrumber
+        (fn breadcrumber [lambda]
+          (fn
+            ([results _] results)
+            ([results env fragment]
+             (let [[result env continuation] (lambda env fragment)]
+               (partial (breadcrumber continuation)
+                        (conj results result)
+                        env)))))
+
+        event-activity-breadcrumbs
+        (fn [env _]
+          [["Edit" (event-activity-edit-route env)] env nil])
+
+        event-activities-breadcrumbs
+        (fn [env fragment]
+          (case fragment
+            "explore" [["Explore" (event-activities-explore-route env)] env nil]
+            "add" [["Add" (event-activity-add-route env)] env nil]
+            (let [env (assoc env :ActivityId fragment)]
+              [[(:Name (d/entity @activities-db (int fragment)))
+                (event-activity-route env)]
+               env
+               event-activity-breadcrumbs])))
+
+        event-attendees-breadcrumbs
+        (fn [env fragment]
+          (let [env (assoc env :AttendeeId fragment)
+                entity (d/entity @attendees-db (int fragment))]
+            [[(str (:FirstName entity) (:LastName entity))
+              env
+              event-attendee-route]]))
+
+        event-breadcrumbs
+        (fn [env fragment]
+          (case fragment
+            "edit" [["Edit" (event-edit-route env)] env nil]
+            "register" [["Register" (event-register-route env)] env nil]
+            "activities" [["Activities" (event-activities-route env)]
+                          env
+                          event-activities-breadcrumbs]
+            "attendees" [["Attendees" (event-attendees-route env)]
+                         env
+                         event-attendees-breadcrumbs]))
+
+        events-breadcrumbs
+        (fn [env fragment]
+          (case fragment
+            "explore" [["Explore" (events-explore-route)] env nil]
+            "add" [["Add" (event-add-route)] env nil]
+            (let [env (assoc env :EventId fragment)]
+              [[(:Name (d/entity @events-db (int fragment))) (event-route env)]
+               env
+               event-breadcrumbs])))
+
+        organization-breadcrumbs
+        (fn [env _]
+          [["Edit" (organization-edit-route env)] env nil])
+
+        organizations-breadcrumbs
+        (fn [env fragment]
+          (case fragment
+            "explore" [["Explore" (organizations-explore-route)] env nil]
+            "add" [["Add" (organization-add-route)] env nil]
+            (let [env (assoc env :OrganizationId fragment)]
+              [[(:Name (d/entity @organizations-db (int fragment)))
+                (organization-route env)]
+               env
+               organization-breadcrumbs])))
+
+        top-breadcrumbs
+        (fn [env fragment]
+          (case fragment
+            "events" [["Events" (events-route)] env events-breadcrumbs]
+            "organizations" [["Organizations" (organization-route)]
+                             env
+                             organizations-breadcrumbs]
+            "statistics" [["Statistics" (statistics-route)] env nil]
+            "sign-in" [["Sign in" (sign-in-route)] env nil]
+            "sign-up" [["Sign up" (sign-up-route)] env nil]))
+
+        get-breadcrumbs
+        (fn
+          ([] [["Home" (home-route)]])
+          ([fragment]
+           ((breadcrumber
+              (fn [env _] [["Home" (home-route)] env top-breadcrumbs]))
+            []
+            {}
+            fragment)))
+
+        breadcrumbs
+        ((reduce #(%1 %2) get-breadcrumbs (str/split @location #"/")))]
+    [:div.sixteen.wide.column
+     [:div.ui.breadcrumb
+      (map-indexed (fn [index [name hash]]
+                     (condp = index
+                       0
+                       (if (= (count breadcrumbs) 1)
+                         ^{:key (str "only-" hash)}
+                         [:div.active.section name]
+
+                         ^{:key (str "first-" hash)}
+                         [:a.section {:href hash} name])
+
+                       (dec (count breadcrumbs))
+                       ^{:key (str "last-" hash)}
+                       [:span
+                        [:div.divider "/"]
+                        [:div.active.section name]]
+
+                       ^{:key hash}
+                       [:span
+                        [:div.divider "/"]
+                        [:a.section {:href hash} name]]))
+                   breadcrumbs)]]))
 
 (defn messages-component []
   (when-let [messages* (seq @messages)]
@@ -481,11 +589,11 @@
                               @events-db
                               @attendees-db
                               (get-in @session [:user :UserId]))
-        unattending-events (difference (into #{}
-                                             (d/q '[:find [?event-id ...]
-                                                    :where [?event-id]]
-                                                  @events-db))
-                                       (into #{} attending-events))]
+        unattending-events (set/difference (into #{}
+                                                 (d/q '[:find [?event-id ...]
+                                                        :where [?event-id]]
+                                                      @events-db))
+                                           (into #{} attending-events))]
     [:div.sixteen.wide.column
      [:div.ui.segment
       [:div
@@ -629,7 +737,7 @@
 
             errors
             (validator @form)
-            
+
             register
             (fn [form]
               (attendees-endpoint :create
