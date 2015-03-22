@@ -144,6 +144,7 @@
          event-activities-explore-page
          event-activity-page
          event-activity-edit-page
+         event-schedule-page
          event-attendees-page
          event-attendee-page
          organizations-page
@@ -197,6 +198,10 @@
 (defroute event-activity-add-route
   "/events/:EventId/activities/add" [EventId]
   (reset! current-page [#'event-activity-edit-page (int EventId)]))
+
+(defroute event-schedule-route
+  "/events/:EventId/schedule" [EventId]
+  (reset! current-page [#'event-schedule-page (int EventId)]))
 
 (defroute event-activity-route
   "/events/:EventId/activities/:ActivityId" [EventId ActivityId]
@@ -427,7 +432,8 @@
                           event-activities-breadcrumbs]
             "attendees" [["Attendees" (event-attendees-route env)]
                          env
-                         event-attendees-breadcrumbs]))
+                         event-attendees-breadcrumbs]
+            "schedule" [["Schedule" (event-schedule-route)] env nil]))
 
         events-breadcrumbs
         (fn [env fragment]
@@ -560,7 +566,6 @@
             (:Name event)]
            [:div.meta
             [:strong "Date:"]
-            " "
             (let [start (from-string (:StartDate event))
                   end   (from-string (:EndDate   event))]
               (str (unparse datetime-formatter start)
@@ -568,12 +573,11 @@
                      (str " to " (unparse datetime-formatter end)))))]
            [:div.meta
             [:strong "Venue:"]
-            " "
             (:Venue event)]
            [:div.description
             (:Description event)]
            [:div.extra
-            [:a.ui.right.floated.button {:href (event-activities-route)}
+            [:a.ui.right.floated.button {:href (event-schedule-route event)}
              "Your activities"
              [:i.right.chevron.icon]]]]])]]]
     [:div.ui.dimmer {:class (when (empty? @events) "active")}
@@ -766,72 +770,71 @@
                                                            (from-string end-time))))
                                      #(reset-form!))))]
         (when (seq event)
-          [:div.ui.page.grid
-           [:div.sixteen.wide.column
-            [:div.ui.segment
-             [:div.ui.vertical.segment
-              [:h2.ui.header
-               (:Name event)]]
-             [:div.ui.vertical.segment
-              [:h2.ui.header
-               "Add activity"]
-              [:form.ui.form
-               [:div.one.field
-                [:div.required.field {:class (when (and Name (:Name errors))
-                                               "error")}
-                 [:label "Name"]
-                 [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
-               [:div.two.fields
-                [:div.field
-                 [:label "Location"]
-                 [input-atom :text (r/wrap Location swap! form assoc :Location)]]
-                [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
-                                      "error")}
-                 [:label "Enrollment Cap"]
-                 [input-atom :text (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
-               [:div.two.fields =
-                [:div.required.field {:class (when (and StartTime (:StartTime errors))
-                                               "error")}
-                 [:label "Start Time"]
-                 [input-atom :datetime-local
-                  (r/wrap StartTime swap! form assoc :StartTime)
-                  #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
-                  #(unparse (:date-hour-minute formatters) (from-string %))]]
-                [:div.required.field {:class (when (and EndTime (:EndTime errors))
-                                               "error")}
-                 [:label "End Time"]
-                 [input-atom :datetime-local
-                  (r/wrap EndTime swap! form assoc :EndTime)
-                  #(or % (unparse (:date-hour-minute formatters) (now)))
-                  #(unparse (:date-hour-minute formatters) (from-string %))]]]
+          [:div.sixteen.wide.column
+           [:div.ui.segment
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              (:Name event)]]
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              "Add activity"]
+             [:form.ui.form
+              [:div.one.field
+               [:div.required.field {:class (when (and Name (:Name errors))
+                                              "error")}
+                [:label "Name"]
+                [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
+              [:div.two.fields
                [:div.field
-                [:label "Description"]
-                [input-atom :textarea
-                 (r/wrap Description swap! form assoc :Description)]]
-               [:button.ui.primary.button {:class (when (seq errors) "disabled")
-                                           :type :submit
-                                           :on-click #(create-activity @form)}
-                "Add"]]]
-             [:div.ui.vertical.segment
-              [:h2.ui.header
-               "Activities"]
-              [:table.ui.table
-               [:thead
-                [:tr
-                 [:th "Start Time"]
-                 [:th "End Time"]
-                 [:th "Activity"]
-                 [:th "Location"]]]
-               [:tbody
-                (for [activity activities]
-                  ^{:key (:ActivityId activity)}
-                  [:tr
-                   [:td (let [start (from-string (:StartTime activity))]
-                          (unparse datetime-formatter start))]
-                   [:td (let [end   (from-string (:EndTime   activity))]
-                          (unparse datetime-formatter end))]
-                   [:td (:Name activity)]
-                   [:td (:Location activity)]])]]]]]])))))
+                [:label "Location"]
+                [input-atom :text (r/wrap Location swap! form assoc :Location)]]
+               [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
+                                     "error")}
+                [:label "Enrollment Cap"]
+                [input-atom :text (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
+              [:div.two.fields =
+               [:div.required.field {:class (when (and StartTime (:StartTime errors))
+                                              "error")}
+                [:label "Start Time"]
+                [input-atom :datetime-local
+                 (r/wrap StartTime swap! form assoc :StartTime)
+                 #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
+                 #(unparse (:date-hour-minute formatters) (from-string %))]]
+               [:div.required.field {:class (when (and EndTime (:EndTime errors))
+                                              "error")}
+                [:label "End Time"]
+                [input-atom :datetime-local
+                 (r/wrap EndTime swap! form assoc :EndTime)
+                 #(or % (unparse (:date-hour-minute formatters) (now)))
+                 #(unparse (:date-hour-minute formatters) (from-string %))]]]
+              [:div.field
+               [:label "Description"]
+               [input-atom :textarea
+                (r/wrap Description swap! form assoc :Description)]]
+              [:button.ui.primary.button {:class (when (seq errors) "disabled")
+                                          :type :submit
+                                          :on-click #(create-activity @form)}
+               "Add"]]]
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              "Activities"]
+             [:table.ui.table
+              [:thead
+               [:tr
+                [:th "Start Time"]
+                [:th "End Time"]
+                [:th "Activity"]
+                [:th "Location"]]]
+              [:tbody
+               (for [activity activities]
+                 ^{:key (:ActivityId activity)}
+                 [:tr
+                  [:td (let [start (from-string (:StartTime activity))]
+                         (unparse datetime-formatter start))]
+                  [:td (let [end   (from-string (:EndTime   activity))]
+                         (unparse datetime-formatter end))]
+                  [:td (:Name activity)]
+                  [:td (:Location activity)]])]]]]])))))
 
 (defn event-page [event-id]
   (let [event (into {} (seq (d/entity @events-db event-id)))
@@ -864,88 +867,87 @@
                                   @attendees-db
                                   event-id)))]
     (when (seq event)
-      [:div.ui.page.grid
-       [:div.sixteen.wide.column
-        [:div.ui.segment
-         [:div.ui.vertical.segment
-          [:h2.ui.dividing.header
-           (:Name event)]
-          [:div.ui.right.floated.small.labeled.icon.button
-           [:i.edit.icon]
-           "Edit"]
-          [:div
-           [:b "Date: "]
-           (when (and (:StartDate event)
-                      (:EndDate event))
-             (let [start (from-string (:StartDate event))
-                   end   (from-string (:EndDate   event))]
-               (str (unparse datetime-formatter start)
-                    (when (after? end start)
-                      (str " to "
-                           (unparse datetime-formatter end))))))]
-          [:div
-           [:b "Venue: "] (:Venue event)]
-          [:p (:Description event)]]
-         [:div.ui.vertical.segment
-          [:h2.ui.header
-           "Activities"]
-          [:table.ui.table
-           [:thead
-            [:tr
-             [:th "Start"]
-             [:th "End"]
-             [:th "Activity"]
-             [:th "Location"]]]
-           [:tbody
-            (for [activity activities]
-                ^{:key (:ActivityId activity)}
-                [:tr
-                 [:td {:noWrap true}
-                  (when activity
-                    (unparse datetime-formatter
-                             (from-string (:StartTime activity))))]
-                 [:td {:noWrap true}
-                  (when activity
-                    (unparse datetime-formatter
-                             (from-string (:EndTime activity))))]
-                 [:td (:Name activity)]
-                 [:td (:Location activity)]])]
-           [:tfoot
-            [:tr
-             [:th {:colSpan "4"}
-              [:a.ui.right.floated.small.labeled.icon.button
-               {:href (event-activity-add-route event)}
-               [:i.edit.icon]
-               "Edit"]]]]]]
-         [:div.ui.vertical.segment
-          [:h2.ui.header
-           "Attendees"
-           [:a.ui.right.floated.small.button
-            {:href (event-attendees-route event)}
-            "View"]]
-          [:table.ui.table
-           [:thead
-            [:tr
-             [:th "Name"]
-             [:th]]]
-           [:tbody
-            (for [attendee attendees]
-              ^{:key (:AttendeeId attendee)}
-              [:tr
-               [:td (str (:FirstName attendee) " " (:LastName attendee))]
-               [:td [:a.ui.right.floated.small.labeled.button
-                     {:href (event-attendee-route {:EventId (:EventId event)
-                                                   :AttendeeId (:AttendeeId attendee)})
-                      :class (when (:CheckinTime attendee) :green)}
-                     (if (:CheckinTime attendee)
-                       "Checked in"
-                       "Check in")]]])]
-           [:tfoot
-            [:tr
-             [:th {:colSpan "4"}
-              [:div.ui.right.floated.small.labeled.icon.button
-               [:i.edit.icon]
-               "Edit"]]]]]]]]])))
+      [:div.sixteen.wide.column
+       [:div.ui.segment
+        [:div.ui.vertical.segment
+         [:h2.ui.dividing.header
+          (:Name event)]
+         [:div.ui.right.floated.small.labeled.icon.button
+          [:i.edit.icon]
+          "Edit"]
+         [:div
+          [:b "Date: "]
+          (when (and (:StartDate event)
+                     (:EndDate event))
+            (let [start (from-string (:StartDate event))
+                  end   (from-string (:EndDate   event))]
+              (str (unparse datetime-formatter start)
+                   (when (after? end start)
+                     (str " to "
+                          (unparse datetime-formatter end))))))]
+         [:div
+          [:b "Venue: "] (:Venue event)]
+         [:p (:Description event)]]
+        [:div.ui.vertical.segment
+         [:h2.ui.header
+          "Activities"]
+         [:table.ui.table
+          [:thead
+           [:tr
+            [:th "Start"]
+            [:th "End"]
+            [:th "Activity"]
+            [:th "Location"]]]
+          [:tbody
+           (for [activity activities]
+             ^{:key (:ActivityId activity)}
+             [:tr
+              [:td {:noWrap true}
+               (when activity
+                 (unparse datetime-formatter
+                          (from-string (:StartTime activity))))]
+              [:td {:noWrap true}
+               (when activity
+                 (unparse datetime-formatter
+                          (from-string (:EndTime activity))))]
+              [:td (:Name activity)]
+              [:td (:Location activity)]])]
+          [:tfoot
+           [:tr
+            [:th {:colSpan "4"}
+             [:a.ui.right.floated.small.labeled.icon.button
+              {:href (event-activity-add-route event)}
+              [:i.edit.icon]
+              "Edit"]]]]]]
+        [:div.ui.vertical.segment
+         [:h2.ui.header
+          "Attendees"
+          [:a.ui.right.floated.small.button
+           {:href (event-attendees-route event)}
+           "View"]]
+         [:table.ui.table
+          [:thead
+           [:tr
+            [:th "Name"]
+            [:th]]]
+          [:tbody
+           (for [attendee attendees]
+             ^{:key (:AttendeeId attendee)}
+             [:tr
+              [:td (str (:FirstName attendee) " " (:LastName attendee))]
+              [:td [:a.ui.right.floated.small.labeled.button
+                    {:href (event-attendee-route {:EventId (:EventId event)
+                                                  :AttendeeId (:AttendeeId attendee)})
+                     :class (when (:CheckinTime attendee) :green)}
+                    (if (:CheckinTime attendee)
+                      "Checked in"
+                      "Check in")]]])]
+          [:tfoot
+           [:tr
+            [:th {:colSpan "4"}
+             [:div.ui.right.floated.small.labeled.icon.button
+              [:i.edit.icon]
+              "Edit"]]]]]]]])))
 
 (defn event-attendee-page [event-id attendee-id]
   (let [check-in-or-out
@@ -1042,93 +1044,92 @@
                                                                     ;(reset! checked-in false)
                                                                     (callback))))))]
           (when (seq event)
-            [:div.ui.page.grid
-             [:div.sixteen.wide.column
-              [:div.ui.segment
-               [:div
-                [:div.ui.vertical.segment
-                 [:h1.ui.header
-                  (str (:FirstName @attendee) " " (:LastName @attendee))]]
-                [:div.ui.vertical.segment
-                 [:div.ui.divided.items
-                  [:div.item
-                   [:div.content
-                    [:a.header
-                     {:href (event-route event)}
-                     (:Name event)]
-                    [:div.meta
-                     [:b "Date: "]
-                     (when event
-                       (let [start (from-string (:StartDate event))
-                             end   (from-string (:EndDate   event))]
-                         (str (unparse datetime-formatter start)
-                              (when (after? end start)
-                                (str " to " (unparse datetime-formatter end))))))]
-                    [:div.meta
-                     [:b "Venue: "]
-                     (:Venue event)]
-                    [:div.description
-                     (:Description event)]
-                    [:div.extra
-                     [:div.ui.right.floated.button
-                      {:on-click #(if (:CheckinTime @attendee)
-                                    (check-out attendee-id)
-                                    (check-in attendee-id))}
-                      @button-text]]]]]]
-                [:div.ui.vertical.segment
-                 [:h3.ui.header
-                  "Attendee Info"]
-                 [:table.ui.definition.table.attendee-info
-                  [:tbody
-                   [:tr
-                    [:td "Email"]
-                    [:td (:Email @attendee)]]]]]
-                [:div.ui.vertical.segment
-                 [:h3.ui.header
-                  "Attendee Schedule"]
-                 [:table.ui.table
-                  [:thead
-                   [:tr
-                    [:th "Start"]
-                    [:th "End"]
-                    [:th "Activity"]
-                    [:th "Location"]
-                    [:th]]]
-                  [:tbody
-                   (for [[schedule-id activity-id] attendee-activities]
-                     ^{:key schedule-id}
-                     (let [activity
-                           (when activity-id
-                             (d/entity @activities-db activity-id))
-                           schedule
-                           (when schedule-id
-                             (d/entity @schedules-db schedule-id))]
-                       (let
-                         [checked-in (atom (not (nil? (:CheckinTime schedule))))
-                          checking-in (atom false)]
-                         [:tr
-                          [:td {:noWrap true}
-                           (when activity
-                             (unparse datetime-formatter
-                                      (from-string (:StartTime activity))))]
-                          [:td {:noWrap true}
-                           (when activity
-                             (unparse datetime-formatter
-                                      (from-string (:EndTime activity))))]
-                          [:td (:Name activity)]
-                          [:td (:Location activity)]
-                          [:td.right.aligned {:noWrap true}
-                           [:div.ui.button
-                            {:on-click (fn []
-                                         (reset! checking-in true)
-                                         (if @checked-in
-                                           (activity-check-out schedule-id checked-in #(reset! checking-in false))
-                                           (activity-check-in schedule-id checked-in #(reset! checking-in false))))}
-                            (if @checking-in
-                              [:i.spinner.loading.icon] ; todo: not working
-                              (if @checked-in
-                                "Check out"
-                                "Check in"))]]])))]]]]]]]))))))
+            [:div.sixteen.wide.column
+             [:div.ui.segment
+              [:div
+               [:div.ui.vertical.segment
+                [:h1.ui.header
+                 (str (:FirstName @attendee) " " (:LastName @attendee))]]
+               [:div.ui.vertical.segment
+                [:div.ui.divided.items
+                 [:div.item
+                  [:div.content
+                   [:a.header
+                    {:href (event-route event)}
+                    (:Name event)]
+                   [:div.meta
+                    [:b "Date: "]
+                    (when event
+                      (let [start (from-string (:StartDate event))
+                            end   (from-string (:EndDate   event))]
+                        (str (unparse datetime-formatter start)
+                             (when (after? end start)
+                               (str " to " (unparse datetime-formatter end))))))]
+                   [:div.meta
+                    [:b "Venue: "]
+                    (:Venue event)]
+                   [:div.description
+                    (:Description event)]
+                   [:div.extra
+                    [:div.ui.right.floated.button
+                     {:on-click #(if (:CheckinTime @attendee)
+                                   (check-out attendee-id)
+                                   (check-in attendee-id))}
+                     @button-text]]]]]]
+               [:div.ui.vertical.segment
+                [:h3.ui.header
+                 "Attendee Info"]
+                [:table.ui.definition.table.attendee-info
+                 [:tbody
+                  [:tr
+                   [:td "Email"]
+                   [:td (:Email @attendee)]]]]]
+               [:div.ui.vertical.segment
+                [:h3.ui.header
+                 "Attendee Schedule"]
+                [:table.ui.table
+                 [:thead
+                  [:tr
+                   [:th "Start"]
+                   [:th "End"]
+                   [:th "Activity"]
+                   [:th "Location"]
+                   [:th]]]
+                 [:tbody
+                  (for [[schedule-id activity-id] attendee-activities]
+                    ^{:key schedule-id}
+                    (let [activity
+                          (when activity-id
+                            (d/entity @activities-db activity-id))
+                          schedule
+                          (when schedule-id
+                            (d/entity @schedules-db schedule-id))]
+                      (let
+                        [checked-in (atom (not (nil? (:CheckinTime schedule))))
+                         checking-in (atom false)]
+                        [:tr
+                         [:td {:noWrap true}
+                          (when activity
+                            (unparse datetime-formatter
+                                     (from-string (:StartTime activity))))]
+                         [:td {:noWrap true}
+                          (when activity
+                            (unparse datetime-formatter
+                                     (from-string (:EndTime activity))))]
+                         [:td (:Name activity)]
+                         [:td (:Location activity)]
+                         [:td.right.aligned {:noWrap true}
+                          [:div.ui.button
+                           {:on-click (fn []
+                                        (reset! checking-in true)
+                                        (if @checked-in
+                                          (activity-check-out schedule-id checked-in #(reset! checking-in false))
+                                          (activity-check-in schedule-id checked-in #(reset! checking-in false))))}
+                           (if @checking-in
+                             [:i.spinner.loading.icon] ; todo: not working
+                             (if @checked-in
+                               "Check out"
+                               "Check in"))]]])))]]]]]]))))))
 
 (defn event-register-page [event-id]
   (let [form (atom {:Email (get-in @session [:user :Email])
@@ -1194,6 +1195,115 @@
               [:button.ui.primary.button
                {:type :submit :on-click #(register @form)}
                "Register"]]]]])))))
+
+(defn event-schedule-page [event-id]
+  (let [event (into {} (seq (d/entity @events-db event-id)))
+        
+        scheduled-activities
+        (d/q '[:find ?schedule-id ?activity-id
+               :in $activities $schedules ?event-id ?user-id
+               :where
+               [$activities ?activity-id :EventId ?event-id]
+               [$schedules  ?schedule-id :UserId     ?user-id]
+               [$schedules  ?schedule-id :ActivityId ?activity-id]]
+             @activities-db
+             @schedules-db
+             event-id
+             (get-in @session [:user :UserId]))
+        
+        event-activities
+        (d/q '[:find ?activity-id
+               :in $ ?event-id
+               :where
+               [?activity-id :EventId ?event-id]]
+             @activities-db
+             event-id)
+        
+        unscheduled-activities
+        (set/difference event-activities (into #{} (map #(vector (second %))
+                                                    scheduled-activities)))
+        
+        add-activity!
+        (fn [user-id activity-id]
+          (schedules-endpoint :create
+                              {:ActivityId activity-id
+                               :UserId     user-id}
+                              nil))
+        
+        remove-activity!
+        (fn [schedule]
+          (schedules-endpoint :delete schedule nil))]
+    (when (seq event)
+   [:div.sixteen.wide.column
+    [:div.ui.segment
+     [:div.ui.vertical.segment
+      [:h2.ui.header
+       (str (get-in @session [:user :FirstName]) "'s Schedule for " (:Name event))]]
+     [:div.ui.vertical.segment
+      [:table.ui.table
+       [:thead
+        [:tr
+         [:th "Start"]
+         [:th "End"]
+         [:th "Activity"]
+         [:th "Location"]
+         [:th]]]
+       [:tbody
+        (for [[schedule-id activity-id] scheduled-activities]
+          ^{:key schedule-id}
+          (let [activity
+                (when activity-id
+                         (d/entity @activities-db activity-id))]
+            [:tr
+             [:td {:noWrap true}
+              (when activity
+                (unparse datetime-formatter
+                         (from-string (:StartTime activity))))]
+             [:td {:noWrap true}
+              (when activity
+                (unparse datetime-formatter
+                         (from-string (:EndTime activity))))]
+             [:td (:Name activity)]
+             [:td (:Location activity)]
+             [:td.right.aligned {:noWrap true}
+              [:div.ui.button
+               {:on-click #(remove-activity!
+                             (d/entity @schedules-db
+                                       schedule-id))}
+               [:i.red.remove.icon] "Remove"]]]))]
+       [:tfoot
+        [:tr
+         [:th {:colSpan "6"}
+          [:div.ui.small.labeled.icon.button
+           [:i.print.icon] "Print"]]]]]]
+     [:div.ui.vertical.segment
+      [:div.ui.divided.items
+       (for [[activity-id] unscheduled-activities]
+         ^{:key activity-id}
+         (let [activity
+               (when activity-id
+                 (d/entity @activities-db activity-id))]
+           [:div.item
+            [:div.content
+             [:a.header (:Name activity)]
+             [:div.meta (:Location activity)]
+             [:div (str (when activity
+                          (unparse datetime-formatter
+                                   (from-string
+                                     (:StartTime activity))))
+                        " - "
+                        (when activity
+                          (unparse datetime-formatter
+                                   (from-string
+                                     (:EndTime activity)))))]
+             [:div.description
+              (:Description activity)]
+             [:div.extra
+              [:div.ui.right.floated.primary.button
+               {:on-click #(add-activity! (get-in @session [:user :UserId])
+                                          (:ActivityId activity))}
+               "Add"
+               [:i.right.chevron.icon]]]]]))]]]])))
 
 (defn sign-in-page []
   (let [form (atom {})
