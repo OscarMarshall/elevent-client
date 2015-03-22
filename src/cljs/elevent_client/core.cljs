@@ -13,8 +13,8 @@
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
       [cljs-time.coerce :refer [from-string]]
-      [cljs-time.core :refer [after? at-midnight now]]
-      [cljs-time.format :refer [formatter formatters unparse]]
+      [cljs-time.core :refer [after? at-midnight now plus hours]]
+      [cljs-time.format :refer [formatter formatters unparse parse]]
       [datascript :as d]
       [garden.core :refer [css]]
       [secretary.core :as secretary :refer-macros [defroute]]
@@ -722,6 +722,117 @@
                                         :on-click #(create-event @form)}
              "Add"]]]]]))))
 
+(defn event-activity-edit-page [event-id]
+  (let [form (atom {:EventId event-id})
+        validator (validation-set (presence-of :Name)
+                                  (presence-of :StartTime)
+                                  (presence-of :EndTime)
+                                  (format-of   :EnrollmentCap :format #"[0-9_]"
+                                                              :allow-nil true
+                                                              :allow-blank true
+                                                              :message "Please enter a number"))
+        reset-form!
+        (fn []
+          (reset! form (atom {:EventId event-id})))]
+    (fn [event-id]
+      (let [{:keys [Name Location EnrollmentCap StartTime EndTime Description]}
+            @form
+
+            errors
+            (validator @form)
+            
+            event
+            (into {} (seq (d/entity @events-db event-id)))
+            
+            activities
+            (map #(d/entity @activities-db %)
+                 (d/q '[:find [?e ...]
+                        :in $ ?event-id
+                        :where
+                        [?e :EventId ?event-id]]
+                      @activities-db
+                      event-id))
+
+            create-activity
+            (fn [form]
+              (when (empty? errors)
+                (activities-endpoint :create
+                                     (let [start-time (:StartTime form)
+                                           end-time   (:EndTime form)]
+                                       (assoc form
+                                         :StartTime (unparse (:date-hour-minute-second formatters)
+                                                             (from-string start-time))
+                                         :EndTime (unparse (:date-hour-minute-second formatters)
+                                                           (from-string end-time))))
+                                     #(reset-form!))))]
+        (when (seq event)
+          [:div.ui.page.grid
+           [:div.sixteen.wide.column
+            [:div.ui.segment
+             [:div.ui.vertical.segment
+              [:h2.ui.header
+               (:Name event)]]
+             [:div.ui.vertical.segment
+              [:h2.ui.header
+               "Add activity"]
+              [:form.ui.form
+               [:div.one.field
+                [:div.required.field {:class (when (and Name (:Name errors))
+                                               "error")}
+                 [:label "Name"]
+                 [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
+               [:div.two.fields
+                [:div.field
+                 [:label "Location"]
+                 [input-atom :text (r/wrap Location swap! form assoc :Location)]]
+                [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
+                                      "error")}
+                 [:label "Enrollment Cap"]
+                 [input-atom :text (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
+               [:div.two.fields =
+                [:div.required.field {:class (when (and StartTime (:StartTime errors))
+                                               "error")}
+                 [:label "Start Time"]
+                 [input-atom :datetime-local
+                  (r/wrap StartTime swap! form assoc :StartTime)
+                  #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
+                  #(unparse (:date-hour-minute formatters) (from-string %))]]
+                [:div.required.field {:class (when (and EndTime (:EndTime errors))
+                                               "error")}
+                 [:label "End Time"]
+                 [input-atom :datetime-local
+                  (r/wrap EndTime swap! form assoc :EndTime)
+                  #(or % (unparse (:date-hour-minute formatters) (now)))
+                  #(unparse (:date-hour-minute formatters) (from-string %))]]]
+               [:div.field
+                [:label "Description"]
+                [input-atom :textarea
+                 (r/wrap Description swap! form assoc :Description)]]
+               [:button.ui.primary.button {:class (when (seq errors) "disabled")
+                                           :type :submit
+                                           :on-click #(create-activity @form)}
+                "Add"]]]
+             [:div.ui.vertical.segment
+              [:h2.ui.header
+               "Activities"]
+              [:table.ui.table
+               [:thead
+                [:tr
+                 [:th "Start Time"]
+                 [:th "End Time"]
+                 [:th "Activity"]
+                 [:th "Location"]]]
+               [:tbody
+                (for [activity activities]
+                  ^{:key (:ActivityId activity)}
+                  [:tr
+                   [:td (let [start (from-string (:StartTime activity))]
+                          (unparse datetime-formatter start))]
+                   [:td (let [end   (from-string (:EndTime   activity))]
+                          (unparse datetime-formatter end))]
+                   [:td (:Name activity)]
+                   [:td (:Location activity)]])]]]]]])))))
+
 (defn event-page [event-id]
   (let [event (into {} (seq (d/entity @events-db event-id)))
 
@@ -777,10 +888,7 @@
           [:p (:Description event)]]
          [:div.ui.vertical.segment
           [:h2.ui.header
-           "Activities"
-           [:a.ui.right.floated.small.button
-            {:href (event-activity-add-route event)}
-            "View/Edit"]]
+           "Activities"]
           [:table.ui.table
            [:thead
             [:tr
@@ -1042,10 +1150,11 @@
 
             register
             (fn [form]
-              (attendees-endpoint :create
-                                  {:UserId (get-in @session [:user :UserId])
-                                   :EventId event-id}
-                                  #(js/location.replace (events-route))))]
+              (when (empty? errors)
+                (attendees-endpoint :create
+                                    {:UserId (get-in @session [:user :UserId])
+                                     :EventId event-id}
+                                    #(js/location.replace (events-route)))))]
         (when (seq event)
           [:div.ui.stackable.page.grid
            [:div.sixteen.wide.column
