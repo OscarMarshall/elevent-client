@@ -723,7 +723,7 @@
              "Add"]]]]]))))
 
 (defn event-page [event-id]
-  (let [event (d/entity @events-db event-id)
+  (let [event (into {} (seq (d/entity @events-db event-id)))
 
         activities (map #(d/entity @activities-db %)
                         (d/q '[:find [?e ...]
@@ -838,6 +838,189 @@
               [:div.ui.right.floated.small.labeled.icon.button
                [:i.edit.icon]
                "Edit"]]]]]]]]])))
+
+(defn event-attendee-page [event-id attendee-id]
+  (let [check-in-or-out
+        (fn [op url init callback]
+          (init)
+          (op (str api-url url)
+              {:format :json
+               :keywords? true
+               :headers
+               (if (:token @session)
+                 {:Authentication
+                  (str "Bearer " (:token @session))}
+                 {})
+               :handler callback
+               :error-handler (fn []
+                                (swap! messages conj [:error "Check in failed. Please try again."]))}))
+        
+        button-loading? (atom false)]
+    (fn [event-id attendee-id]
+      (let [event (into {} (seq (d/entity @events-db event-id)))
+            
+            attendee
+            (atom (into {} (seq
+                             (first (map (fn [[user-id attendee-id]]
+                                           (merge (into {} (d/entity @users-db
+                                                                     user-id))
+                                                  (into {} (d/entity @attendees-db
+                                                                     attendee-id))))
+                                         (d/q '[:find ?e ?a
+                                                :in $ ?attendee-id
+                                                :where
+                                                [?a :AttendeeId ?attendee-id]
+                                                [?a :UserId ?e]]
+                                              @attendees-db
+                                              attendee-id))))))
+            
+            attendee-activities
+            (d/q '[:find ?schedule-id ?activity-id
+                   :in $activities $schedules $attendees ?event-id ?attendee-id
+                   :where
+                   [$activities ?activity-id :EventId ?event-id]
+                   [$attendees  ?a :AttendeeId ?attendee-id]
+                   [$attendees  ?a :UserId ?user-id]
+                   [$schedules  ?schedule-id :UserId     ?user-id]
+                   [$schedules  ?schedule-id :ActivityId ?activity-id]]
+                 @activities-db
+                 @schedules-db
+                 @attendees-db
+                 event-id
+                 attendee-id)]
+        (let [button-text (atom (if @button-loading?
+                                  [:i.spinner.loading.icon]
+                                  (if (:CheckinTime @attendee)
+                                    "Check out"
+                                    "Check in")))
+              
+              check-in
+              (fn [attendee-id]
+                (check-in-or-out PUT
+                                 (str "/attendees/" attendee-id "/checkin")
+                                 #(reset! button-loading? true)
+                                 (fn []
+                                   (prn "Checked in!")
+                                   (attendees-endpoint :read nil #(reset! button-loading? false)))))
+              
+              check-out
+              (fn [attendee-id]
+                (check-in-or-out DELETE
+                                 (str "/attendees/" attendee-id "/checkin")
+                                 #(reset! button-loading? true)
+                                 (fn []
+                                   (prn "Checked out!")
+                                   (attendees-endpoint :read nil #(reset! button-loading? false)))))
+              
+              activity-check-in
+              (fn [schedule-id checked-in callback]
+                (check-in-or-out PUT
+                                 (str "/schedules/" schedule-id "/checkin")
+                                 #()
+                                 (fn []
+                                   (prn "Checked in!")
+                                   (schedules-endpoint :read nil #(do
+                                                                    ;(reset! checked-in true)
+                                                                    (callback))))))
+              
+              activity-check-out
+              (fn [schedule-id checked-in callback]
+                (check-in-or-out DELETE
+                                 (str "/schedules/" schedule-id "/checkin")
+                                 #()
+                                 (fn []
+                                   (prn "Checked out!")
+                                   (schedules-endpoint :read nil #(do
+                                                                    ;(reset! checked-in false)
+                                                                    (callback))))))]
+          (when (seq event)
+            [:div.ui.page.grid
+             [:div.sixteen.wide.column
+              [:div.ui.segment
+               [:div
+                [:div.ui.vertical.segment
+                 [:h1.ui.header
+                  (str (:FirstName @attendee) " " (:LastName @attendee))]]
+                [:div.ui.vertical.segment
+                 [:div.ui.divided.items
+                  [:div.item
+                   [:div.content
+                    [:a.header
+                     {:href (event-route event)}
+                     (:Name event)]
+                    [:div.meta
+                     [:b "Date: "]
+                     (when event
+                       (let [start (from-string (:StartDate event))
+                             end   (from-string (:EndDate   event))]
+                         (str (unparse datetime-formatter start)
+                              (when (after? end start)
+                                (str " to " (unparse datetime-formatter end))))))]
+                    [:div.meta
+                     [:b "Venue: "]
+                     (:Venue event)]
+                    [:div.description
+                     (:Description event)]
+                    [:div.extra
+                     [:div.ui.right.floated.button
+                      {:on-click #(if (:CheckinTime @attendee)
+                                    (check-out attendee-id)
+                                    (check-in attendee-id))}
+                      @button-text]]]]]]
+                [:div.ui.vertical.segment
+                 [:h3.ui.header
+                  "Attendee Info"]
+                 [:table.ui.definition.table.attendee-info
+                  [:tbody
+                   [:tr
+                    [:td "Email"]
+                    [:td (:Email @attendee)]]]]]
+                [:div.ui.vertical.segment
+                 [:h3.ui.header
+                  "Attendee Schedule"]
+                 [:table.ui.table
+                  [:thead
+                   [:tr
+                    [:th "Start"]
+                    [:th "End"]
+                    [:th "Activity"]
+                    [:th "Location"]
+                    [:th]]]
+                  [:tbody
+                   (for [[schedule-id activity-id] attendee-activities]
+                     ^{:key schedule-id}
+                     (let [activity
+                           (when activity-id
+                             (d/entity @activities-db activity-id))
+                           schedule
+                           (when schedule-id
+                             (d/entity @schedules-db schedule-id))]
+                       (let
+                         [checked-in (atom (not (nil? (:CheckinTime schedule))))
+                          checking-in (atom false)]
+                         [:tr
+                          [:td {:noWrap true}
+                           (when activity
+                             (unparse datetime-formatter
+                                      (from-string (:StartTime activity))))]
+                          [:td {:noWrap true}
+                           (when activity
+                             (unparse datetime-formatter
+                                      (from-string (:EndTime activity))))]
+                          [:td (:Name activity)]
+                          [:td (:Location activity)]
+                          [:td.right.aligned {:noWrap true}
+                           [:div.ui.button
+                            {:on-click (fn []
+                                         (reset! checking-in true)
+                                         (if @checked-in
+                                           (activity-check-out schedule-id checked-in #(reset! checking-in false))
+                                           (activity-check-in schedule-id checked-in #(reset! checking-in false))))}
+                            (if @checking-in
+                              [:i.spinner.loading.icon] ; todo: not working
+                              (if @checked-in
+                                "Check out"
+                                "Check in"))]]])))]]]]]]]))))))
 
 (defn event-register-page [event-id]
   (let [form (atom {:Email (get-in @session [:user :Email])
