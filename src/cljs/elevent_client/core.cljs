@@ -1193,7 +1193,9 @@
                  [input-atom :text
                   (r/wrap LastName swap! form assoc :LastName)]]]]
               [:button.ui.primary.button
-               {:type :submit :on-click #(register @form)}
+               {:type :submit
+                :class (when (seq errors) "disabled")
+                :on-click #(register @form)}
                "Register"]]]]])))))
 
 (defn event-schedule-page [event-id]
@@ -1304,6 +1306,61 @@
                                           (:ActivityId activity))}
                "Add"
                [:i.right.chevron.icon]]]]]))]]]])))
+
+(defn organizations-page []
+  [:div.sixteen.wide.column
+   [:div.ui.segment
+    [:div.ui.vertical.segment
+     [:h1.ui.header
+      "Organizations"
+      [:a.ui.right.floated.small.button
+       {:href (organization-add-route)}
+       "Add Organization"]]]
+    [:div.ui.vertical.segment
+     [:div.ui.divided.items
+      (for [organization (map #(d/entity @organizations-db
+                                         %)
+                              (d/q '[:find [?organization-id ...]
+                                     :where [?organization-id]]
+                                   @organizations-db))]
+        ^{:key (:OrganizationId organization)}
+        [:div.item
+         [:div.content
+          [:a.header
+           (:Name organization)]
+          [:div.extra
+           [:a.ui.right.floated.small.icon.button
+            {:href (str "#/events?organization="
+                        (:OrganizationId organization))} ; TODO: make this work
+            "View events"]]]])]]]])
+
+(defn organization-edit-page []
+  (let [form (atom {})
+        validator (validation-set (presence-of :Name))]
+    (fn []
+      (let [{:keys [Name]} @form
+            errors (validator @form)
+            create-organization
+            (fn [form]
+              (organizations-endpoint :create
+                                      form
+                                      #(set! js/location "#/organizations")))]
+        [:div.sixteen.wide.column
+         [:div.ui.segment
+          [:form.ui.form
+           [:div.ui.vertical.segment
+            [:h2.ui.dividing.header
+             "Add an Organization"]
+            [:div.field
+             [:div.required.field {:class (when (and Name (:Name errors))
+                                            "error")}
+              [:label "Organization Name"]
+              [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
+            [:button.ui.primary.button
+             {:type :submit
+              :class (when (seq errors) "disabled")
+              :on-click #(create-organization @form)}
+             "Add"]]]]]))))
 
 (defn sign-in-page []
   (let [form (atom {})
