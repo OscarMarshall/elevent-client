@@ -136,12 +136,14 @@
 
 (declare home-page
          events-page
+         sign-in-page
+         sign-up-page
          events-explore-page
          event-page
          event-edit-page
          event-register-page
-         event-activities-page
          event-activities-explore-page
+         event-activities-page
          event-activity-page
          event-activity-edit-page
          event-schedule-page
@@ -153,8 +155,6 @@
          organization-edit-page
          calendar-page
          statistics-page
-         sign-in-page
-         sign-up-page
          statistics-component)
 
 (defonce current-page (atom #'home-page))
@@ -165,17 +165,27 @@
   "/" []
   (reset! current-page [#'home-page]))
 
-(defroute events-route
-  "/events" []
-  (reset! current-page [#'events-page]))
+(defroute sign-in-route "/sign-in" []
+  (reset! current-page [#'sign-in-page]))
+
+(defroute sign-up-route "/sign-up" []
+  (reset! current-page [#'sign-up-page]))
 
 (defroute events-explore-route
   "/events/explore" []
   (reset! current-page [#'events-explore-page]))
 
+(defroute events-route
+  "/events" []
+  (if (:token @session)
+    (reset! current-page [#'events-page])
+    (location.replace (events-explore-route))))
+
 (defroute event-add-route
   "/events/add" []
-  (reset! current-page [#'event-edit-page]))
+  (if (:token @session)
+    (reset! current-page [#'event-edit-page])
+    (location.replace (sign-in-route))))
 
 (defroute event-route
   "/events/:EventId" [EventId]
@@ -189,13 +199,13 @@
   "/events/:EventId/register" [EventId]
   (reset! current-page [#'event-register-page (int EventId)]))
 
-(defroute event-activities-route
-  "/events/:EventId/activities" [EventId]
-  (reset! current-page [#'event-activities-page (int EventId)]))
-
 (defroute event-activities-explore-route
   "/events/:EventId/activities/explore" [EventId]
   (reset! current-page [#'event-activities-explore-page (int EventId)]))
+
+(defroute event-activities-route
+  "/events/:EventId/activities" [EventId]
+  (reset! current-page [#'event-activities-page (int EventId)]))
 
 (defroute event-activity-add-route
   "/events/:EventId/activities/add" [EventId]
@@ -250,22 +260,18 @@
   "/statistics" []
   (reset! current-page [#'statistics-page]))
 
-(defroute sign-in-route "/sign-in" []
-  (reset! current-page [#'sign-in-page]))
-
-(defroute sign-up-route "/sign-up" []
-  (reset! current-page [#'sign-up-page]))
-
 (def dispatch!
   (secretary/uri-dispatcher [home-route
-                             events-route
+                             sign-in-route
+                             sign-up-route
                              events-explore-route
+                             events-route
                              event-add-route
                              event-route
                              event-edit-route
                              event-register-route
-                             event-activities-route
                              event-activities-explore-route
+                             event-activities-route
                              event-activity-add-route
                              event-activity-route
                              event-activity-edit-route
@@ -276,9 +282,7 @@
                              organization-add-route
                              organization-route
                              organization-edit-route
-                             statistics-route
-                             sign-in-route
-                             sign-up-route]))
+                             statistics-route]))
 
 
 ;; User Account
@@ -466,7 +470,7 @@
             "attendees" [["Attendees" (event-attendees-route env)]
                          env
                          event-attendees-breadcrumbs]
-            "schedule" [["Schedule" (event-schedule-route)] env nil]))
+            "schedule" [["Schedule" (event-schedule-route env)] env nil]))
 
         events-breadcrumbs
         (fn [env fragment]
@@ -1446,7 +1450,7 @@
           @events-db
           @attendees-db
           event-id)
-     
+
      all-attendees
      (d/q '[:find ?attendee-id
             :in $events $attendees ?event-id
@@ -1456,7 +1460,7 @@
           @events-db
           @attendees-db
           event-id)
-     
+
      check-in-data
      (get-time-counts
        (into
