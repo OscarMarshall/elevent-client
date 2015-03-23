@@ -52,7 +52,7 @@
                                         :optimizations :none
                                         :pretty-print  true}}}}
 
-  :profiles {:dev {:repl-options {:init-ns elevent-client.handler
+  :profiles {:dev {:repl-options {:init-ns elevent-client.dev
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
                    :dependencies [[ring-mock "0.1.5"]
@@ -88,9 +88,4 @@
                                              {:source-paths ["env/prod/cljs"]
                                               :compiler
                                               {:optimizations :advanced
-                                               :pretty-print false}}}}}
-
-             :production {:ring {:open-browser? false
-                                 :stacktraces?  false
-                                 :auto-reload?  false}
-                          :cljsbuild {:builds {:app {:compiler {:main "elevent-client.prod"}}}}}})
+                                               :pretty-print false}}}}}})

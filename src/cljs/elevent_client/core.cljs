@@ -744,10 +744,10 @@
 
             errors
             (validator @form)
-            
+
             event
             (into {} (seq (d/entity @events-db event-id)))
-            
+
             activities
             (map #(d/entity @activities-db %)
                  (d/q '[:find [?e ...]
@@ -964,11 +964,11 @@
                :handler callback
                :error-handler (fn []
                                 (swap! messages conj [:error "Check in failed. Please try again."]))}))
-        
+
         button-loading? (atom false)]
     (fn [event-id attendee-id]
       (let [event (into {} (seq (d/entity @events-db event-id)))
-            
+
             attendee
             (atom (into {} (seq
                              (first (map (fn [[user-id attendee-id]]
@@ -983,7 +983,7 @@
                                                 [?a :UserId ?e]]
                                               @attendees-db
                                               attendee-id))))))
-            
+
             attendee-activities
             (d/q '[:find ?schedule-id ?activity-id
                    :in $activities $schedules $attendees ?event-id ?attendee-id
@@ -1003,7 +1003,7 @@
                                   (if (:CheckinTime @attendee)
                                     "Check out"
                                     "Check in")))
-              
+
               check-in
               (fn [attendee-id]
                 (check-in-or-out PUT
@@ -1012,7 +1012,7 @@
                                  (fn []
                                    (prn "Checked in!")
                                    (attendees-endpoint :read nil #(reset! button-loading? false)))))
-              
+
               check-out
               (fn [attendee-id]
                 (check-in-or-out DELETE
@@ -1021,7 +1021,7 @@
                                  (fn []
                                    (prn "Checked out!")
                                    (attendees-endpoint :read nil #(reset! button-loading? false)))))
-              
+
               activity-check-in
               (fn [schedule-id checked-in callback]
                 (check-in-or-out PUT
@@ -1032,7 +1032,7 @@
                                    (schedules-endpoint :read nil #(do
                                                                     ;(reset! checked-in true)
                                                                     (callback))))))
-              
+
               activity-check-out
               (fn [schedule-id checked-in callback]
                 (check-in-or-out DELETE
@@ -1200,7 +1200,7 @@
 
 (defn event-schedule-page [event-id]
   (let [event (into {} (seq (d/entity @events-db event-id)))
-        
+
         scheduled-activities
         (d/q '[:find ?schedule-id ?activity-id
                :in $activities $schedules ?event-id ?user-id
@@ -1212,7 +1212,7 @@
              @schedules-db
              event-id
              (get-in @session [:user :UserId]))
-        
+
         event-activities
         (d/q '[:find ?activity-id
                :in $ ?event-id
@@ -1220,18 +1220,18 @@
                [?activity-id :EventId ?event-id]]
              @activities-db
              event-id)
-        
+
         unscheduled-activities
         (set/difference event-activities (into #{} (map #(vector (second %))
                                                     scheduled-activities)))
-        
+
         add-activity!
         (fn [user-id activity-id]
           (schedules-endpoint :create
                               {:ActivityId activity-id
                                :UserId     user-id}
                               nil))
-        
+
         remove-activity!
         (fn [schedule]
           (schedules-endpoint :delete schedule nil))]
@@ -1424,6 +1424,9 @@
 ;; Initialize app
 ;; =============================================================================
 
+(defn mount-root []
+  (r/render [app-frame] (.-body js/document)))
+
 (defn init! []
   (hook-browser-navigation!)
-  (r/render [app-frame] (.-body js/document)))
+  (mount-root))
