@@ -23,7 +23,7 @@
                  [garden "1.2.5"]
                  [hiccup "1.0.5"]
                  [prone "0.8.1"]
-                 [secretary "1.2.2"]]
+                 [secretary "2.0.0.1-260a59"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]

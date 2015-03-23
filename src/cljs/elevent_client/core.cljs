@@ -157,7 +157,7 @@
 
 (defonce current-page (atom #'home-page))
 
-(secretary/set-config! :prefix "#")
+(secretary/set-route-prefix! "#")
 
 (defroute home-route
   "/" []
@@ -249,6 +249,30 @@
 
 (defroute sign-up-route "/sign-up" []
   (reset! current-page [#'sign-up-page]))
+
+(def dispatch!
+  (secretary/uri-dispatcher [home-route
+                             events-route
+                             events-explore-route
+                             event-add-route
+                             event-route
+                             event-edit-route
+                             event-register-route
+                             event-activities-route
+                             event-activities-explore-route
+                             event-activity-add-route
+                             event-activity-route
+                             event-activity-edit-route
+                             event-attendees-route
+                             event-attendee-route
+                             organizations-route
+                             organizations-explore-route
+                             organization-add-route
+                             organization-route
+                             organization-edit-route
+                             statistics-route
+                             sign-in-route
+                             sign-up-route]))
 
 
 ;; User Account
@@ -1417,7 +1441,7 @@
      (fn [event]
        (let [token (.-token event)]
          (reset! location token)
-         (secretary/dispatch! token))))
+         (dispatch! token))))
     (.setEnabled true)))
 
 
