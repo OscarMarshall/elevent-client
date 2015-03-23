@@ -8,11 +8,11 @@
       [goog.history.EventType :as EventType]
 
       [cljsjs.react :as react]
-      [reagent.core :as r :refer [atom]]
+      [reagent.core :as r :refer [atom create-class render-component]]
 
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
-      [cljs-time.coerce :refer [from-string]]
+      [cljs-time.coerce :refer [from-string from-long to-long]]
       [cljs-time.core :refer [after? at-midnight now plus hours]]
       [cljs-time.format :refer [formatter formatters unparse parse]]
       [datascript :as d]
@@ -151,9 +151,11 @@
          organizations-explore-page
          organization-page
          organization-edit-page
+         calendar-page
          statistics-page
          sign-in-page
-         sign-up-page)
+         sign-up-page
+         statistics-component)
 
 (defonce current-page (atom #'home-page))
 
@@ -239,6 +241,10 @@
 (defroute organization-edit-route
   "/organizations/:OrganizationId/edit" [OrganizationId]
   (reset! current-page [#'organization-edit-page (int OrganizationId)]))
+
+(defroute calendar-route
+  "/calendar" []
+  (reset! current-page [#'calendar-page]))
 
 (defroute statistics-route
   "/statistics" []
@@ -399,6 +405,9 @@
    [:a.item {:href "#/calendar"}
     [:i.calendar.icon]
     "Calendar"]
+   [:a.item {:href "#/statistics"}
+    [:i.bar.chart.icon]
+    "Statistics"]
    (if (:token @session)
      [:div.right.menu
       [:a.item {:on-click sign-out!}
@@ -491,6 +500,7 @@
             "organizations" [["Organizations" (organization-route)]
                              env
                              organizations-breadcrumbs]
+            "calendar" [["Calendar" (calendar-route)] env nil]
             "statistics" [["Statistics" (statistics-route)] env nil]
             "sign-in" [["Sign in" (sign-in-route)] env nil]
             "sign-up" [["Sign up" (sign-up-route)] env nil]))
@@ -1385,6 +1395,121 @@
               :class (when (seq errors) "disabled")
               :on-click #(create-organization @form)}
              "Add"]]]]]))))
+
+(defn calendar-page []
+  [:div.sixteen.wide.column
+   [:div.ui.segment
+    [:h1.ui.header
+     "Calendar"]
+    [:div
+     "Calendar goes here..."]]])
+
+(defn pie-chart-config [attendees all-attendees]
+  {:chart {:type "pie"}
+   :title {:text "Attendance"}
+   :tooltip {:pointFormat "{point.name}: <b>{point.percentage:.1f}%</b>"}
+   :plotOptions {:pie {:cursor "pointer"
+                       :dataLabels {
+                                    :enabled true
+                                    :format "<b>{point.name}</b>: {point.y}"
+                                    }}}
+   :series [{:data [
+                    ["Attended" (count attendees)]
+                    ["Did Not Attend" (- (count all-attendees) (count attendees))]]}]})
+
+(defn time-chart-config [check-in-data]
+  {:chart {:type "line"}
+   :title {:text "Check in Times"}
+   :xAxis {:type "datetime"
+           :dateTimeLabelFormats {:day "%e %b"}}
+   :yAxis {:title {:text "Number checked in"}}
+   :series [{:name "Checked in"
+             :data check-in-data}]})
+
+(defn get-time-counts [pairs prev-count]
+  (if (empty? pairs)
+    (list)
+    (let [check-in-time (ffirst pairs)
+          attendee-count (count (second (first pairs)))]
+      (cons [check-in-time (+ attendee-count prev-count)]
+            (get-time-counts (rest pairs) (+ attendee-count prev-count))))))
+
+(defn statistics-page-did-mount [event-id]
+  (let
+    [attendees
+     (d/q '[:find ?attendee-id ?check-in-time
+            :in $events $attendees ?event-id
+            :where
+            [$events ?event-id :EventId ?event-id]
+            [$attendees ?attendee-id :EventId ?event-id]
+            [$attendees ?attendee-id :CheckinTime ?check-in-time]]
+          @events-db
+          @attendees-db
+          event-id)
+     
+     all-attendees
+     (d/q '[:find ?attendee-id
+            :in $events $attendees ?event-id
+            :where
+            [$events ?event-id :EventId ?event-id]
+            [$attendees ?attendee-id :EventId ?event-id]]
+          @events-db
+          @attendees-db
+          event-id)
+     
+     check-in-data
+     (get-time-counts
+       (into
+         []
+         (into
+           (sorted-map)
+           (apply
+             (partial merge-with concat)
+             (map (fn [[attendee-id check-in-time]]
+                    {(to-long check-in-time)
+                     (list attendee-id)})
+                  attendees))))
+       0)]
+    (do
+      (js/$ (fn []
+              (.highcharts (js/$ "#graph")
+                           (clj->js (pie-chart-config attendees all-attendees)))))
+      (js/$ (fn []
+              (.highcharts (js/$ "#graph2")
+                           (clj->js (time-chart-config check-in-data)))))
+      (prn check-in-data)
+      (prn event-id))))
+
+(defn statistics-page []
+  (fn []
+    (let [events
+          (d/q '[:find ?name ?id
+                 :where [?id :Name ?name]]
+               @events-db)]
+      [(with-meta identity
+                  {:component-did-mount (fn [] (render-component [statistics-component 54]
+                                                                 (.getElementById js/document "graph")))})
+       [:div.sixteen.wide.column
+        [:div.ui.segment
+         [:h1.ui.header
+          "Statistics"]
+         [:div.ui.form
+          [:div.two.fields
+           [:div.field
+            [:label "Choose event:"]
+            [:select.ui {:type "select" :on-change #(statistics-page-did-mount (int (.-value (.-target %))))}
+             (for [[event-name event-id] events]
+               ^{:key event-id}
+               [:option {:value event-id}
+                event-name])]]]]
+         [:div#graph {:style {:min-width "310px" :max-width "800px"
+                              :height "250px" :margin "0 auto"}}]
+         [:div#graph2 {:style {:min-width "310px" :max-width "800px"
+                               :height "400px" :margin "0 auto"}}]]]])))
+
+(defn statistics-component [event-id]
+  (create-class {:reagent-render statistics-page
+                 :component-did-mount #(statistics-page-did-mount event-id)}))
 
 (defn sign-in-page []
   (let [form (atom {})
