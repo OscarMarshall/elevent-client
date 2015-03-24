@@ -1410,12 +1410,57 @@
              "Add"]]]]]))))
 
 (defn calendar-page []
-  [:div.sixteen.wide.column
-   [:div.ui.segment
-    [:h1.ui.header
-     "Calendar"]
-    [:div
-     "Calendar goes here..."]]])
+  (let [user-activities
+        (d/q '[:find ?schedule-id ?activity-id
+               :in $schedules $activities ?user-id
+               :where
+               [$schedules  ?schedule-id :UserId     ?user-id]
+               [$schedules  ?schedule-id :ActivityId ?activity-id]
+               [$activities ?activity-id :ActivityId ?activity-id]]
+             @schedules-db
+             @activities-db
+             (get-in @session [:user :UserId]))
+
+        user-events
+        (d/q '[:find ?event-id
+               :in $ ?user-id
+               :where
+               [?attendee-id :UserId ?user-id]
+               [?attendee-id :EventId ?event-id]]
+             @attendees-db
+             (get-in @session [:user :UserId]))]
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:h1.ui.header
+       "Calendar"]
+      [(with-meta identity
+                  {:component-did-mount
+                   (fn []
+                     (.fullCalendar (js/$ "#calendar")
+                                    (clj->js
+                                      {:events (vec (concat
+                                                      (map (fn [[schedule-id activity-id]]
+                                                             (let [activity
+                                                                   (when activity-id
+                                                                     (d/entity @activities-db activity-id))]
+                                                               {:title (:Name activity)
+                                                                :start (:StartTime activity)
+                                                                :end   (:EndTime activity)}))
+                                                           user-activities)
+                                                      (map (fn [[event-id]]
+                                                             (let [event
+                                                                   (when event-id
+                                                                     (d/entity @events-db event-id))]
+                                                               {:title (:Name event)
+                                                                :start (:StartDate event)
+                                                                :end   (:EndDate event)
+                                                                :color "#8fdf82"}))
+                                                           user-events)))
+                                       :header {:left "title"
+                                                :center ""
+                                                :right "today prev,next month,agendaWeek,agendaDay"}
+                                       :defaultView "agendaWeek"})))})
+       [:div#calendar]]]]))
 
 (defn pie-chart-config [attendees all-attendees]
   {:chart {:type "pie"}
