@@ -157,7 +157,9 @@
          organization-edit-page
          calendar-page
          statistics-page
-         statistics-component)
+         statistics-component
+         payments-page
+         payments-component)
 
 (defonce current-page (atom #'home-page))
 
@@ -262,6 +264,10 @@
   "/statistics" []
   (reset! current-page [#'statistics-page]))
 
+(defroute payments-route
+  "/payments" []
+  (reset! current-page [#'payments-page]))
+
 (def dispatch!
   (secretary/uri-dispatcher [home-route
                              sign-in-route
@@ -286,7 +292,8 @@
                              organization-route
                              organization-edit-route
                              calendar-route
-                             statistics-route]))
+                             statistics-route
+                             payments-route]))
 
 
 ;; User Account
@@ -310,7 +317,7 @@
           :error-handler   (add-message! :negative "Sign in failed")})))
 
 (defn sign-out! []
-  (swap! session dissoc :token :user)
+  (swap! session dissoc :token :user :stripe-token)
   (refresh!)
   (set! js/location (home-route)))
 
@@ -514,6 +521,7 @@
                              organizations-breadcrumbs]
             "calendar" [["Calendar" (calendar-route)] env nil]
             "statistics" [["Statistics" (statistics-route)] env nil]
+            "payments" [["Payments" (payments-route)] env nil]
             "sign-in" [["Sign in" (sign-in-route)] env nil]
             "sign-up" [["Sign up" (sign-up-route)] env nil]))
 
@@ -952,10 +960,13 @@
 (defn event-edit-page []
   (let [form (atom {})
         validator (validation-set (presence-of :Name)
-                                  (presence-of :Organization)
+                                  (presence-of :OrganizationId)
                                   (presence-of :Venue)
                                   (presence-of :StartDate)
-                                  (presence-of :EndDate))
+                                  (presence-of :EndDate)
+                                  (format-of   :TicketPrice :format #"^\d+\.\d{2}$"
+                                               :allow-nil true
+                                               :allow-blank true))
         clone-id (atom 0)]
     (add-watch clone-id :clone
                (fn [_ _ _ id]
@@ -967,7 +978,7 @@
                                              (into {}))
                                         :EventId)))))
     (fn []
-      (let [{:keys [Name OrganizationId Venue StartDate EndDate Description]}
+      (let [{:keys [Name OrganizationId Venue StartDate EndDate RequiresPayment TicketPrice Description]}
             @form
 
             errors
@@ -986,8 +997,9 @@
                        @organizations-db))
 
             create-event
-            (fn [form]
+            (fn [e form]
               (when (empty? errors)
+                (.preventDefault e)
                 (events-endpoint :create
                                  form
                                  #(set! js/location (events-explore-route)))))]
@@ -1006,35 +1018,59 @@
               [:label "Clone From"]
               [input-atom :select clonable-events clone-id]]]
             [:div.two.fields
-             [:div.field
+             [:div.required.field
               [:label "Organization"]
               [input-atom :select associated-organizations
                (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
              [:div.required.field {:class (when (and Venue (:Venue errors))
                                             "error")}
-              [:div.field
+              [:div.required.field
                [:label "Venue"]
                [input-atom :text (r/wrap Venue swap! form assoc :Venue)]]]]
             [:div.two.fields
-             [:div.field
+             [:div.required.field
               [:label "Start Date"]
               [input-atom :datetime-local
                (r/wrap StartDate swap! form assoc :StartDate)
                #(or % (unparse (:date-hour-minute formatters) (now)))
                #(unparse (:date-hour-minute formatters) (from-string %))]]
-             [:div.field
+             [:div.required.field
               [:label "End Date"]
               [input-atom :datetime-local
                (r/wrap EndDate swap! form assoc :EndDate)
                #(or % (unparse (:date-hour-minute formatters) (now)))
                #(unparse (:date-hour-minute formatters) (from-string %))]]]
             [:div.field
+             [:div.four.wide.field {:class (when (and TicketPrice (:TicketPrice errors))
+                                   "error")}
+              [:label "Ticket Price"]
+              [:div.ui.labeled.input
+               [:div.ui.label "$"]
+               [input-atom :text
+                (r/wrap TicketPrice swap! form assoc :TicketPrice)]]]]
+            [:div.field
+             [:div.field
+              ; TODO: someday make UI checkboxes work
+              #_[:div.field
+              [(with-meta identity
+                          {:component-did-mount #(.checkbox (js/$ ".ui.checkbox"))})
+               [:div#requires-payment.ui.checkbox
+                [:input {:type "checkbox"}]
+                [:label "Ticket required"]]]]
+               [:label
+                [:input#requires-payment {:type "checkbox"
+                                          :on-change #(swap! form assoc :RequiresPayment
+                                                             (if (nil? (:RequiresPayment @form))
+                                                               true
+                                                               (not (:RequiresPayment @form))))}]
+                " Ticket required"]]]
+            [:div.field
              [:label "Description"]
              [input-atom :textarea
               (r/wrap Description swap! form assoc :Description)]]
             [:button.ui.primary.button {:class (when (seq errors) "disabled")
                                         :type :submit
-                                        :on-click #(create-event @form)}
+                                        :on-click #(create-event % @form)}
              "Add"]]]]]))))
 
 (defn event-activity-edit-page [event-id & [activity-id]]
@@ -1357,7 +1393,10 @@
               (when (empty? errors)
                 (attendees-endpoint :create
                                     {:UserId (get-in @session [:user :UserId])
-                                     :EventId event-id}
+                                     :EventId event-id
+                                     :Token (when (:RequiresPayment event) (:stripe-token @session))
+                                     ; TODO: maybe this logic is wrong?MIght want to buy ticket even if not required
+                                     :Amount (when (:RequiresPayment event) (:TicketPrice event))}
                                     #(js/location.replace (events-route)))))]
         (when (seq event)
           [:div.ui.stackable.page.grid
@@ -1367,16 +1406,19 @@
               [:h2.ui.dividing.header
                (str "Register for " (:Name event))]
               [:div.meta
-               [:strong "Date:"]
+               [:strong "Date: "]
                (let [start (from-string (:StartDate event))
                      end   (from-string (:EndDate   event))]
-                 (str " " (unparse datetime-formatter start)
+                 (str (unparse datetime-formatter start)
                       (when (after? end start)
                         (str " to " (unparse datetime-formatter end)))))]
               [:div.meta
-               [:strong "Venue:"]
-               " "
+               [:strong "Venue: "]
                (:Venue event)]
+              (when (> (:TicketPrice event) 0)
+                [:div.meta
+                 [:strong "Ticket Price: "]
+                 (goog.string.format "$%.2f" (:TicketPrice event))])
               [:div.description
                (:Description event)]]
              [:div.ui.vertical.segment
@@ -1394,10 +1436,25 @@
                 [:div.required.field
                  [:label "Last Name"]
                  [input-atom :text
-                  (r/wrap LastName swap! form assoc :LastName)]]]]
+                  (r/wrap LastName swap! form assoc :LastName)]]]
+               (when (and (:RequiresPayment event)
+                          (nil? (:stripe-token @session)))
+                 [payments-component])
+               (when (and (:RequiresPayment event)
+                          (not (nil? (:stripe-token @session))))
+                 [:div.inline.fields
+                  [:div.field (str "Charging card ending in " (:cc-last @session) ".")]
+                   [:a.field {:on-click #(swap! session dissoc :stripe-token :cc-last)
+                              :style {:cursor "pointer"}}
+                    "Charge different card"
+                    [:i.right.chevron.icon]]])]
+              [:div.ui.divider]
               [:button.ui.primary.button
                {:type :submit
-                :class (when (seq errors) "disabled")
+                :class (when (or (seq errors)
+                                 (and (:RequiresPayment event)
+                                      (nil? (:stripe-token @session))))
+                         "disabled")
                 :on-click #(register @form)}
                "Register"]]]]])))))
 
@@ -1651,39 +1708,42 @@
 (defn statistics-page-did-mount [event-id]
   (let
     [attendees
-     (d/q '[:find ?attendee-id ?check-in-time
-            :in $events $attendees ?event-id
-            :where
-            [$events ?event-id :EventId ?event-id]
-            [$attendees ?attendee-id :EventId ?event-id]
-            [$attendees ?attendee-id :CheckinTime ?check-in-time]]
-          @events-db
-          @attendees-db
-          event-id)
+     (when event-id
+       (d/q '[:find ?attendee-id ?check-in-time
+              :in $events $attendees ?event-id
+              :where
+              [$events ?event-id :EventId ?event-id]
+              [$attendees ?attendee-id :EventId ?event-id]
+              [$attendees ?attendee-id :CheckinTime ?check-in-time]]
+            @events-db
+            @attendees-db
+            event-id))
 
      all-attendees
-     (d/q '[:find ?attendee-id
-            :in $events $attendees ?event-id
-            :where
-            [$events ?event-id :EventId ?event-id]
-            [$attendees ?attendee-id :EventId ?event-id]]
-          @events-db
-          @attendees-db
-          event-id)
+     (when event-id
+       (d/q '[:find ?attendee-id
+              :in $events $attendees ?event-id
+              :where
+              [$events ?event-id :EventId ?event-id]
+              [$attendees ?attendee-id :EventId ?event-id]]
+            @events-db
+            @attendees-db
+            event-id))
 
      check-in-data
-     (get-time-counts
-       (into
-         []
+     (when attendees
+       (get-time-counts
          (into
-           (sorted-map)
-           (apply
-             (partial merge-with concat)
-             (map (fn [[attendee-id check-in-time]]
-                    {(to-long check-in-time)
-                     (list attendee-id)})
-                  attendees))))
-       0)]
+           []
+           (into
+             (sorted-map)
+             (apply
+               (partial merge-with concat)
+               (map (fn [[attendee-id check-in-time]]
+                      {(to-long check-in-time)
+                       (list attendee-id)})
+                    attendees))))
+         0))]
     (do
       (js/$ (fn []
               (.highcharts (js/$ "#graph")
@@ -1727,6 +1787,102 @@
 (defn statistics-component [event-id]
   (create-class {:reagent-render statistics-page
                  :component-did-mount #(statistics-page-did-mount event-id)}))
+
+(defn payments-component []
+  (let [form (atom {})
+        validator (validation-set (presence-of :number)
+                                  (presence-of :cvc)
+                                  (presence-of :exp-date)
+                                  (format-of   :number   :format #"^[0-9]{16}$")
+                                  (format-of   :cvc      :format #"^[0-9]{3}$")
+                                  (format-of   :exp-date :format #"^[0-1][0-9]/20[1-9][0-9]$"))
+        stripe-error (atom nil)
+        stripe-success (atom nil)
+        button-loading? (atom false)]
+    (fn []
+      (Stripe.setPublishableKey "pk_test_7ntI7D72loXtuO2F15gV0nR0")
+      (let [{:keys [number cvc exp-date]} @form
+            errors (validator @form)
+
+            response-handler
+            (fn [status response]
+              (reset! button-loading? false)
+              (prn response)
+              (if response.error
+                (do
+                  (reset! stripe-error response.error.message)
+                  (reset! stripe-success nil))
+                (do
+                  (reset! stripe-error nil)
+                  (reset! stripe-success "Success!")
+                  (swap! session assoc :stripe-token response.id)
+                  (swap! session assoc :cc-last      (subs (:number @form) 12)))))
+
+            create-token
+            (fn [e form]
+              (when (empty? errors)
+                (let [[month year] (clojure.string/split (:exp-date form) #"/" 2)]
+                  (reset! button-loading? true)
+                  (prn (dissoc (assoc form
+                                 :exp-month (int month)
+                                 :exp-year (int year))
+                               :exp-date))
+                  (.preventDefault e)
+                  (.stopPropagation e)
+                  (Stripe.card.createToken
+                    (clj->js (dissoc (assoc form
+                                       :exp-month (int month)
+                                       :exp-year (int year))
+                                     :exp-date))
+                    response-handler))))]
+        [:div.ui.vertical.segment
+         [:h2.ui.dividing.header
+          "Payment Info"]
+         [:div.two.fields
+          [:div.required.field {:class (when (and number (:number errors))
+                                         "error")}
+           [:label "Card Number"]
+           [input-atom :text
+            (r/wrap number swap! form assoc :number)]]
+          [:div.required.field {:class (when (and cvc (:cvc errors))
+                                         "error")}
+           [:label "CVC"]
+           [:div.two.fields
+            [:div.field
+             [input-atom :password
+              (r/wrap cvc swap! form assoc :cvc)]]
+            [:div.field]]]]
+         [:div.two.fields
+          [:div.required.field {:class (when (and exp-date (:exp-date errors))
+                                         "error")}
+           [:label "Expiration Date"]
+           [input-atom :text ; TODO placeholder
+            (r/wrap exp-date swap! form assoc :exp-date)]]
+          [:div.field]]
+         [:button.ui.primary.button
+          {:type :submit
+           :class (when (seq errors) "disabled")
+           :on-click #(create-token % @form)}
+          (if @button-loading?
+            [:i.spinner.loading.icon]
+            "Confirm")]
+         [:span.ui.red.compact.message
+          {:class (when (nil? @stripe-error) "hidden")}
+          @stripe-error]
+         [:span.ui.green.compact.message
+          {:class (when (nil? @stripe-success) "hidden")}
+          @stripe-success]]))))
+
+(defn payments-page []
+  [:div.sixteen.wide.column
+   [:div.ui.segment
+    ; TODO: expire stripe token if payment info changes
+    [(with-meta identity
+                {:component-did-mount (fn [] (.change (js/$ "#payments-form")
+                                                      #_(swap! session assoc :stripe-token nil)
+                                                      #(prn "changed")))})
+     [:form#payments-form.ui.form
+    [payments-component]]]]])
 
 
 ;; Frame

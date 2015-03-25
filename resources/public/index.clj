@@ -17,5 +17,7 @@
             :src "bower_components/moment/min/moment.min.js"}]
   [:script {:type "text/javascript"
             :src "bower_components/fullcalendar/dist/fullcalendar.min.js"}]
-  [:script {:type "text/javascript" :src "js/app.js"}]]]
+  [:script {:type "text/javascript"
+            :src "https://js.stripe.com/v2/"}]
+  [:script {:type "text/javascript" :src "js/app.js"}]]
  [:body]]
