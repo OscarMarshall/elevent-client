@@ -275,6 +275,7 @@
                              event-activity-add-route
                              event-activity-route
                              event-activity-edit-route
+                             event-schedule-route
                              event-attendees-route
                              event-attendee-route
                              organizations-route
@@ -282,6 +283,7 @@
                              organization-add-route
                              organization-route
                              organization-edit-route
+                             calendar-route
                              statistics-route]))
 
 
@@ -577,49 +579,60 @@
 
 ; TODO: abstract events and events-explore into single component
 (defn events-page []
-  [:div.sixteen.wide.column
-   [:div.ui.segment
-    [:div
-     [:div.ui.vertical.segment
-      [:div.ui.two.column.grid
+  (let [leave-event
+        (fn [attendee-id]
+          ; TODO: this doesn't delete schedules
+          (attendees-endpoint :delete (d/entity @attendees-db attendee-id) nil))]
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:div
+       [:div.ui.vertical.segment
+        [:div.ui.two.column.grid
          [:div.column
           [:h1.ui.header "Your Events"]]
          [:div.right.aligned.column
           [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
            [:i.plus.icon]
            "Add event"]]]]
-     [:div.ui.vertical.segment
-      [:div.ui.divided.items
-       (for [event (map (partial d/entity @events-db)
-                        (d/q '[:find [?event-id ...]
-                               :in $ ?user-id
-                               :where
-                               [?attendee-id :UserId  ?user-id]
-                               [?attendee-id :EventId ?event-id]]
-                             @attendees-db
-                             (get-in @session [:user :UserId])))]
-         [:div.item
-          [:div.content
-           [:a.header {:href (event-route event)}
-            (:Name event)]
-           [:div.meta
-            [:strong "Date:"]
-            (let [start (from-string (:StartDate event))
-                  end   (from-string (:EndDate   event))]
-              (str (unparse datetime-formatter start)
-                   (when (after? end start)
-                     (str " to " (unparse datetime-formatter end)))))]
-           [:div.meta
-            [:strong "Venue:"]
-            (:Venue event)]
-           [:div.description
-            (:Description event)]
-           [:div.extra
-            [:a.ui.right.floated.button {:href (event-schedule-route event)}
-             "Your activities"
-             [:i.right.chevron.icon]]]]])]]]
-    [:div.ui.dimmer {:class (when (empty? @events) "active")}
-     [:div.ui.loader]]]])
+       [:div.ui.vertical.segment
+        [:div.ui.divided.items
+         (for [event (map (fn [[event-id attendee-id]]
+                            (merge
+                              (into {} (d/entity @events-db event-id))
+                              {:AttendeeId attendee-id}))
+                          (d/q '[:find ?event-id ?attendee-id
+                                 :in $ ?user-id
+                                 :where
+                                 [?attendee-id :UserId  ?user-id]
+                                 [?attendee-id :EventId ?event-id]]
+                               @attendees-db
+                               (get-in @session [:user :UserId])))]
+           [:div.item
+            [:div.content
+             [:a.header {:href (event-route event)}
+              (:Name event)]
+             [:div.meta
+              [:strong "Date:"]
+              (let [start (from-string (:StartDate event))
+                    end   (from-string (:EndDate   event))]
+                (str (unparse datetime-formatter start)
+                     (when (after? end start)
+                       (str " to " (unparse datetime-formatter end)))))]
+             [:div.meta
+              [:strong "Venue:"]
+              (:Venue event)]
+             [:div.description
+              (:Description event)]
+             [:div.extra
+              [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+               "Your activities"
+               [:i.right.chevron.icon]]
+              [:a.ui.right.floated.small.button
+               {:on-click #(leave-event (:AttendeeId event))}
+               [:i.red.remove.icon]
+               "Leave event"]]]])]]]
+      [:div.ui.dimmer {:class (when (empty? @events) "active")}
+       [:div.ui.loader]]]]))
 
 (defn events-explore-page []
   (let [attending-events (d/q '[:find [?event-id ...]
@@ -1401,12 +1414,57 @@
              "Add"]]]]]))))
 
 (defn calendar-page []
-  [:div.sixteen.wide.column
-   [:div.ui.segment
-    [:h1.ui.header
-     "Calendar"]
-    [:div
-     "Calendar goes here..."]]])
+  (let [user-activities
+        (d/q '[:find ?schedule-id ?activity-id
+               :in $schedules $activities ?user-id
+               :where
+               [$schedules  ?schedule-id :UserId     ?user-id]
+               [$schedules  ?schedule-id :ActivityId ?activity-id]
+               [$activities ?activity-id :ActivityId ?activity-id]]
+             @schedules-db
+             @activities-db
+             (get-in @session [:user :UserId]))
+
+        user-events
+        (d/q '[:find ?event-id
+               :in $ ?user-id
+               :where
+               [?attendee-id :UserId ?user-id]
+               [?attendee-id :EventId ?event-id]]
+             @attendees-db
+             (get-in @session [:user :UserId]))]
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:h1.ui.header
+       "Calendar"]
+      [(with-meta identity
+                  {:component-did-mount
+                   (fn []
+                     (.fullCalendar (js/$ "#calendar")
+                                    (clj->js
+                                      {:events (vec (concat
+                                                      (map (fn [[schedule-id activity-id]]
+                                                             (let [activity
+                                                                   (when activity-id
+                                                                     (d/entity @activities-db activity-id))]
+                                                               {:title (:Name activity)
+                                                                :start (:StartTime activity)
+                                                                :end   (:EndTime activity)}))
+                                                           user-activities)
+                                                      (map (fn [[event-id]]
+                                                             (let [event
+                                                                   (when event-id
+                                                                     (d/entity @events-db event-id))]
+                                                               {:title (:Name event)
+                                                                :start (:StartDate event)
+                                                                :end   (:EndDate event)
+                                                                :color "#8fdf82"}))
+                                                           user-events)))
+                                       :header {:left "title"
+                                                :center ""
+                                                :right "today prev,next month,agendaWeek,agendaDay"}
+                                       :defaultView "agendaWeek"})))})
+       [:div#calendar]]]]))
 
 (defn pie-chart-config [attendees all-attendees]
   {:chart {:type "pie"}
@@ -1491,7 +1549,10 @@
                  :where [?id :Name ?name]]
                @events-db)]
       [(with-meta identity
-                  {:component-did-mount (fn [] (render-component [statistics-component 54]
+                  {:component-did-mount (fn [] (render-component [statistics-component (first
+                                                                                         (map (fn [[event-name event-id]]
+                                                                                                event-id)
+                                                                                              events))]
                                                                  (.getElementById js/document "graph")))})
        [:div.sixteen.wide.column
         [:div.ui.segment
