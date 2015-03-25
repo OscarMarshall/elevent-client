@@ -732,62 +732,60 @@
 
 ; TODO: abstract events and events-explore into single component
 (defn events-page []
-  (let [leave-event
-        (fn [attendee-id]
-          ; TODO: this doesn't delete schedules
-          (attendees-endpoint :delete
-                              (d/entity @attendees-db attendee-id)
-                              nil))]
-    #_[:div.sixteen.wide.column
-     [:div.ui.segment
-      [:div
-       [:div.ui.vertical.segment
-        [:div.ui.two.column.grid
-         [:div.column
-          [:h1.ui.header "Events You've Created"]]
-         [:div.right.aligned.column
-          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
-           [:i.plus.icon]
-           "Add event"]]]]
-       [:div.ui.vertical.segment
-        [:div.ui.divided.items
-         (for [event (map (fn [[event-id attendee-id]]
-                            (assoc
-                              (into {} (d/entity @events-db event-id))
-                              :AttendeeId attendee-id))
-                          (d/q '[:find ?event-id ?attendee-id
-                                 :in $ ?user-id
-                                 :where
-                                 [?attendee-id :UserId  ?user-id]
-                                 [?attendee-id :EventId ?event-id]]
-                               @attendees-db
-                               (get-in @session [:user :UserId])))]
-           [:div.item
-            [:div.content
-             [:a.header {:href (event-route event)}
-              (:Name event)]
-             [:div.meta
-              [:strong "Date:"]
-              (let [start (from-string (:StartDate event))
-                    end   (from-string (:EndDate   event))]
-                (str (unparse datetime-formatter start)
-                     (when (after? end start)
-                       (str " to " (unparse datetime-formatter end)))))]
-             [:div.meta
-              [:strong "Venue:"]
-              (:Venue event)]
-             [:div.description
-              (:Description event)]
-             [:div.extra
-              [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
-               "Your activities"
-               [:i.right.chevron.icon]]
-              [:a.ui.right.floated.small.button
-               {:on-click #(leave-event (:AttendeeId event))}
-               [:i.red.remove.icon]
-               "Leave event"]]]])]]]
-      [:div.ui.dimmer {:class (when (empty? @events) "active")}
-       [:div.ui.loader]]]
+  (let [leave-event (fn [attendee-id]
+                      ; TODO: this doesn't delete schedules
+                      (attendees-endpoint :delete
+                                          (d/entity @attendees-db attendee-id)
+                                          nil))
+
+        created-events (map #(into {} (d/entity @events-db %))
+                            (d/q '[:find [?event-id ...]
+                                   :in $ ?user-id
+                                   :where
+                                   [?event-id :CreatorId  ?user-id]]
+                                 @events-db
+                                 (get-in @session [:user :UserId])))]
+    [:div.sixteen.wide.column
+     (when (seq created-events)
+       [:div.ui.segment
+        [:div
+         [:div.ui.vertical.segment
+          [:div.ui.two.column.grid
+           [:div.column
+            [:h1.ui.header "Events You've Created"]]
+           [:div.right.aligned.column
+            [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
+             [:i.plus.icon]
+             "Add event"]]]]
+         [:div.ui.vertical.segment
+          [:div.ui.divided.items
+           (for [event created-events]
+             [:div.item
+              [:div.content
+               [:a.header {:href (event-route event)}
+                (:Name event)]
+               [:div.meta
+                [:strong "Date:"]
+                (let [start (from-string (:StartDate event))
+                      end   (from-string (:EndDate   event))]
+                  (str (unparse datetime-formatter start)
+                       (when (after? end start)
+                         (str " to " (unparse datetime-formatter end)))))]
+               [:div.meta
+                [:strong "Venue:"]
+                (:Venue event)]
+               [:div.description
+                (:Description event)]
+               [:div.extra
+                [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+                 "Your activities"
+                 [:i.right.chevron.icon]]
+                [:a.ui.right.floated.small.button
+                 {:on-click #(leave-event (:AttendeeId event))}
+                 [:i.red.remove.icon]
+                 "Leave event"]]]])]]]
+        [:div.ui.dimmer {:class (when (empty? @events) "active")}
+         [:div.ui.loader]]])
      [:div.ui.segment
       [:div
        [:div.ui.vertical.segment
