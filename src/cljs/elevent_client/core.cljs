@@ -19,6 +19,8 @@
       [garden.core :refer [css]]
       [secretary.core :as secretary :refer-macros [defroute]]
       [validateur.validation :refer [format-of
+                                     inclusion-of
+                                     numericality-of
                                      presence-of
                                      valid?
                                      validation-set]])
@@ -46,7 +48,7 @@
 ;; Location
 ;; =============================================================================
 
-(def location (atom ""))
+(defonce location (atom ""))
 
 
 ;; Session
@@ -291,8 +293,8 @@
 ;; =============================================================================
 
 (defn sign-in! [form]
-  (let [{:keys [email password]} form
-        auth-string (b64/encodeString (str email ":" password))]
+  (let [{:keys [Email Password]} form
+        auth-string (b64/encodeString (str Email ":" Password))]
     (GET (str api-url "/token")
          {:format          :json
           :response-format :json
@@ -300,16 +302,20 @@
           :headers         {:Authorization (str "Basic " auth-string)}
           :handler         (fn [response]
                              (swap! session assoc :token (:Token response))
-                             (swap! session assoc-in [:user :Email] email)
+                             (swap! session assoc-in [:user :Email] Email)
                              (refresh!)
                              (reset! messages {})
                              (add-message! :positive "Sign in succeeded")
-                             (js/location.replace (events-route)))})))
+                             (js/location.replace (events-route)))
+          :error-handler   (add-message! :negative "Sign in failed")})))
 
 (defn sign-out! []
   (swap! session dissoc :token :user)
   (refresh!)
   (set! js/location (home-route)))
+
+(defn sign-up! [form]
+  (users-endpoint :create form #(sign-in! form)))
 
 (add-watch users-db
            :find-user
@@ -557,7 +563,7 @@
         message])]))
 
 
-;; Views
+;; Pages
 ;; =============================================================================
 
 (defn home-page []
@@ -577,62 +583,97 @@
      "attend. Elevent Solutions provides the best possible experience for "
      "event organizers, attendees, and everyone in between."]]])
 
-; TODO: abstract events and events-explore into single component
-(defn events-page []
-  (let [leave-event
-        (fn [attendee-id]
-          ; TODO: this doesn't delete schedules
-          (attendees-endpoint :delete (d/entity @attendees-db attendee-id) nil))]
-    [:div.sixteen.wide.column
-     [:div.ui.segment
-      [:div
-       [:div.ui.vertical.segment
-        [:div.ui.two.column.grid
-         [:div.column
-          [:h1.ui.header "Your Events"]]
-         [:div.right.aligned.column
-          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
-           [:i.plus.icon]
-           "Add event"]]]]
-       [:div.ui.vertical.segment
-        [:div.ui.divided.items
-         (for [event (map (fn [[event-id attendee-id]]
-                            (merge
-                              (into {} (d/entity @events-db event-id))
-                              {:AttendeeId attendee-id}))
-                          (d/q '[:find ?event-id ?attendee-id
-                                 :in $ ?user-id
-                                 :where
-                                 [?attendee-id :UserId  ?user-id]
-                                 [?attendee-id :EventId ?event-id]]
-                               @attendees-db
-                               (get-in @session [:user :UserId])))]
-           [:div.item
-            [:div.content
-             [:a.header {:href (event-route event)}
-              (:Name event)]
-             [:div.meta
-              [:strong "Date:"]
-              (let [start (from-string (:StartDate event))
-                    end   (from-string (:EndDate   event))]
-                (str (unparse datetime-formatter start)
-                     (when (after? end start)
-                       (str " to " (unparse datetime-formatter end)))))]
-             [:div.meta
-              [:strong "Venue:"]
-              (:Venue event)]
-             [:div.description
-              (:Description event)]
-             [:div.extra
-              [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
-               "Your activities"
-               [:i.right.chevron.icon]]
-              [:a.ui.right.floated.small.button
-               {:on-click #(leave-event (:AttendeeId event))}
-               [:i.red.remove.icon]
-               "Leave event"]]]])]]]
-      [:div.ui.dimmer {:class (when (empty? @events) "active")}
-       [:div.ui.loader]]]]))
+(defn sign-in-page []
+  (let [form (atom {})
+        validator (validation-set (format-of :Email :format #"@")
+                                  (presence-of :Password))]
+    (fn []
+      (let [{:keys [Email Password]} @form
+            errors                   (validator @form)]
+        [:div.eight.wide.centered.column
+         [:div.ui.segment
+          [:h1.ui.dividing.header "Sign In"]
+          [:form.ui.form {:on-submit (fn [e]
+                                       (.preventDefault e)
+                                       (when (empty? errors)
+                                         (sign-in! @form)))}
+           [:div.two.fields
+            [:div.required.field {:class (when (and Email (:Email errors))
+                                           "error")}
+             [:label "Email"]
+             [:div.ui.icon.input
+              [input-atom :email
+               (r/wrap Email swap! form assoc :Email)]
+              [:i.mail.icon]]]
+            [:div.required.field {:class (when (and Password (:Password errors))
+                                           "error")}
+             [:label "Password"]
+             [:div.ui.icon.input
+              [input-atom :password
+               (r/wrap Password swap! form assoc :Password)]
+              [:i.lock.icon]]]]
+           [:button.ui.primary.button {:type :submit
+                                       :class (when (seq errors) "disabled")}
+            "Sign in"]]]]))))
+
+(defn sign-up-page []
+  (let [form (atom {})]
+    (fn []
+      (let [{:keys [Email Password PasswordConfirm FirstName LastName]} @form
+            validator (validation-set (format-of :Email :format #"@")
+                                      (presence-of :Password)
+                                      (inclusion-of :PasswordConfirm
+                                                    :in #{(:Password @form)})
+                                      (presence-of :FirstName)
+                                      (presence-of :LastName))
+            errors                   (validator @form)]
+        [:div.eight.wide.centered.column
+         [:div.ui.segment
+          [:h1.ui.dividing.header "Sign Up"]
+          [:form.ui.form {:on-submit (fn [e]
+                                       (.preventDefault e)
+                                       (when (empty? errors)
+                                         (sign-up! @form)))}
+           [:div.required.field {:class (when (and Email (:Email errors))
+                                          "error")}
+            [:label "Email"]
+            [:div.ui.icon.input
+             [input-atom :email
+              (r/wrap Email swap! form assoc :Email)]
+             [:i.mail.icon]]]
+           [:div.two.fields
+            [:div.required.field {:class (when (and Password (:Password errors))
+                                           "error")}
+             [:label "Password"]
+             [:div.ui.icon.input
+              [input-atom :password
+               (r/wrap Password swap! form assoc :Password)]
+              [:i.lock.icon]]]
+            [:div.required.field {:class (when (and PasswordConfirm
+                                                    (:PasswordConfirm errors))
+                                           "error")}
+             [:label "Confirm Password"]
+             [:div.ui.input
+              [input-atom :password
+               (r/wrap PasswordConfirm swap! form assoc :PasswordConfirm)]]]]
+           [:div.two.fields
+            [:div.required.field {:class (when (and FirstName
+                                                    (:FirstName errors))
+                                           "error")}
+             [:label "First Name"]
+             [:div.ui.input
+              [input-atom :text
+               (r/wrap FirstName swap! form assoc :FirstName)]]]
+            [:div.required.field {:class (when (and LastName
+                                                    (:LastName errors))
+                                           "error")}
+             [:label "Last Name"]
+             [:div.ui.input
+              [input-atom :text
+               (r/wrap LastName swap! form assoc :LastName)]]]]
+           [:button.ui.primary.button {:type :submit
+                                       :class (when (seq errors) "disabled")}
+            "Sign up"]]]]))))
 
 (defn events-explore-page []
   (let [attending-events (d/q '[:find [?event-id ...]
@@ -689,206 +730,116 @@
       [:div.ui.dimmer {:class (when-not @events "active")}
        [:div.ui.loader]]]]))
 
-(defn event-edit-page []
-  (let [form (atom {})
-        validator (validation-set (presence-of :Name)
-                                  (presence-of :Organization)
-                                  (presence-of :Venue)
-                                  (presence-of :StartDate)
-                                  (presence-of :EndDate))
-        clone-id (atom 0)]
-    (add-watch clone-id :clone
-               (fn [_ _ _ id]
-                 (when-not (zero? (int id))
-                   (reset! form (dissoc (->> id
-                                             int
-                                             (d/entity @events-db)
-                                             seq
-                                             (into {}))
-                                        :EventId)))))
-    (fn []
-      (let [{:keys [Name OrganizationId Venue StartDate EndDate Description]}
-            @form
-
-            errors
-            (validator @form)
-
-            clonable-events
-            (cons ["None" 0]
-                  (d/q '[:find ?name ?id
-                         :where [?id :Name ?name]]
-                       @events-db))
-
-            associated-organizations
-            (cons ["None" 0]
-                  (d/q '[:find ?name ?id
-                         :where [?id :Name ?name]]
-                       @organizations-db))
-
-            create-event
-            (fn [form]
-              (when (empty? errors)
-                (events-endpoint :create
-                                 form
-                                 #(set! js/location (events-explore-route)))))]
-        [:div.sixteen.wide.column
-         [:div.ui.segment
-          [:form.ui.form
-           [:div.ui.vertical.segment
-            [:h2.ui.dividing.header "Add an Event"]
-            [:p (prn-str @form)]
-            [:div.two.fields
-             [:div.required.field {:class (when (and Name (:Name errors))
-                                            "error")}
-              [:label "Name"]
-              [input-atom :text (r/wrap Name swap! form assoc :Name)]]
-             [:div.field
-              [:label "Clone From"]
-              [input-atom :select clonable-events clone-id]]]
-            [:div.two.fields
-             [:div.field
-              [:label "Organization"]
-              [input-atom :select associated-organizations
-               (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
-             [:div.required.field {:class (when (and Venue (:Venue errors))
-                                            "error")}
-              [:div.field
-               [:label "Venue"]
-               [input-atom :text (r/wrap Venue swap! form assoc :Venue)]]]]
-            [:div.two.fields
-             [:div.field
-              [:label "Start Date"]
-              [input-atom :datetime-local
-               (r/wrap StartDate swap! form assoc :StartDate)
-               #(or % (unparse (:date-hour-minute formatters) (now)))
-               #(unparse (:date-hour-minute formatters) (from-string %))]]
-             [:div.field
-              [:label "End Date"]
-              [input-atom :datetime-local
-               (r/wrap EndDate swap! form assoc :EndDate)
-               #(or % (unparse (:date-hour-minute formatters) (now)))
-               #(unparse (:date-hour-minute formatters) (from-string %))]]]
-            [:div.field
-             [:label "Description"]
-             [input-atom :textarea
-              (r/wrap Description swap! form assoc :Description)]]
-            [:button.ui.primary.button {:class (when (seq errors) "disabled")
-                                        :type :submit
-                                        :on-click #(create-event @form)}
-             "Add"]]]]]))))
-
-(defn event-activity-edit-page [event-id]
-  (let [form (atom {:EventId event-id})
-        validator (validation-set (presence-of :Name)
-                                  (presence-of :StartTime)
-                                  (presence-of :EndTime)
-                                  (format-of   :EnrollmentCap :format #"[0-9_]"
-                                                              :allow-nil true
-                                                              :allow-blank true
-                                                              :message "Please enter a number"))
-        reset-form!
-        (fn []
-          (reset! form (atom {:EventId event-id})))]
-    (fn [event-id]
-      (let [{:keys [Name Location EnrollmentCap StartTime EndTime Description]}
-            @form
-
-            errors
-            (validator @form)
-
-            event
-            (into {} (seq (d/entity @events-db event-id)))
-
-            activities
-            (map #(d/entity @activities-db %)
-                 (d/q '[:find [?e ...]
-                        :in $ ?event-id
-                        :where
-                        [?e :EventId ?event-id]]
-                      @activities-db
-                      event-id))
-
-            create-activity
-            (fn [form]
-              (when (empty? errors)
-                (activities-endpoint :create
-                                     (let [start-time (:StartTime form)
-                                           end-time   (:EndTime form)]
-                                       (assoc form
-                                         :StartTime (unparse (:date-hour-minute-second formatters)
-                                                             (from-string start-time))
-                                         :EndTime (unparse (:date-hour-minute-second formatters)
-                                                           (from-string end-time))))
-                                     #(reset-form!))))]
-        (when (seq event)
-          [:div.sixteen.wide.column
-           [:div.ui.segment
-            [:div.ui.vertical.segment
-             [:h2.ui.header
-              (:Name event)]]
-            [:div.ui.vertical.segment
-             [:h2.ui.header
-              "Add activity"]
-             [:form.ui.form
-              [:div.one.field
-               [:div.required.field {:class (when (and Name (:Name errors))
-                                              "error")}
-                [:label "Name"]
-                [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
-              [:div.two.fields
-               [:div.field
-                [:label "Location"]
-                [input-atom :text (r/wrap Location swap! form assoc :Location)]]
-               [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
-                                     "error")}
-                [:label "Enrollment Cap"]
-                [input-atom :text (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
-              [:div.two.fields =
-               [:div.required.field {:class (when (and StartTime (:StartTime errors))
-                                              "error")}
-                [:label "Start Time"]
-                [input-atom :datetime-local
-                 (r/wrap StartTime swap! form assoc :StartTime)
-                 #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
-                 #(unparse (:date-hour-minute formatters) (from-string %))]]
-               [:div.required.field {:class (when (and EndTime (:EndTime errors))
-                                              "error")}
-                [:label "End Time"]
-                [input-atom :datetime-local
-                 (r/wrap EndTime swap! form assoc :EndTime)
-                 #(or % (unparse (:date-hour-minute formatters) (now)))
-                 #(unparse (:date-hour-minute formatters) (from-string %))]]]
-              [:div.field
-               [:label "Description"]
-               [input-atom :textarea
-                (r/wrap Description swap! form assoc :Description)]]
-              [:button.ui.primary.button {:class (when (seq errors) "disabled")
-                                          :type :submit
-                                          :on-click #(create-activity @form)}
-               "Add"]]]
-            [:div.ui.vertical.segment
-             [:h2.ui.header
-              "Activities"]
-             [:table.ui.table
-              [:thead
-               [:tr
-                [:th "Start Time"]
-                [:th "End Time"]
-                [:th "Activity"]
-                [:th "Location"]]]
-              [:tbody
-               (for [activity activities]
-                 ^{:key (:ActivityId activity)}
-                 [:tr
-                  [:td (let [start (from-string (:StartTime activity))]
-                         (unparse datetime-formatter start))]
-                  [:td (let [end   (from-string (:EndTime   activity))]
-                         (unparse datetime-formatter end))]
-                  [:td (:Name activity)]
-                  [:td (:Location activity)]])]]]]])))))
+; TODO: abstract events and events-explore into single component
+(defn events-page []
+  (let [leave-event
+        (fn [attendee-id]
+          ; TODO: this doesn't delete schedules
+          (attendees-endpoint :delete
+                              (d/entity @attendees-db attendee-id)
+                              nil))]
+    #_[:div.sixteen.wide.column
+     [:div.ui.segment
+      [:div
+       [:div.ui.vertical.segment
+        [:div.ui.two.column.grid
+         [:div.column
+          [:h1.ui.header "Events You've Created"]]
+         [:div.right.aligned.column
+          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
+           [:i.plus.icon]
+           "Add event"]]]]
+       [:div.ui.vertical.segment
+        [:div.ui.divided.items
+         (for [event (map (fn [[event-id attendee-id]]
+                            (assoc
+                              (into {} (d/entity @events-db event-id))
+                              :AttendeeId attendee-id))
+                          (d/q '[:find ?event-id ?attendee-id
+                                 :in $ ?user-id
+                                 :where
+                                 [?attendee-id :UserId  ?user-id]
+                                 [?attendee-id :EventId ?event-id]]
+                               @attendees-db
+                               (get-in @session [:user :UserId])))]
+           [:div.item
+            [:div.content
+             [:a.header {:href (event-route event)}
+              (:Name event)]
+             [:div.meta
+              [:strong "Date:"]
+              (let [start (from-string (:StartDate event))
+                    end   (from-string (:EndDate   event))]
+                (str (unparse datetime-formatter start)
+                     (when (after? end start)
+                       (str " to " (unparse datetime-formatter end)))))]
+             [:div.meta
+              [:strong "Venue:"]
+              (:Venue event)]
+             [:div.description
+              (:Description event)]
+             [:div.extra
+              [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+               "Your activities"
+               [:i.right.chevron.icon]]
+              [:a.ui.right.floated.small.button
+               {:on-click #(leave-event (:AttendeeId event))}
+               [:i.red.remove.icon]
+               "Leave event"]]]])]]]
+      [:div.ui.dimmer {:class (when (empty? @events) "active")}
+       [:div.ui.loader]]]
+     [:div.ui.segment
+      [:div
+       [:div.ui.vertical.segment
+        [:div.ui.two.column.grid
+         [:div.column
+          [:h1.ui.header "Your Events"]]
+         [:div.right.aligned.column
+          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
+           [:i.plus.icon]
+           "Add event"]]]]
+       [:div.ui.vertical.segment
+        [:div.ui.divided.items
+         (for [event (map (fn [[event-id attendee-id]]
+                            (merge
+                              (into {} (d/entity @events-db event-id))
+                              {:AttendeeId attendee-id}))
+                          (d/q '[:find ?event-id ?attendee-id
+                                 :in $ ?user-id
+                                 :where
+                                 [?attendee-id :UserId  ?user-id]
+                                 [?attendee-id :EventId ?event-id]]
+                               @attendees-db
+                               (get-in @session [:user :UserId])))]
+           [:div.item
+            [:div.content
+             [:a.header {:href (event-route event)}
+              (:Name event)]
+             [:div.meta
+              [:strong "Date:"]
+              (let [start (from-string (:StartDate event))
+                    end   (from-string (:EndDate   event))]
+                (str (unparse datetime-formatter start)
+                     (when (after? end start)
+                       (str " to " (unparse datetime-formatter end)))))]
+             [:div.meta
+              [:strong "Venue:"]
+              (:Venue event)]
+             [:div.description
+              (:Description event)]
+             [:div.extra
+              [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+               "Your activities"
+               [:i.right.chevron.icon]]
+              [:a.ui.right.floated.small.button
+               {:on-click #(leave-event (:AttendeeId event))}
+               [:i.red.remove.icon]
+               "Leave event"]]]])]]]
+      [:div.ui.dimmer {:class (when (empty? @events) "active")}
+       [:div.ui.loader]]]]))
 
 (defn event-page [event-id]
-  (let [event (into {} (seq (d/entity @events-db event-id)))
+  (let [event (into {} (d/entity @events-db event-id))
 
         activities (map #(d/entity @activities-db %)
                         (d/q '[:find [?e ...]
@@ -1000,6 +951,210 @@
               [:i.edit.icon]
               "Edit"]]]]]]]])))
 
+(defn event-edit-page []
+  (let [form (atom {})
+        validator (validation-set (presence-of :Name)
+                                  (presence-of :Organization)
+                                  (presence-of :Venue)
+                                  (presence-of :StartDate)
+                                  (presence-of :EndDate))
+        clone-id (atom 0)]
+    (add-watch clone-id :clone
+               (fn [_ _ _ id]
+                 (when-not (zero? (int id))
+                   (reset! form (dissoc (->> id
+                                             int
+                                             (d/entity @events-db)
+                                             seq
+                                             (into {}))
+                                        :EventId)))))
+    (fn []
+      (let [{:keys [Name OrganizationId Venue StartDate EndDate Description]}
+            @form
+
+            errors
+            (validator @form)
+
+            clonable-events
+            (cons ["None" 0]
+                  (d/q '[:find ?name ?id
+                         :where [?id :Name ?name]]
+                       @events-db))
+
+            associated-organizations
+            (cons ["None" 0]
+                  (d/q '[:find ?name ?id
+                         :where [?id :Name ?name]]
+                       @organizations-db))
+
+            create-event
+            (fn [form]
+              (when (empty? errors)
+                (events-endpoint :create
+                                 form
+                                 #(set! js/location (events-explore-route)))))]
+        [:div.sixteen.wide.column
+         [:div.ui.segment
+          [:form.ui.form
+           [:div.ui.vertical.segment
+            [:h2.ui.dividing.header "Add an Event"]
+            [:p (prn-str @form)]
+            [:div.two.fields
+             [:div.required.field {:class (when (and Name (:Name errors))
+                                            "error")}
+              [:label "Name"]
+              [input-atom :text (r/wrap Name swap! form assoc :Name)]]
+             [:div.field
+              [:label "Clone From"]
+              [input-atom :select clonable-events clone-id]]]
+            [:div.two.fields
+             [:div.field
+              [:label "Organization"]
+              [input-atom :select associated-organizations
+               (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
+             [:div.required.field {:class (when (and Venue (:Venue errors))
+                                            "error")}
+              [:div.field
+               [:label "Venue"]
+               [input-atom :text (r/wrap Venue swap! form assoc :Venue)]]]]
+            [:div.two.fields
+             [:div.field
+              [:label "Start Date"]
+              [input-atom :datetime-local
+               (r/wrap StartDate swap! form assoc :StartDate)
+               #(or % (unparse (:date-hour-minute formatters) (now)))
+               #(unparse (:date-hour-minute formatters) (from-string %))]]
+             [:div.field
+              [:label "End Date"]
+              [input-atom :datetime-local
+               (r/wrap EndDate swap! form assoc :EndDate)
+               #(or % (unparse (:date-hour-minute formatters) (now)))
+               #(unparse (:date-hour-minute formatters) (from-string %))]]]
+            [:div.field
+             [:label "Description"]
+             [input-atom :textarea
+              (r/wrap Description swap! form assoc :Description)]]
+            [:button.ui.primary.button {:class (when (seq errors) "disabled")
+                                        :type :submit
+                                        :on-click #(create-event @form)}
+             "Add"]]]]]))))
+
+(defn event-activity-edit-page [event-id & [activity-id]]
+  (let [form (atom {:EventId event-id})
+        validator (validation-set (presence-of     :Name)
+                                  (presence-of     :StartTime)
+                                  (presence-of     :EndTime)
+                                  (numericality-of :EnrollmentCap))
+        reset-form!
+        (fn []
+          (reset! form (atom {:EventId event-id})))]
+    (when activity-id
+      (if-let [activity (seq (d/entity @activities-db activity-id))]
+        (reset! form (into {} activity))
+        (add-watch activities-db
+                   :activity-edit
+                   (fn [_ _ _ _]
+                     (reset! form (into {} (d/entity @activities-db
+                                                     activity-id)))
+                     (remove-watch activities-db :activity-edit)))))
+    (fn [event-id]
+      (let [{:keys [Name Location EnrollmentCap StartTime EndTime Description]}
+            @form
+
+            errors
+            (validator @form)
+
+            event
+            (into {} (d/entity @events-db event-id))
+
+            activities
+            (doall (map #(d/entity @activities-db %)
+                        (d/q '[:find [?e ...]
+                               :in $ ?event-id
+                               :where
+                               [?e :EventId ?event-id]]
+                             @activities-db
+                             event-id)))
+
+            create-activity
+            (fn [form]
+              (when (empty? errors)
+                (activities-endpoint :create
+                                     (let [start-time (:StartTime form)
+                                           end-time   (:EndTime form)]
+                                       (assoc form
+                                         :StartTime (unparse (:date-hour-minute-second formatters)
+                                                             (from-string start-time))
+                                         :EndTime (unparse (:date-hour-minute-second formatters)
+                                                           (from-string end-time))))
+                                     #(reset-form!))))]
+        (when (seq event)
+          [:div.sixteen.wide.column
+           [:div.ui.segment
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              (:Name event)]]
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              "Add activity"]
+             [:form.ui.form
+              [:div.one.field
+               [:div.required.field {:class (when (and Name (:Name errors))
+                                              "error")}
+                [:label "Name"]
+                [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
+              [:div.two.fields
+               [:div.field
+                [:label "Location"]
+                [input-atom :text (r/wrap Location swap! form assoc :Location)]]
+               [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
+                                     "error")}
+                [:label "Enrollment Cap"]
+                [input-atom :text (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
+              [:div.two.fields =
+               [:div.required.field {:class (when (and StartTime (:StartTime errors))
+                                              "error")}
+                [:label "Start Time"]
+                [input-atom :datetime-local
+                 (r/wrap StartTime swap! form assoc :StartTime)
+                 #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
+                 #(unparse (:date-hour-minute formatters) (from-string %))]]
+               [:div.required.field {:class (when (and EndTime (:EndTime errors))
+                                              "error")}
+                [:label "End Time"]
+                [input-atom :datetime-local
+                 (r/wrap EndTime swap! form assoc :EndTime)
+                 #(or % (unparse (:date-hour-minute formatters) (now)))
+                 #(unparse (:date-hour-minute formatters) (from-string %))]]]
+              [:div.field
+               [:label "Description"]
+               [input-atom :textarea
+                (r/wrap Description swap! form assoc :Description)]]
+              [:button.ui.primary.button {:class (when (seq errors) "disabled")
+                                          :type :submit
+                                          :on-click #(create-activity @form)}
+               "Add"]]]
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              "Activities"]
+             [:table.ui.table
+              [:thead
+               [:tr
+                [:th "Start Time"]
+                [:th "End Time"]
+                [:th "Activity"]
+                [:th "Location"]]]
+              [:tbody
+               (for [activity activities]
+                 ^{:key (:ActivityId activity)}
+                 [:tr
+                  [:td (let [start (from-string (:StartTime activity))]
+                         (unparse datetime-formatter start))]
+                  [:td (let [end   (from-string (:EndTime   activity))]
+                         (unparse datetime-formatter end))]
+                  [:td (:Name activity)]
+                  [:td (:Location activity)]])]]]]])))))
+
 (defn event-attendee-page [event-id attendee-id]
   (let [check-in-or-out
         (fn [op url init callback]
@@ -1018,22 +1173,21 @@
 
         button-loading? (atom false)]
     (fn [event-id attendee-id]
-      (let [event (into {} (seq (d/entity @events-db event-id)))
+      (let [event (into {} (d/entity @events-db event-id))
 
             attendee
-            (atom (into {} (seq
-                             (first (map (fn [[user-id attendee-id]]
-                                           (merge (into {} (d/entity @users-db
-                                                                     user-id))
-                                                  (into {} (d/entity @attendees-db
-                                                                     attendee-id))))
-                                         (d/q '[:find ?e ?a
-                                                :in $ ?attendee-id
-                                                :where
-                                                [?a :AttendeeId ?attendee-id]
-                                                [?a :UserId ?e]]
-                                              @attendees-db
-                                              attendee-id))))))
+            (atom (into {} (first (map (fn [[user-id attendee-id]]
+                                         (merge (into {} (d/entity @users-db
+                                                                   user-id))
+                                                (into {} (d/entity @attendees-db
+                                                                   attendee-id))))
+                                       (d/q '[:find ?e ?a
+                                              :in $ ?attendee-id
+                                              :where
+                                              [?a :AttendeeId ?attendee-id]
+                                              [?a :UserId ?e]]
+                                            @attendees-db
+                                            attendee-id)))))
 
             attendee-activities
             (d/q '[:find ?schedule-id ?activity-id
@@ -1198,7 +1352,7 @@
             (validator @form)
 
             event
-            (into {} (seq (d/entity @events-db event-id)))
+            (into {} (d/entity @events-db event-id))
 
             register
             (fn [form]
@@ -1250,7 +1404,7 @@
                "Register"]]]]])))))
 
 (defn event-schedule-page [event-id]
-  (let [event (into {} (seq (d/entity @events-db event-id)))
+  (let [event (into {} (d/entity @events-db event-id))
 
         scheduled-activities
         (d/q '[:find ?schedule-id ?activity-id
@@ -1575,36 +1729,6 @@
 (defn statistics-component [event-id]
   (create-class {:reagent-render statistics-page
                  :component-did-mount #(statistics-page-did-mount event-id)}))
-
-(defn sign-in-page []
-  (let [form (atom {})
-        validator (validation-set (format-of :email :format #"@")
-                                  (presence-of :password))]
-    (fn []
-      (let [{:keys [email password]} @form
-            errors                   (validator @form)]
-        [:div.eight.wide.centered.column
-         [:div.ui.segment
-          [:h1.ui.dividing.header "Sign In"]
-          [:form.ui.form {:on-submit (fn [e]
-                                       (.preventDefault e)
-                                       (when (valid? validator @form)
-                                         (sign-in! @form)))}
-           [:div.two.fields
-            [:div.required.field {:class (when (and email (:email errors))
-                                           "error")}
-             [:label "Email"]
-             [:div.ui.icon.input
-              [input-atom :email
-               (r/wrap email swap! form assoc :email)]
-              [:i.mail.icon]]]
-            [:div.required.field
-             [:label "Password"]
-             [:div.ui.icon.input
-              [input-atom :password
-               (r/wrap password swap! form assoc :password)]
-              [:i.lock.icon]]]]
-           [:button.ui.primary.button {:type :submit} "Sign in"]]]]))))
 
 
 ;; Frame
