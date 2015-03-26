@@ -959,22 +959,31 @@
 
 (defn event-edit-page []
   (let [form (atom {})
-        validator (validation-set (presence-of     :Name)
-                                  (presence-of     :OrganizationId)
-                                  (presence-of     :Venue)
-                                  (presence-of     :StartDate)
-                                  (presence-of     :EndDate)
-                                  (numericality-of :TicketPrice))
+        validator (validation-set (presence-of :Name)
+                                  (presence-of :OrganizationId)
+                                  (presence-of :Venue)
+                                  (presence-of :StartDate)
+                                  (presence-of :EndDate)
+                                  (format-of   :TicketPrice :format #"^\d*\.\d\d$"
+                                               :allow-nil true
+                                               :allow-blank true))
         clone-id (atom 0)]
     (add-watch clone-id :clone
                (fn [_ _ _ id]
                  (when-not (zero? (int id))
-                   (reset! form (dissoc (->> id
-                                             int
-                                             (d/entity @events-db)
-                                             seq
-                                             (into {}))
-                                        :EventId)))))
+                   (let [clone-event (->> id
+                                          int
+                                          (d/entity @events-db)
+                                          seq
+                                          (into {}))]
+                     (reset! form (dissoc
+                                    (assoc
+                                      clone-event
+                                      :TicketPrice
+                                      (if (> (:TicketPrice clone-event) 0)
+                                        (goog.string.format "%.2f" (:TicketPrice clone-event))
+                                        ""))
+                                    :EventId))))))
     (fn []
       (let [{:keys [Name OrganizationId Venue StartDate EndDate RequiresPayment TicketPrice Description]}
             @form
@@ -1073,13 +1082,15 @@
 
 (defn event-activity-edit-page [event-id & [activity-id]]
   (let [form (atom {:EventId event-id})
-        validator (validation-set (presence-of     :Name)
-                                  (presence-of     :StartTime)
-                                  (presence-of     :EndTime)
-                                  (numericality-of :EnrollmentCap))
+        validator (validation-set (presence-of :Name)
+                                  (presence-of :StartTime)
+                                  (presence-of :EndTime)
+                                  (format-of :EnrollmentCap :format #"^\d*$"
+                                             :allow-blank true
+                                             :allow-nil true))
         reset-form!
         (fn []
-          (reset! form (atom {:EventId event-id})))]
+          (reset! form {:EventId event-id}))]
     (when activity-id
       (if-let [activity (seq (d/entity @activities-db activity-id))]
         (reset! form (into {} activity))
@@ -1109,8 +1120,9 @@
                              event-id)))
 
             create-activity
-            (fn [form]
+            (fn [e form]
               (when (empty? errors)
+                (.preventDefault e)
                 (activities-endpoint :create
                                      (let [start-time (:StartTime form)
                                            end-time   (:EndTime form)]
@@ -1164,7 +1176,7 @@
                 (r/wrap Description swap! form assoc :Description)]]
               [:button.ui.primary.button {:class (when (seq errors) "disabled")
                                           :type :submit
-                                          :on-click #(create-activity @form)}
+                                          :on-click #(create-activity % @form)}
                "Add"]]]
             [:div.ui.vertical.segment
              [:h2.ui.header
