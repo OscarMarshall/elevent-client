@@ -315,7 +315,7 @@
                              (reset! messages {})
                              (add-message! :positive "Sign in succeeded")
                              (js/location.replace (events-route)))
-          :error-handler   (add-message! :negative "Sign in failed")})))
+          :error-handler   #(add-message! :negative "Sign in failed")})))
 
 (defn sign-out! []
   (swap! session dissoc :token :user :stripe-token)
@@ -365,7 +365,16 @@
    (let [in  (or in  identity)
          out (or out identity)]
      (r/create-class
-       {:component-did-update
+       {:component-did-mount
+        (fn [this]
+          (when (= type :select)
+            (-> this
+                r/dom-node
+                js/jQuery
+                (.dropdown (clj->js {:onChange #(when % (reset! state
+                                                                (out %)))})))))
+
+        :component-did-update
         (fn [this]
           (when (= type :select)
             (-> this
