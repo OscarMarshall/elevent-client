@@ -959,14 +959,12 @@
 
 (defn event-edit-page []
   (let [form (atom {})
-        validator (validation-set (presence-of :Name)
-                                  (presence-of :OrganizationId)
-                                  (presence-of :Venue)
-                                  (presence-of :StartDate)
-                                  (presence-of :EndDate)
-                                  (format-of   :TicketPrice :format #"^\d+\.\d{2}$"
-                                               :allow-nil true
-                                               :allow-blank true))
+        validator (validation-set (presence-of     :Name)
+                                  (presence-of     :OrganizationId)
+                                  (presence-of     :Venue)
+                                  (presence-of     :StartDate)
+                                  (presence-of     :EndDate)
+                                  (numericality-of :TicketPrice))
         clone-id (atom 0)]
     (add-watch clone-id :clone
                (fn [_ _ _ id]
