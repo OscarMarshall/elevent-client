@@ -167,7 +167,8 @@
 
 (defroute home-route
   "/" []
-  (reset! current-page [#'home-page]))
+  (reset! current-page [#'events-page])
+  (js/location.replace "#/events"))
 
 (defroute sign-in-route "/sign-in" []
   (reset! current-page [#'sign-in-page]))
@@ -319,7 +320,7 @@
 (defn sign-out! []
   (swap! session dissoc :token :user :stripe-token)
   (refresh!)
-  (set! js/location (home-route)))
+  (set! js/window.location (home-route)))
 
 (defn sign-up! [form]
   (users-endpoint :create form #(sign-in! form)))
@@ -411,32 +412,51 @@
   [:nav.ui.fixed.menu
    [:a.logo.item {:href (home-route)}
     [:img {:src "images/logo-menu.png"}]]
-   [:a.item {:href (events-explore-route)}
+   [:a.blue.item {:href (events-explore-route)
+                  :class (when (re-find (re-pattern (events-explore-route))
+                                        @location)
+                           "active")}
     [:i.rocket.icon]
     "Explore"]
    (when (:token @session)
-     [:a.item {:href "#/events"}
+     [:a.blue.item {:href (events-route)
+                    :class (when (re-find (re-pattern (events-route)) @location)
+                             "active")}
       [:i.ticket.icon]
       "Events"])
-   [:a.item {:href "#/organizations"}
+   [:a.blue.item {:href (organizations-route)
+                  :class (when (re-find (re-pattern (organizations-route))
+                                        @location)
+                           "active")}
     [:i.building.icon]
     "Organizations"]
-   [:a.item {:href "#/calendar"}
+   [:a.blue.item {:href (calendar-route)
+                  :class (when (re-find (re-pattern (calendar-route)) @location)
+                           "active")}
     [:i.calendar.icon]
     "Calendar"]
-   [:a.item {:href "#/statistics"}
+   [:a.blue.item {:href (statistics-route)
+                  :class (when (re-find (re-pattern (statistics-route))
+                                        @location)
+                           "active")}
     [:i.bar.chart.icon]
     "Statistics"]
    (if (:token @session)
      [:div.right.menu
-      [:a.item {:on-click sign-out!}
+      [:a.blue.item {:on-click sign-out!}
        [:i.sign.out.icon]
        "Sign out"]]
      [:div.right.menu
-      [:a.item {:href (sign-in-route)}
+      [:a.blue.item {:href (sign-in-route)
+                     :class (when (re-find (re-pattern (sign-in-route))
+                                           @location)
+                              "active")}
        [:i.sign.in.icon]
        "Sign in"]
-      [:a.item {:href (sign-up-route)}
+      [:a.blue.item {:href (sign-up-route)
+                     :class (when (re-find (re-pattern (sign-up-route))
+                                           @location)
+                              "active")}
        [:i.add.user.icon]
        "Sign up"]])])
 
@@ -468,9 +488,17 @@
 
         event-attendees-breadcrumbs
         (fn [env fragment]
-          (let [env (assoc env :AttendeeId fragment)
-                entity (d/entity @attendees-db (int fragment))]
-            [[(str (:FirstName entity) (:LastName entity))
+          (let [env
+                (assoc env :AttendeeId fragment)
+
+                entity
+                (d/entity @users-db
+                          (first (d/q '[:find [?user-id ...]
+                                        :in $ ?attendee-id
+                                        :where [?attendee-id :UserId ?user-id]]
+                                      @attendees-db
+                                      (int fragment))))]
+            [[(str (:FirstName entity) " " (:LastName entity))
               env
               event-attendee-route]]))
 
@@ -1009,7 +1037,8 @@
                 (.preventDefault e)
                 (events-endpoint :create
                                  form
-                                 #(set! js/location (events-explore-route)))))]
+                                 #(set! js/window.location
+                                        (events-explore-route)))))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:form.ui.form
@@ -1140,7 +1169,7 @@
               (:Name event)]]
             [:div.ui.vertical.segment
              [:h2.ui.header
-              "Add activity"]
+              (if activity-id "Edit" "Add") " activity"]
              [:form.ui.form
               [:div.one.field
                [:div.required.field {:class (when (and Name (:Name errors))
@@ -1614,7 +1643,8 @@
             (fn [form]
               (organizations-endpoint :create
                                       form
-                                      #(set! js/location "#/organizations")))]
+                                      #(set! js/window.location
+                                             (organizations-route))))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:form.ui.form
@@ -1917,8 +1947,8 @@
     (events/listen
      EventType/NAVIGATE
      (fn [event]
-       (let [token (.-token event)]
-         (reset! location token)
+       (let [token (apply str (or (seq (.-token event)) '("/")))]
+         (reset! location (str "#" token))
          (dispatch! token))))
     (.setEnabled true)))
 

@@ -50,7 +50,11 @@
                                         ;;:externs       ["react/externs/react.js"]
                                         :asset-path   "js/out"
                                         :optimizations :none
-                                        :pretty-print  true}}}}
+                                        :pretty-print  true}}
+                       :prod {:source-paths ["env/prod/cljs"]
+                              :compiler
+                              {:optimizations :advanced
+                               :pretty-print false}}}}
 
   :profiles {:dev {:repl-options {:init-ns elevent-client.dev
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
