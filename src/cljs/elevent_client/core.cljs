@@ -404,6 +404,23 @@
   ([type state]
    (input-atom type nil state nil nil)))
 
+(defn chart [config _]
+  (let [data (atom nil)]
+    (r/create-class
+      {:component-did-mount #(.highcharts (js/jQuery (r/dom-node %))
+                                          (clj->js (assoc-in config
+                                                     [:series 0 :data] @data)))
+       :component-did-update #(-> %
+                                  r/dom-node
+                                  js/jQuery
+                                  .highcharts
+                                  .-series
+                                  first
+                                  (.setData (clj->js @data)))
+       :reagent-render (fn [_ series]
+                         (reset! data series)
+                         [:div])})))
+
 
 ;; Compenents
 ;; =============================================================================
@@ -1044,7 +1061,6 @@
           [:form.ui.form
            [:div.ui.vertical.segment
             [:h2.ui.dividing.header "Add an Event"]
-            [:p (prn-str @form)]
             [:div.two.fields
              [:div.required.field {:class (when (and Name (:Name errors))
                                             "error")}
@@ -1715,118 +1731,78 @@
                                        :defaultView "agendaWeek"})))})
        [:div#calendar]]]]))
 
-(defn pie-chart-config [attendees all-attendees]
-  {:chart {:type "pie"}
-   :title {:text "Attendance"}
-   :tooltip {:pointFormat "{point.name}: <b>{point.percentage:.1f}%</b>"}
-   :plotOptions {:pie {:cursor "pointer"
-                       :dataLabels {
-                                    :enabled true
-                                    :format "<b>{point.name}</b>: {point.y}"
-                                    }}}
-   :series [{:data [
-                    ["Attended" (count attendees)]
-                    ["Did Not Attend" (- (count all-attendees) (count attendees))]]}]})
-
-(defn time-chart-config [check-in-data]
-  {:chart {:type "line"}
-   :title {:text "Check in Times"}
-   :xAxis {:type "datetime"
-           :dateTimeLabelFormats {:day "%e %b"}}
-   :yAxis {:title {:text "Number checked in"}}
-   :series [{:name "Checked in"
-             :data check-in-data}]})
-
-(defn get-time-counts [pairs prev-count]
-  (if (empty? pairs)
-    (list)
-    (let [check-in-time (ffirst pairs)
-          attendee-count (count (second (first pairs)))]
-      (cons [check-in-time (+ attendee-count prev-count)]
-            (get-time-counts (rest pairs) (+ attendee-count prev-count))))))
-
-(defn statistics-page-did-mount [event-id]
-  (let
-    [attendees
-     (when event-id
-       (d/q '[:find ?attendee-id ?check-in-time
-              :in $events $attendees ?event-id
-              :where
-              [$events ?event-id :EventId ?event-id]
-              [$attendees ?attendee-id :EventId ?event-id]
-              [$attendees ?attendee-id :CheckinTime ?check-in-time]]
-            @events-db
-            @attendees-db
-            event-id))
-
-     all-attendees
-     (when event-id
-       (d/q '[:find ?attendee-id
-              :in $events $attendees ?event-id
-              :where
-              [$events ?event-id :EventId ?event-id]
-              [$attendees ?attendee-id :EventId ?event-id]]
-            @events-db
-            @attendees-db
-            event-id))
-
-     check-in-data
-     (when attendees
-       (get-time-counts
-         (into
-           []
-           (into
-             (sorted-map)
-             (apply
-               (partial merge-with concat)
-               (map (fn [[attendee-id check-in-time]]
-                      {(to-long check-in-time)
-                       (list attendee-id)})
-                    attendees))))
-         0))]
-    (do
-      (js/$ (fn []
-              (.highcharts (js/$ "#graph")
-                           (clj->js (pie-chart-config attendees all-attendees)))))
-      (js/$ (fn []
-              (.highcharts (js/$ "#graph2")
-                           (clj->js (time-chart-config check-in-data)))))
-      (prn check-in-data)
-      (prn event-id))))
-
 (defn statistics-page []
-  (fn []
-    (let [events
-          (d/q '[:find ?name ?id
-                 :where [?id :Name ?name]]
-               @events-db)]
-      [(with-meta identity
-                  {:component-did-mount (fn [] (render-component [statistics-component (first
-                                                                                         (map (fn [[event-name event-id]]
-                                                                                                event-id)
-                                                                                              events))]
-                                                                 (.getElementById js/document "graph")))})
-       [:div.sixteen.wide.column
-        [:div.ui.segment
-         [:h1.ui.header
-          "Statistics"]
-         [:div.ui.form
-          [:div.two.fields
-           [:div.field
-            [:label "Choose event:"]
-            [:select.ui {:type "select" :on-change #(statistics-page-did-mount (int (.-value (.-target %))))}
-             (for [[event-name event-id] events]
-               ^{:key event-id}
-               [:option {:value event-id}
-                event-name])]]]]
-         [:div#graph {:style {:min-width "310px" :max-width "800px"
-                              :height "250px" :margin "0 auto"}}]
-         [:div#graph2 {:style {:min-width "310px" :max-width "800px"
-                               :height "400px" :margin "0 auto"}}]]]])))
+  (let [event-id (atom 0)]
+    (fn []
+      (let [events
+            (d/q '[:find ?name ?id
+                   :where [?id :Name ?name]]
+                 @events-db)
 
-(defn statistics-component [event-id]
-  (create-class {:reagent-render statistics-page
-                 :component-did-mount #(statistics-page-did-mount event-id)}))
+            attendees
+            (d/q '[:find [?check-in-time ...]
+                   :in $ ?event-id
+                   :where
+                   [?attendee-id :EventId ?event-id]
+                   [?attendee-id :CheckinTime ?check-in-time]]
+                 @attendees-db
+                 @event-id)
+
+            all-attendees
+            (d/q '[:find [?attendee-id ...]
+                   :in $ ?event-id
+                   :where
+                   [?attendee-id :EventId ?event-id]]
+                 @attendees-db
+                 @event-id)
+
+            check-in-data
+            (into (sorted-map) (frequencies (map to-long attendees)))
+
+            check-in-data
+            (sort-by first (vec (zipmap (keys check-in-data)
+                                        (reduce #(conj %1 (+ (last %1) %2))
+                                                []
+                                                (vals check-in-data)))))]
+        [:div.sixteen.wide.column
+         [:div.ui.segment
+          [:h1.ui.header
+           "Statistics"]
+          [:div.ui.form
+           [:div.two.fields
+            [:div.field
+             [:label "Choose event:"]
+             [input-atom :select events event-id identity int]]]]
+          (when (seq all-attendees)
+            [chart
+             {:chart
+              {:type "pie"}
+
+              :title
+              {:text "Attendance"}
+
+              :tooltip
+              {:pointFormat "{point.name}: <b>{point.percentage:.1f}%</b>"}
+
+              :plotOptions
+              {:pie {:cursor "pointer"
+                     :dataLabels {:enabled true
+                                  :format "<b>{point.name}</b>: {point.y}"}}}
+
+              :series
+              []}
+             [["Attended" (count attendees)]
+              ["Did Not Attend" (- (count all-attendees)
+                                   (count attendees))]]])
+          (when (seq check-in-data)
+            [chart
+             {:chart {:type "line"}
+              :title {:text "Check in Times"}
+              :xAxis {:type "datetime"
+                      :dateTimeLabelFormats {:day "%e %b"}}
+              :yAxis {:title {:text "Number checked in"}}
+              :series [{:name "Checked in"}]}
+             check-in-data])]]))))
 
 (defn payments-component []
   (let [form (atom {})
