@@ -8,7 +8,7 @@
       [goog.history.EventType :as EventType]
 
       [cljsjs.react :as react]
-      [reagent.core :as r :refer [atom create-class render-component]]
+      [reagent.core :as r :refer [atom]]
 
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
@@ -106,9 +106,11 @@
 
                     :error-handler
                     (fn [error]
-                      (when (= (:failure error) :timeout)
-                        (add-message! :negative (str uri " timed out")))
-                      (when error-handler (error-handler error)))}]
+                      (if error-handler
+                        (error-handler error)
+                        (if (= (:failure error) :timeout)
+                          (add-message! :negative (str uri " timed out"))
+                          (add-message! :negative (str uri (js->clj error))))))}]
        (let [check-id (fn [op] (if (contains? params element-id)
                                  (op (str uri "/" (params element-id)) options)
                                  (throw (str "Element doesn't contain key \""
@@ -137,15 +139,16 @@
 ;; =============================================================================
 
 (declare home-page
-         events-page
          sign-in-page
          sign-up-page
+         events-page
          events-explore-page
+         events-owned-page
          event-page
          event-edit-page
          event-register-page
-         event-activities-explore-page
          event-activities-page
+         event-activities-explore-page
          event-activity-page
          event-activity-edit-page
          event-schedule-page
@@ -157,9 +160,7 @@
          organization-edit-page
          calendar-page
          statistics-page
-         statistics-component
-         payments-page
-         payments-component)
+         payments-page)
 
 (defonce current-page (atom #'home-page))
 
@@ -167,8 +168,7 @@
 
 (defroute home-route
   "/" []
-  (reset! current-page [#'events-page])
-  (js/location.replace "#/events"))
+  (reset! current-page [#'home-page]))
 
 (defroute sign-in-route "/sign-in" []
   (reset! current-page [#'sign-in-page]))
@@ -179,6 +179,10 @@
 (defroute events-explore-route
   "/events/explore" []
   (reset! current-page [#'events-explore-page]))
+
+(defroute events-owned-route
+  "/events/owned" []
+  (reset! current-page [#'events-owned-page]))
 
 (defroute events-route
   "/events" []
@@ -274,6 +278,7 @@
                              sign-in-route
                              sign-up-route
                              events-explore-route
+                             events-owned-route
                              events-route
                              event-add-route
                              event-route
@@ -327,20 +332,18 @@
 
 (add-watch users-db
            :find-user
-           (fn [_ db _ _]
+           (fn [_ _ _ db]
              (when-let [email (get-in @session [:user :Email])]
                (swap! session
                       assoc
                       :user
-                      (->> email
-                           (d/q '[:find ?user-id
-                                  :in $ ?email
-                                  :where [?user-id :Email ?email]]
-                                @db)
-                           ffirst
-                           (d/entity @db)
-                           seq
-                           (into {}))))))
+                      (when-let [entity-id (->> email
+                                                (d/q '[:find ?user-id
+                                                       :in $ ?email
+                                                       :where [?user-id :Email ?email]]
+                                                     db)
+                                                ffirst)]
+                        (into {} (d/entity db entity-id)))))))
 
 
 ;; Stylesheet
@@ -430,6 +433,14 @@
                          (reset! data series)
                          [:div])})))
 
+(defn calendar [options]
+  (r/create-class
+    {:component-did-mount #(.fullCalendar (js/jQuery (r/dom-node %))
+                                          (clj->js options))
+     :component-did-update #(.fullCalendar (js/jQuery (r/dom-node %))
+                                          (clj->js options))
+     :reagent-render (constantly [:div])}))
+
 
 ;; Compenents
 ;; =============================================================================
@@ -438,12 +449,6 @@
   [:nav.ui.fixed.menu
    [:a.logo.item {:href (home-route)}
     [:img {:src "images/logo-menu.png"}]]
-   [:a.blue.item {:href (events-explore-route)
-                  :class (when (re-find (re-pattern (events-explore-route))
-                                        @location)
-                           "active")}
-    [:i.rocket.icon]
-    "Explore"]
    (when (:token @session)
      [:a.blue.item {:href (events-route)
                     :class (when (re-find (re-pattern (events-route)) @location)
@@ -469,6 +474,9 @@
     "Statistics"]
    (if (:token @session)
      [:div.right.menu
+      [:div.item
+       [:i.user.icon]
+       (:FirstName (:user @session))]
       [:a.blue.item {:on-click sign-out!}
        [:i.sign.out.icon]
        "Sign out"]]
@@ -545,6 +553,7 @@
         (fn [env fragment]
           (case fragment
             "explore" [["Explore" (events-explore-route)] env nil]
+            "owned" [["Owned" (events-owned-route)] env nil]
             "add" [["Add" (event-add-route)] env nil]
             (let [env (assoc env :EventId fragment)]
               [[(:Name (d/entity @events-db (int fragment))) (event-route env)]
@@ -623,6 +632,91 @@
        [:div.ui.message {:class type}
         [:i.close.icon {:on-click #(swap! messages dissoc key)}]
         message])]))
+
+(defn payments-component []
+  (let [form (atom {})
+        validator (validation-set (presence-of :number)
+                                  (presence-of :cvc)
+                                  (presence-of :exp-date)
+                                  (format-of   :number   :format #"^[0-9]{16}$")
+                                  (format-of   :cvc      :format #"^[0-9]{3}$")
+                                  (format-of   :exp-date :format #"^[0-1][0-9]/20[1-9][0-9]$"))
+        stripe-error (atom nil)
+        stripe-success (atom nil)
+        button-loading? (atom false)]
+    (fn []
+      (Stripe.setPublishableKey "pk_test_7ntI7D72loXtuO2F15gV0nR0")
+      (let [{:keys [number cvc exp-date]} @form
+            errors (validator @form)
+
+            response-handler
+            (fn [status response]
+              (reset! button-loading? false)
+              (prn response)
+              (if response.error
+                (do
+                  (reset! stripe-error response.error.message)
+                  (reset! stripe-success nil))
+                (do
+                  (reset! stripe-error nil)
+                  (reset! stripe-success "Success!")
+                  (swap! session assoc :stripe-token response.id)
+                  (swap! session assoc :cc-last      (subs (:number @form) 12)))))
+
+            create-token
+            (fn [e form]
+              (when (empty? errors)
+                (let [[month year] (clojure.string/split (:exp-date form) #"/" 2)]
+                  (reset! button-loading? true)
+                  (prn (dissoc (assoc form
+                                 :exp-month (int month)
+                                 :exp-year (int year))
+                               :exp-date))
+                  (.preventDefault e)
+                  (.stopPropagation e)
+                  (Stripe.card.createToken
+                    (clj->js (dissoc (assoc form
+                                       :exp-month (int month)
+                                       :exp-year (int year))
+                                     :exp-date))
+                    response-handler))))]
+        [:div.ui.vertical.segment
+         [:h2.ui.dividing.header
+          "Payment Info"]
+         [:div.two.fields
+          [:div.required.field {:class (when (and number (:number errors))
+                                         "error")}
+           [:label "Card Number"]
+           [input-atom :text
+            (r/wrap number swap! form assoc :number)]]
+          [:div.required.field {:class (when (and cvc (:cvc errors))
+                                         "error")}
+           [:label "CVC"]
+           [:div.two.fields
+            [:div.field
+             [input-atom :password
+              (r/wrap cvc swap! form assoc :cvc)]]
+            [:div.field]]]]
+         [:div.two.fields
+          [:div.required.field {:class (when (and exp-date (:exp-date errors))
+                                         "error")}
+           [:label "Expiration Date"]
+           [input-atom :text ; TODO placeholder
+            (r/wrap exp-date swap! form assoc :exp-date)]]
+          [:div.field]]
+         [:button.ui.primary.button
+          {:type :submit
+           :class (when (seq errors) "disabled")
+           :on-click #(create-token % @form)}
+          (if @button-loading?
+            [:i.spinner.loading.icon]
+            "Confirm")]
+         [:span.ui.red.compact.message
+          {:class (when (nil? @stripe-error) "hidden")}
+          @stripe-error]
+         [:span.ui.green.compact.message
+          {:class (when (nil? @stripe-success) "hidden")}
+          @stripe-success]]))))
 
 
 ;; Pages
@@ -737,35 +831,101 @@
                                        :class (when (seq errors) "disabled")}
             "Sign up"]]]]))))
 
+(defn events-page []
+  (let [leave-event (fn [attendee-id]
+                      ; TODO: this doesn't delete schedules
+                      (attendees-endpoint :delete
+                                          (d/entity @attendees-db attendee-id)
+                                          nil))]
+    (fn []
+      (let [attending-events
+            (doall (map (fn [[event-id attendee-id]]
+                          (merge
+                            (into {} (d/entity @events-db event-id))
+                            {:AttendeeId attendee-id}))
+                        (d/q '[:find ?event-id ?attendee-id
+                               :in $ ?user-id
+                               :where
+                               [?attendee-id :UserId  ?user-id]
+                               [?attendee-id :EventId ?event-id]]
+                             @attendees-db
+                             (get-in @session [:user :UserId]))))]
+        [:div.sixteen.wide.column
+         [:div.ui.top.attached.tabular.menu
+          [:a.active.item {:href (events-route)}
+           "Events"]
+          [:a.item {:href (events-explore-route)}
+           "Explore"]
+          [:a.item {:href (events-owned-route)}
+           "Owned"]
+          [:a.item {:href (event-add-route)}
+           "Add"]]
+         [:div.ui.bottom.attached.segment
+          [:div
+           [:div.ui.vertical.segment
+            [:h1.ui.header "Events You're Attending"]]
+           [:div.ui.vertical.segment
+            [:div.ui.divided.items
+             (for [event attending-events]
+               ^{:key (:EventId event)}
+               [:div.item
+                [:div.content
+                 [:a.header {:href (event-route event)}
+                  (:Name event)]
+                 [:div.meta
+                  [:strong "Date:"]
+                  (let [start (from-string (:StartDate event))
+                        end   (from-string (:EndDate   event))]
+                    (str (unparse datetime-formatter start)
+                         (when (after? end start)
+                           (str " to " (unparse datetime-formatter end)))))]
+                 [:div.meta
+                  [:strong "Venue:"]
+                  (:Venue event)]
+                 [:div.description
+                  (:Description event)]
+                 [:div.extra
+                  [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+                   "Your activities"
+                   [:i.right.chevron.icon]]
+                  [:a.ui.right.floated.small.button
+                   {:on-click #(leave-event (:AttendeeId event))}
+                   [:i.red.remove.icon]
+                   "Leave event"]]]])]]]
+          [:div.ui.dimmer {:class (when (empty? @events) "active")}
+           [:div.ui.loader]]]]))))
+
 (defn events-explore-page []
-  (let [attending-events (d/q '[:find [?event-id ...]
-                                :in $events $attendees ?user-id
-                                :where
-                                [$events ?event-id]
-                                [$attendees ?attendee-id :EventId ?event-id]
-                                [$attendees ?attendee-id :UserId ?user-id]]
-                              @events-db
-                              @attendees-db
-                              (get-in @session [:user :UserId]))
-        unattending-events (set/difference (into #{}
-                                                 (d/q '[:find [?event-id ...]
-                                                        :where [?event-id]]
-                                                      @events-db))
-                                           (into #{} attending-events))]
+  (let [unattending-events
+        (map (partial d/entity @events-db)
+             (set/difference (into #{} (d/q '[:find [?event-id ...]
+                                              :where [?event-id]]
+                                            @events-db))
+                             (into #{} (d/q '[:find [?event-id ...]
+                                              :in $ ?user-id
+                                              :where
+                                              [?attendee-id :EventId ?event-id]
+                                              [?attendee-id :UserId ?user-id]]
+                                            @attendees-db
+                                            (get-in @session
+                                                    [:user :UserId])))))]
     [:div.sixteen.wide.column
-     [:div.ui.segment
+     [:div.ui.top.attached.tabular.menu
+      [:a.item {:href (events-route)}
+       "Events"]
+      [:a.active.item {:href (events-explore-route)}
+       "Explore"]
+      [:a.item {:href (events-owned-route)}
+       "Owned"]
+      [:a.item {:href (event-add-route)}
+       "Add"]]
+     [:div.ui.bottom.attached.segment
       [:div
        [:div.ui.vertical.segment
-        [:div.ui.two.column.grid
-         [:div.column
-          [:h1.ui.header "Explore Events"]]
-         [:div.right.aligned.column
-          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
-           [:i.plus.icon]
-           "Add event"]]]]
+        [:h1.ui.header "Explore Events"]]
        [:div.ui.vertical.segment
         [:div.ui.divided.items
-         (for [event (map (partial d/entity @events-db) unattending-events)]
+         (for [event (sort-by :StartDate unattending-events)]
            ^{:key (:EventId event)}
            [:div.item
             [:div.content
@@ -785,43 +945,40 @@
              [:div.description
               (:Description event)]
              [:div.extra
-              [:a.ui.right.floated.tiny.button
+              [:a.ui.right.floated.button
                {:href (event-register-route event)}
                "Register"
                [:i.right.chevron.icon]]]]])]]]
       [:div.ui.dimmer {:class (when-not @events "active")}
        [:div.ui.loader]]]]))
 
-; TODO: abstract events and events-explore into single component
-(defn events-page []
-  (let [leave-event (fn [attendee-id]
-                      ; TODO: this doesn't delete schedules
-                      (attendees-endpoint :delete
-                                          (d/entity @attendees-db attendee-id)
-                                          nil))
-
-        created-events (map #(into {} (d/entity @events-db %))
-                            (d/q '[:find [?event-id ...]
-                                   :in $ ?user-id
-                                   :where
-                                   [?event-id :CreatorId  ?user-id]]
-                                 @events-db
-                                 (get-in @session [:user :UserId])))]
+(defn events-owned-page []
+  (let [created-events (doall (map #(into {} (d/entity @events-db %))
+                                   (d/q '[:find [?event-id ...]
+                                          :in $ ?user-id
+                                          :where
+                                          [?event-id :CreatorId  ?user-id]]
+                                        @events-db
+                                        (get-in @session [:user :UserId]))))]
     [:div.sixteen.wide.column
+     [:div.ui.top.attached.tabular.menu
+      [:a.item {:href (events-route)}
+       "Events"]
+      [:a.item {:href (events-explore-route)}
+       "Explore"]
+      [:a.active.item {:href (events-owned-route)}
+       "Owned"]
+      [:a.item {:href (event-add-route)}
+       "Add"]]
      (when (seq created-events)
-       [:div.ui.segment
+       [:div.ui.bottom.attached.segment
         [:div
          [:div.ui.vertical.segment
-          [:div.ui.two.column.grid
-           [:div.column
-            [:h1.ui.header "Events You've Created"]]
-           [:div.right.aligned.column
-            [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
-             [:i.plus.icon]
-             "Add event"]]]]
+          [:h1.ui.header "Events You Own"]]
          [:div.ui.vertical.segment
           [:div.ui.divided.items
            (for [event created-events]
+             ^{:key (:EventId event)}
              [:div.item
               [:div.content
                [:a.header {:href (event-route event)}
@@ -839,64 +996,11 @@
                [:div.description
                 (:Description event)]
                [:div.extra
-                [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
-                 "Your activities"
-                 [:i.right.chevron.icon]]
-                [:a.ui.right.floated.small.button
-                 {:on-click #(leave-event (:AttendeeId event))}
-                 [:i.red.remove.icon]
-                 "Leave event"]]]])]]]
+                [:a.ui.right.floated.small.button {:href nil}
+                 "Edit"
+                 [:i.right.chevron.icon]]]]])]]]
         [:div.ui.dimmer {:class (when (empty? @events) "active")}
-         [:div.ui.loader]]])
-     [:div.ui.segment
-      [:div
-       [:div.ui.vertical.segment
-        [:div.ui.two.column.grid
-         [:div.column
-          [:h1.ui.header "Your Events"]]
-         [:div.right.aligned.column
-          [:a.ui.tiny.labeled.icon.button {:href (event-add-route)}
-           [:i.plus.icon]
-           "Add event"]]]]
-       [:div.ui.vertical.segment
-        [:div.ui.divided.items
-         (for [event (map (fn [[event-id attendee-id]]
-                            (merge
-                              (into {} (d/entity @events-db event-id))
-                              {:AttendeeId attendee-id}))
-                          (d/q '[:find ?event-id ?attendee-id
-                                 :in $ ?user-id
-                                 :where
-                                 [?attendee-id :UserId  ?user-id]
-                                 [?attendee-id :EventId ?event-id]]
-                               @attendees-db
-                               (get-in @session [:user :UserId])))]
-           [:div.item
-            [:div.content
-             [:a.header {:href (event-route event)}
-              (:Name event)]
-             [:div.meta
-              [:strong "Date:"]
-              (let [start (from-string (:StartDate event))
-                    end   (from-string (:EndDate   event))]
-                (str (unparse datetime-formatter start)
-                     (when (after? end start)
-                       (str " to " (unparse datetime-formatter end)))))]
-             [:div.meta
-              [:strong "Venue:"]
-              (:Venue event)]
-             [:div.description
-              (:Description event)]
-             [:div.extra
-              [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
-               "Your activities"
-               [:i.right.chevron.icon]]
-              [:a.ui.right.floated.small.button
-               {:on-click #(leave-event (:AttendeeId event))}
-               [:i.red.remove.icon]
-               "Leave event"]]]])]]]
-      [:div.ui.dimmer {:class (when (empty? @events) "active")}
-       [:div.ui.loader]]]]))
+         [:div.ui.loader]]])]))
 
 (defn event-page [event-id]
   (let [event (into {} (d/entity @events-db event-id))
@@ -1066,7 +1170,16 @@
                                  #(set! js/window.location
                                         (events-explore-route)))))]
         [:div.sixteen.wide.column
-         [:div.ui.segment
+         [:div.ui.top.attached.tabular.menu
+          [:a.item {:href (events-route)}
+           "Events"]
+          [:a.item {:href (events-explore-route)}
+           "Explore"]
+          [:a.item {:href (events-owned-route)}
+           "Owned"]
+          [:a.active.item {:href (event-add-route)}
+           "Add"]]
+         [:div.ui.bottom.attached.segment
           [:form.ui.form
            [:div.ui.vertical.segment
             [:h2.ui.dividing.header "Add an Event"]
@@ -1631,22 +1744,80 @@
                "Add"
                [:i.right.chevron.icon]]]]]))]]]])))
 
+;TODO: Display only organizations you're a member of
 (defn organizations-page []
   [:div.sixteen.wide.column
    [:div.ui.segment
     [:div.ui.vertical.segment
      [:h1.ui.header
-      "Organizations"
+      "Organizations You're a Member of"
       [:a.ui.right.floated.small.button
        {:href (organization-add-route)}
        "Add Organization"]]]
     [:div.ui.vertical.segment
      [:div.ui.divided.items
-      (for [organization (map #(d/entity @organizations-db
-                                         %)
-                              (d/q '[:find [?organization-id ...]
-                                     :where [?organization-id]]
-                                   @organizations-db))]
+      (for [organization (doall (map #(d/entity @organizations-db
+                                                %)
+                                     (d/q '[:find [?organization-id ...]
+                                            :where [?organization-id]]
+                                          @organizations-db)))]
+        ^{:key (:OrganizationId organization)}
+        [:div.item
+         [:div.content
+          [:a.header
+           (:Name organization)]
+          [:div.extra
+           [:a.ui.right.floated.small.icon.button
+            {:href (events-explore-route {:query-params
+                                          (select-keys organization
+                                                       [:OrganizationId])})} ; TODO: make this work
+            "View events"]]]])]]]])
+
+;TODO: Display only organizations you're not a member of
+(defn organizations-explore-page []
+  [:div.sixteen.wide.column
+   [:div.ui.segment
+    [:div.ui.vertical.segment
+     [:h1.ui.header
+      "Explore Organizations"
+      [:a.ui.right.floated.small.button
+       {:href (organization-add-route)}
+       "Add Organization"]]]
+    [:div.ui.vertical.segment
+     [:div.ui.divided.items
+      (for [organization (doall (map #(d/entity @organizations-db
+                                                %)
+                                     (d/q '[:find [?organization-id ...]
+                                            :where [?organization-id]]
+                                          @organizations-db)))]
+        ^{:key (:OrganizationId organization)}
+        [:div.item
+         [:div.content
+          [:a.header
+           (:Name organization)]
+          [:div.extra
+           [:a.ui.right.floated.small.icon.button
+            {:href (str "#/events?organization="
+                        (:OrganizationId organization))} ; TODO: make this work
+            "View events"]]]])]]]])
+
+;TODO: Display only organizations you own
+(defn organizations-owned-page []
+  [:div.sixteen.wide.column
+   [:div.ui.segment
+    [:div.ui.vertical.segment
+     [:h1.ui.header
+      "Organizations You Own"
+      [:a.ui.right.floated.small.button
+       {:href (organization-add-route)}
+       "Add Organization"]]]
+    [:div.ui.vertical.segment
+     [:div.ui.divided.items
+      (for [organization (doall (map #(d/entity @organizations-db
+                                                %)
+                                     (d/q '[:find [?organization-id ...]
+                                            :where [?organization-id]]
+                                          @organizations-db)))]
         ^{:key (:OrganizationId organization)}
         [:div.item
          [:div.content
@@ -1711,34 +1882,29 @@
      [:div.ui.segment
       [:h1.ui.header
        "Calendar"]
-      [(with-meta identity
-                  {:component-did-mount
-                   (fn []
-                     (.fullCalendar (js/$ "#calendar")
-                                    (clj->js
-                                      {:events (vec (concat
-                                                      (map (fn [[schedule-id activity-id]]
-                                                             (let [activity
-                                                                   (when activity-id
-                                                                     (d/entity @activities-db activity-id))]
-                                                               {:title (:Name activity)
-                                                                :start (:StartTime activity)
-                                                                :end   (:EndTime activity)}))
-                                                           user-activities)
-                                                      (map (fn [[event-id]]
-                                                             (let [event
-                                                                   (when event-id
-                                                                     (d/entity @events-db event-id))]
-                                                               {:title (:Name event)
-                                                                :start (:StartDate event)
-                                                                :end   (:EndDate event)
-                                                                :color "#8fdf82"}))
-                                                           user-events)))
-                                       :header {:left "title"
-                                                :center ""
-                                                :right "today prev,next month,agendaWeek,agendaDay"}
-                                       :defaultView "agendaWeek"})))})
-       [:div#calendar]]]]))
+      [calendar {:events (vec (concat
+                                (map (fn [[schedule-id activity-id]]
+                                       (let [activity
+                                             (when activity-id
+                                               (d/entity @activities-db
+                                                         activity-id))]
+                                         {:title (:Name activity)
+                                          :start (:StartTime activity)
+                                          :end   (:EndTime activity)}))
+                                     user-activities)
+                                (map (fn [[event-id]]
+                                       (let [event
+                                             (when event-id
+                                               (d/entity @events-db event-id))]
+                                         {:title (:Name event)
+                                          :start (:StartDate event)
+                                          :end   (:EndDate event)
+                                          :color "#8fdf82"}))
+                                     user-events)))
+                 :header {:left "title"
+                          :center ""
+                          :right "today prev,next month,agendaWeek,agendaDay"}
+                 :defaultView "agendaWeek"}]]]))
 
 (defn statistics-page []
   (let [event-id (atom 0)]
@@ -1812,91 +1978,6 @@
               :yAxis {:title {:text "Number checked in"}}
               :series [{:name "Checked in"}]}
              check-in-data])]]))))
-
-(defn payments-component []
-  (let [form (atom {})
-        validator (validation-set (presence-of :number)
-                                  (presence-of :cvc)
-                                  (presence-of :exp-date)
-                                  (format-of   :number   :format #"^[0-9]{16}$")
-                                  (format-of   :cvc      :format #"^[0-9]{3}$")
-                                  (format-of   :exp-date :format #"^[0-1][0-9]/20[1-9][0-9]$"))
-        stripe-error (atom nil)
-        stripe-success (atom nil)
-        button-loading? (atom false)]
-    (fn []
-      (Stripe.setPublishableKey "pk_test_7ntI7D72loXtuO2F15gV0nR0")
-      (let [{:keys [number cvc exp-date]} @form
-            errors (validator @form)
-
-            response-handler
-            (fn [status response]
-              (reset! button-loading? false)
-              (prn response)
-              (if response.error
-                (do
-                  (reset! stripe-error response.error.message)
-                  (reset! stripe-success nil))
-                (do
-                  (reset! stripe-error nil)
-                  (reset! stripe-success "Success!")
-                  (swap! session assoc :stripe-token response.id)
-                  (swap! session assoc :cc-last      (subs (:number @form) 12)))))
-
-            create-token
-            (fn [e form]
-              (when (empty? errors)
-                (let [[month year] (clojure.string/split (:exp-date form) #"/" 2)]
-                  (reset! button-loading? true)
-                  (prn (dissoc (assoc form
-                                 :exp-month (int month)
-                                 :exp-year (int year))
-                               :exp-date))
-                  (.preventDefault e)
-                  (.stopPropagation e)
-                  (Stripe.card.createToken
-                    (clj->js (dissoc (assoc form
-                                       :exp-month (int month)
-                                       :exp-year (int year))
-                                     :exp-date))
-                    response-handler))))]
-        [:div.ui.vertical.segment
-         [:h2.ui.dividing.header
-          "Payment Info"]
-         [:div.two.fields
-          [:div.required.field {:class (when (and number (:number errors))
-                                         "error")}
-           [:label "Card Number"]
-           [input-atom :text
-            (r/wrap number swap! form assoc :number)]]
-          [:div.required.field {:class (when (and cvc (:cvc errors))
-                                         "error")}
-           [:label "CVC"]
-           [:div.two.fields
-            [:div.field
-             [input-atom :password
-              (r/wrap cvc swap! form assoc :cvc)]]
-            [:div.field]]]]
-         [:div.two.fields
-          [:div.required.field {:class (when (and exp-date (:exp-date errors))
-                                         "error")}
-           [:label "Expiration Date"]
-           [input-atom :text ; TODO placeholder
-            (r/wrap exp-date swap! form assoc :exp-date)]]
-          [:div.field]]
-         [:button.ui.primary.button
-          {:type :submit
-           :class (when (seq errors) "disabled")
-           :on-click #(create-token % @form)}
-          (if @button-loading?
-            [:i.spinner.loading.icon]
-            "Confirm")]
-         [:span.ui.red.compact.message
-          {:class (when (nil? @stripe-error) "hidden")}
-          @stripe-error]
-         [:span.ui.green.compact.message
-          {:class (when (nil? @stripe-success) "hidden")}
-          @stripe-success]]))))
 
 (defn payments-page []
   [:div.sixteen.wide.column
