@@ -19,5 +19,7 @@
             :src "bower_components/fullcalendar/dist/fullcalendar.min.js"}]
   [:script {:type "text/javascript"
             :src "https://js.stripe.com/v2/"}]
+  [:script {:type "text/javascript"
+            :src "bower_components/jquery-qrcode/dist/jquery.qrcode.min.js"}]
   [:script {:type "text/javascript" :src "js/app.js"}]]
  [:body]]

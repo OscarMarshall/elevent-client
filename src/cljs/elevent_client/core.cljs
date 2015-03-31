@@ -208,13 +208,13 @@
   "/events/:EventId/register" [EventId]
   (reset! current-page [#'event-register-page (int EventId)]))
 
-(defroute event-activities-explore-route
-  "/events/:EventId/activities/explore" [EventId]
-  (reset! current-page [#'event-activities-explore-page (int EventId)]))
-
 (defroute event-activities-route
   "/events/:EventId/activities" [EventId]
   (reset! current-page [#'event-activities-page (int EventId)]))
+
+(defroute event-activities-explore-route
+  "/events/:EventId/activities/explore" [EventId]
+  (reset! current-page [#'event-activities-explore-page (int EventId)]))
 
 (defroute event-activity-add-route
   "/events/:EventId/activities/add" [EventId]
@@ -438,7 +438,15 @@
     {:component-did-mount #(.fullCalendar (js/jQuery (r/dom-node %))
                                           (clj->js options))
      :component-did-update #(.fullCalendar (js/jQuery (r/dom-node %))
-                                          (clj->js options))
+                                           (clj->js options))
+     :reagent-render (constantly [:div])}))
+
+(defn qr-code [options]
+  (r/create-class
+    {:component-did-mount #(.qrcode (js/jQuery (r/dom-node %))
+                                    (clj->js options))
+     :component-did-update #(.qrcode (js/jQuery (r/dom-node %))
+                                     (clj->js options))
      :reagent-render (constantly [:div])}))
 
 
@@ -1012,31 +1020,31 @@
                                [?e :EventId ?event-id]]
                              @activities-db
                              event-id))
-        attendees (take 10
-                        (map (fn [[user-id attendee-id]]
-                               (merge
-                                 (into
-                                   {}
-                                   (d/entity
-                                     @users-db
-                                     user-id))
-                                 (into
-                                   {}
-                                   (d/entity
-                                     @attendees-db
-                                     attendee-id))))
-                             (d/q '[:find ?e ?a
-                                    :in $ ?event-id
-                                    :where
-                                    [?a :EventId ?event-id]
-                                    [?a :UserId ?e]]
-                                  @attendees-db
-                                  event-id)))]
+        attendees (doall (take 10
+                               (map (fn [[user-id attendee-id]]
+                                      (merge
+                                        (into
+                                          {}
+                                          (d/entity
+                                            @users-db
+                                            user-id))
+                                        (into
+                                          {}
+                                          (d/entity
+                                            @attendees-db
+                                            attendee-id))))
+                                    (d/q '[:find ?e ?a
+                                           :in $ ?event-id
+                                           :where
+                                           [?a :EventId ?event-id]
+                                           [?a :UserId ?e]]
+                                         @attendees-db
+                                         event-id))))]
     (when (seq event)
       [:div.sixteen.wide.column
        [:div.ui.segment
         [:div.ui.vertical.segment
-         [:h2.ui.dividing.header
+         [:h1.ui.dividing.header
           (:Name event)]
          [:div.ui.right.floated.small.labeled.icon.button
           [:i.edit.icon]
@@ -1054,6 +1062,19 @@
          [:div
           [:b "Venue: "] (:Venue event)]
          [:p (:Description event)]]
+        (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
+                                             :in $ ?event-id ?user-id
+                                             :where
+                                             [?attendee-id :EventId ?event-id]
+                                             [?attendee-id :UserId ?user-id]]
+                                           @attendees-db
+                                           event-id
+                                           (:UserId (:user @session))))]
+          [:div.ui.vertical.segment
+           [:h2 "QR-Code"]
+           [qr-code
+            {:text (event-attendee-route (into {} (d/entity @attendees-db
+                                                            attendee-id)))}]])
         [:div.ui.vertical.segment
          [:h2.ui.header
           "Activities"]
