@@ -426,13 +426,12 @@
               [data nil])
             [nil nil]))]
     (r/create-class
-      {:component-did-mount #(do
-                               (let [[series-data categories] (split-data @data)]
-                                 (.highcharts (js/jQuery (r/dom-node %))
-                                              (clj->js (assoc-in
-                                                         (assoc-in config
-                                                                   [:series 0 :data] series-data)
-                                                         [:xAxis :categories] categories)))))
+      {:component-did-mount #(let [[series-data categories] (split-data @data)]
+                               (.highcharts (js/jQuery (r/dom-node %))
+                                            (clj->js (assoc-in
+                                                       (assoc-in config
+                                                                 [:series 0 :data] series-data)
+                                                       [:xAxis :categories] categories))))
        :component-did-update #(let [[series-data categories] (split-data @data)
                                     chart (-> %
                                               r/dom-node
