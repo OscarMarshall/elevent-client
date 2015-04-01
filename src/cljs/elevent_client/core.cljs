@@ -417,18 +417,35 @@
    (input-atom type nil state nil nil)))
 
 (defn chart [config _]
-  (let [data (atom nil)]
+  (let [data (atom nil)
+        split-data
+        (fn [data]
+          (if (seq data)
+            (if (= (:type (:chart config)) "bar")
+              [(into [] (map second data)) (map first data)]
+              [data nil])
+            [nil nil]))]
     (r/create-class
-      {:component-did-mount #(.highcharts (js/jQuery (r/dom-node %))
-                                          (clj->js (assoc-in config
-                                                     [:series 0 :data] @data)))
-       :component-did-update #(-> %
-                                  r/dom-node
-                                  js/jQuery
-                                  .highcharts
-                                  .-series
-                                  first
-                                  (.setData (clj->js @data)))
+      {:component-did-mount #(do
+                               (let [[series-data categories] (split-data @data)]
+                                 (.highcharts (js/jQuery (r/dom-node %))
+                                              (clj->js (assoc-in
+                                                         (assoc-in config
+                                                                   [:series 0 :data] series-data)
+                                                         [:xAxis :categories] categories)))))
+       :component-did-update #(let [[series-data categories] (split-data @data)
+                                    chart (-> %
+                                              r/dom-node
+                                              js/jQuery
+                                              .highcharts)]
+                                (-> chart
+                                    .-series
+                                    first
+                                    (.setData (clj->js series-data)))
+                                (-> chart
+                                    .-xAxis
+                                    first
+                                    (.setCategories (clj->js categories))))
        :reagent-render (fn [_ series]
                          (reset! data series)
                          [:div])})))
@@ -1959,7 +1976,31 @@
             (sort-by first (vec (zipmap (keys check-in-data)
                                         (reduce #(conj %1 (+ (last %1) %2))
                                                 []
-                                                (vals check-in-data)))))]
+                                                (vals check-in-data)))))
+
+            activities
+            (d/q '[:find ?name ?id
+                   :in $ ?event-id
+                   :where
+                   [?id :Name ?name]
+                   [?id :EventId ?event-id]]
+                 @activities-db
+                 @event-id)
+
+            schedules
+            (into []
+                  (map
+                    (fn [[activity-name activity-id]]
+                      (vector activity-name
+                              (count
+                                (d/q '[:find [?check-in-time ...]
+                                       :in $ ?activity-id
+                                       :where
+                                       [?schedule-id :ActivityId ?activity-id]
+                                       [?schedule-id :CheckinTime ?check-in-time]]
+                                     @schedules-db
+                                     activity-id))))
+                    activities))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:h1.ui.header
@@ -1998,7 +2039,16 @@
                       :dateTimeLabelFormats {:day "%e %b"}}
               :yAxis {:title {:text "Number checked in"}}
               :series [{:name "Checked in"}]}
-             check-in-data])]]))))
+             check-in-data])
+          (when (and (seq activities) (seq schedules))
+            [chart
+             {:chart {:type "bar"}
+              :title {:text "Activity attendance"}
+              ;:xAxis {:categories (map first schedules)}
+              :yAxis {:title {:text "Number of attendees"}
+                      :allowDecimals false}
+              :series [{:name "Attendee count"}]}
+             schedules])]]))))
 
 (defn payments-page []
   [:div.sixteen.wide.column
