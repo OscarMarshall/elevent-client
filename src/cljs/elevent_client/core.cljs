@@ -92,7 +92,8 @@
 
                     :params
                     (when (or (= operation :create)
-                              (= operation :update))
+                              (= operation :update)
+                              (= operation :bulk))
                       params)
 
                     :handler
@@ -657,6 +658,7 @@
         [:i.close.icon {:on-click #(swap! messages dissoc key)}]
         message])]))
 
+; TODO: need to renew token after use
 (defn payments-component []
   (let [form (atom {})
         validator (validation-set (presence-of :number)
@@ -704,43 +706,50 @@
                                        :exp-year (int year))
                                      :exp-date))
                     response-handler))))]
-        [:div.ui.vertical.segment
-         [:h2.ui.dividing.header
-          "Payment Info"]
-         [:div.two.fields
-          [:div.required.field {:class (when (and number (:number errors))
-                                         "error")}
-           [:label "Card Number"]
-           [input-atom :text
-            (r/wrap number swap! form assoc :number)]]
-          [:div.required.field {:class (when (and cvc (:cvc errors))
-                                         "error")}
-           [:label "CVC"]
+        (if (nil? (:stripe-token @session))
+          [:div.ui.vertical.segment
+           [:h2.ui.dividing.header
+            "Payment Info"]
            [:div.two.fields
-            [:div.field
-             [input-atom :password
-              (r/wrap cvc swap! form assoc :cvc)]]
-            [:div.field]]]]
-         [:div.two.fields
-          [:div.required.field {:class (when (and exp-date (:exp-date errors))
-                                         "error")}
-           [:label "Expiration Date"]
-           [input-atom :text ; TODO placeholder
-            (r/wrap exp-date swap! form assoc :exp-date)]]
-          [:div.field]]
-         [:button.ui.primary.button
-          {:type :submit
-           :class (when (seq errors) "disabled")
-           :on-click #(create-token % @form)}
-          (if @button-loading?
-            [:i.spinner.loading.icon]
-            "Confirm")]
-         [:span.ui.red.compact.message
-          {:class (when (nil? @stripe-error) "hidden")}
-          @stripe-error]
-         [:span.ui.green.compact.message
-          {:class (when (nil? @stripe-success) "hidden")}
-          @stripe-success]]))))
+            [:div.required.field {:class (when (and number (:number errors))
+                                           "error")}
+             [:label "Card Number"]
+             [input-atom :text
+              (r/wrap number swap! form assoc :number)]]
+            [:div.required.field {:class (when (and cvc (:cvc errors))
+                                           "error")}
+             [:label "CVC"]
+             [:div.two.fields
+              [:div.field
+               [input-atom :password
+                (r/wrap cvc swap! form assoc :cvc)]]
+              [:div.field]]]]
+           [:div.two.fields
+            [:div.required.field {:class (when (and exp-date (:exp-date errors))
+                                           "error")}
+             [:label "Expiration Date"]
+             [input-atom :text ; TODO placeholder
+              (r/wrap exp-date swap! form assoc :exp-date)]]
+            [:div.field]]
+           [:button.ui.primary.button
+            {:type :submit
+             :class (when (seq errors) "disabled")
+             :on-click #(create-token % @form)}
+            (if @button-loading?
+              [:i.spinner.loading.icon]
+              "Confirm")]
+           [:span.ui.red.compact.message
+            {:class (when (nil? @stripe-error) "hidden")}
+            @stripe-error]
+           [:span.ui.green.compact.message
+            {:class (when (nil? @stripe-success) "hidden")}
+            @stripe-success]]
+          [:div.inline.fields
+           [:div.field (str "Charging card ending in " (:cc-last @session) ".")]
+           [:a.field {:on-click #(swap! session dissoc :stripe-token :cc-last)
+                      :style {:cursor "pointer"}}
+            "Charge different card"
+            [:i.right.chevron.icon]]])))))
 
 
 ;; Pages
@@ -1651,17 +1660,9 @@
                  [:label "Last Name"]
                  [input-atom :text
                   (r/wrap LastName swap! form assoc :LastName)]]]
-               (when (and (:RequiresPayment event)
-                          (nil? (:stripe-token @session)))
-                 [payments-component])
-               (when (and (:RequiresPayment event)
-                          (not (nil? (:stripe-token @session))))
-                 [:div.inline.fields
-                  [:div.field (str "Charging card ending in " (:cc-last @session) ".")]
-                   [:a.field {:on-click #(swap! session dissoc :stripe-token :cc-last)
-                              :style {:cursor "pointer"}}
-                    "Charge different card"
-                    [:i.right.chevron.icon]]])]
+               ; TODO: use TicketPrice > 0 instead of RequiresPayment
+               (when (:RequiresPayment event)
+                 [payments-component])]
               [:div.ui.divider]
               [:button.ui.primary.button
                {:type :submit
@@ -1673,31 +1674,7 @@
                "Register"]]]]])))))
 
 (defn event-schedule-page [event-id]
-  (let [event (into {} (d/entity @events-db event-id))
-
-        scheduled-activities
-        (d/q '[:find ?schedule-id ?activity-id
-               :in $activities $schedules ?event-id ?user-id
-               :where
-               [$activities ?activity-id :EventId ?event-id]
-               [$schedules  ?schedule-id :UserId     ?user-id]
-               [$schedules  ?schedule-id :ActivityId ?activity-id]]
-             @activities-db
-             @schedules-db
-             event-id
-             (get-in @session [:user :UserId]))
-
-        event-activities
-        (d/q '[:find ?activity-id
-               :in $ ?event-id
-               :where
-               [?activity-id :EventId ?event-id]]
-             @activities-db
-             event-id)
-
-        unscheduled-activities
-        (set/difference event-activities (into #{} (map #(vector (second %))
-                                                    scheduled-activities)))
+  (let [cart-activities (atom #{})
 
         add-activity!
         (fn [user-id activity-id]
@@ -1709,77 +1686,184 @@
         remove-activity!
         (fn [schedule]
           (schedules-endpoint :delete schedule nil))]
-    (when (seq event)
-   [:div.sixteen.wide.column
-    [:div.ui.segment
-     [:div.ui.vertical.segment
-      [:h2.ui.header
-       (str (get-in @session [:user :FirstName]) "'s Schedule for " (:Name event))]]
-     [:div.ui.vertical.segment
-      [:table.ui.table
-       [:thead
-        [:tr
-         [:th "Start"]
-         [:th "End"]
-         [:th "Activity"]
-         [:th "Location"]
-         [:th]]]
-       [:tbody
-        (for [[schedule-id activity-id] scheduled-activities]
-          ^{:key schedule-id}
-          (let [activity
-                (when activity-id
+    (fn [event-id]
+      (let
+        [event (into {} (d/entity @events-db event-id))
+
+         scheduled-activities
+         (d/q '[:find ?schedule-id ?activity-id
+                :in $activities $schedules ?event-id ?user-id
+                :where
+                [$activities ?activity-id :EventId ?event-id]
+                [$schedules  ?schedule-id :UserId     ?user-id]
+                [$schedules  ?schedule-id :ActivityId ?activity-id]]
+              @activities-db
+              @schedules-db
+              event-id
+              (get-in @session [:user :UserId]))
+
+         event-activities
+         (d/q '[:find ?activity-id
+                :in $ ?event-id
+                :where
+                [?activity-id :EventId ?event-id]]
+              @activities-db
+              event-id)
+
+         unscheduled-activities
+         (set/difference event-activities
+                         (into #{} (map #(vector (second %))
+                                        scheduled-activities))
+                         @cart-activities)
+
+         add-activity-to-cart!
+         (fn [activity-id]
+           (prn activity-id)
+           (swap! cart-activities conj [activity-id]))
+
+         remove-activity-from-cart!
+         (fn [activity-id]
+           (prn activity-id)
+           (swap! cart-activities disj [activity-id]))
+
+         add-cart-activities!
+         (fn [e user-id cart-activities]
+           (.preventDefault e)
+           (let [activities (into [] (map (fn [[activity-id]]
+                                            activity-id)
+                                          @cart-activities))]
+             (schedules-endpoint :bulk
+                                 {:UserId      user-id
+                                  :Token       (:stripe-token @session)
+                                  :ActivityIds activities}
+                                 #(reset! cart-activities #{}))))]
+        (when (seq event)
+          [:div.sixteen.wide.column
+           [:div.ui.segment
+            [:div.ui.vertical.segment
+             [:h2.ui.header
+              (str (get-in @session [:user :FirstName]) "'s Schedule for " (:Name event))]]
+            [:div.ui.vertical.segment
+             [:table.ui.table
+              [:thead
+               [:tr
+                [:th "Start"]
+                [:th "End"]
+                [:th "Activity"]
+                [:th "Location"]
+                [:th]]]
+              [:tbody
+               (for [[schedule-id activity-id] scheduled-activities]
+                 ^{:key schedule-id}
+                 (let [activity
+                       (when activity-id
                          (d/entity @activities-db activity-id))]
-            [:tr
-             [:td {:noWrap true}
-              (when activity
-                (unparse datetime-formatter
-                         (from-string (:StartTime activity))))]
-             [:td {:noWrap true}
-              (when activity
-                (unparse datetime-formatter
-                         (from-string (:EndTime activity))))]
-             [:td (:Name activity)]
-             [:td (:Location activity)]
-             [:td.right.aligned {:noWrap true}
-              [:div.ui.button
-               {:on-click #(remove-activity!
-                             (d/entity @schedules-db
-                                       schedule-id))}
-               [:i.red.remove.icon] "Remove"]]]))]
-       [:tfoot
-        [:tr
-         [:th {:colSpan "6"}
-          [:div.ui.small.labeled.icon.button
-           [:i.print.icon] "Print"]]]]]]
-     [:div.ui.vertical.segment
-      [:div.ui.divided.items
-       (for [[activity-id] unscheduled-activities]
-         ^{:key activity-id}
-         (let [activity
-               (when activity-id
-                 (d/entity @activities-db activity-id))]
-           [:div.item
-            [:div.content
-             [:a.header (:Name activity)]
-             [:div.meta (:Location activity)]
-             [:div (str (when activity
-                          (unparse datetime-formatter
-                                   (from-string
-                                     (:StartTime activity))))
-                        " - "
-                        (when activity
-                          (unparse datetime-formatter
-                                   (from-string
-                                     (:EndTime activity)))))]
-             [:div.description
-              (:Description activity)]
-             [:div.extra
-              [:div.ui.right.floated.primary.button
-               {:on-click #(add-activity! (get-in @session [:user :UserId])
-                                          (:ActivityId activity))}
-               "Add"
-               [:i.right.chevron.icon]]]]]))]]]])))
+                   [:tr
+                    [:td {:noWrap true}
+                     (when activity
+                       (unparse datetime-formatter
+                                (from-string (:StartTime activity))))]
+                    [:td {:noWrap true}
+                     (when activity
+                       (unparse datetime-formatter
+                                (from-string (:EndTime activity))))]
+                    [:td (:Name activity)]
+                    [:td (:Location activity)]
+                    [:td.right.aligned {:noWrap true}
+                     [:div.ui.button
+                      {:on-click #(remove-activity!
+                                    (d/entity @schedules-db
+                                              schedule-id))}
+                      [:i.red.remove.icon] "Remove"]]]))]
+              [:tfoot
+               [:tr
+                [:th {:colSpan "6"}
+                 [:div.ui.small.labeled.icon.button
+                  [:i.print.icon] "Print"]]]]]]
+            [:div.ui.vertical.segment
+             [:div.ui.divided.items
+              (for [[activity-id] unscheduled-activities]
+                ^{:key activity-id}
+                (let [activity
+                      (when activity-id
+                        (d/entity @activities-db activity-id))]
+                  [:div.item
+                   [:div.content
+                    [:a.header (:Name activity)]
+                    [:div.meta [:strong "Location: "] (:Location activity)]
+                    [:div.meta [:strong "Time: "]
+                     (str (when activity
+                            (unparse datetime-formatter
+                                     (from-string
+                                       (:StartTime activity))))
+                          " - "
+                          (when activity
+                            (unparse datetime-formatter
+                                     (from-string
+                                       (:EndTime activity)))))]
+                    (when (> (:TicketPrice activity) 0)
+                      [:div.meta
+                       [:strong "Ticket Price: "]
+                       (goog.string.format "$%.2f" (:TicketPrice activity))])
+                    [:div.description
+                     (:Description activity)]
+                    [:div.extra
+                     (if (> (:TicketPrice activity) 0)
+                       [:div.ui.right.floated.button
+                        {:on-click #(add-activity-to-cart! (:ActivityId activity))}
+                        "Add to cart"
+                        [:i.right.chevron.icon]]
+                       [:div.ui.right.floated.primary.button
+                        {:on-click #(add-activity! (get-in @session [:user :UserId])
+                                                   (:ActivityId activity))}
+                        "Add"
+                        [:i.right.chevron.icon]])]]]))]]]
+           (when (seq @cart-activities)
+             [:div.ui.segment
+              [:div.ui.vertical.segment
+               [:div.ui.vertical.segment
+                [:h2.ui.dividing.header "Cart"]
+                [:div.ui.divided.items
+                 (for [[activity-id] @cart-activities]
+                   ^{:key activity-id}
+                   (let [activity
+                         (when activity-id
+                           (d/entity @activities-db activity-id))]
+                     [:div.item
+                      [:div.content
+                       [:a.header (:Name activity)]
+                       [:div.meta [:strong "Location: "] (:Location activity)]
+                       [:div.meta [:strong "Time: "]
+                        (str (when activity
+                               (unparse datetime-formatter
+                                        (from-string
+                                          (:StartTime activity))))
+                             " - "
+                             (when activity
+                               (unparse datetime-formatter
+                                        (from-string
+                                          (:EndTime activity)))))]
+                       (when (> (:TicketPrice activity) 0)
+                         [:div.meta
+                          [:strong "Ticket Price: "]
+                          (goog.string.format "$%.2f" (:TicketPrice activity))])
+                       [:div.description
+                        (:Description activity)]
+                       [:div.extra
+                        [:div.ui.right.floated.button
+                         {:on-click #(remove-activity-from-cart! (:ActivityId activity))}
+                         [:i.red.remove.icon]
+                         "Remove"]]]]))]]
+               [:div.ui.vertical.segment
+                [:form.ui.form
+                 [payments-component]]
+                [:div.ui.divider]
+                [:button.ui.primary.button
+                 {:type :submit
+                  :class (when (nil? (:stripe-token @session))
+                           "disabled")
+                  :on-click #(add-cart-activities! % (get-in @session [:user :UserId]) cart-activities)}
+                 "Confirm Payment and Add Activities"]]]])])))))
 
 ;TODO: Display only organizations you're a member of
 (defn organizations-page []
