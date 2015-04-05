@@ -324,7 +324,7 @@
           :error-handler   #(add-message! :negative "Sign in failed")})))
 
 (defn sign-out! []
-  (swap! session dissoc :token :user :stripe-token)
+  (swap! session dissoc :token :user :stripe-token :payment-info)
   (refresh!)
   (set! js/window.location (home-route)))
 
@@ -667,8 +667,8 @@
                                   (format-of   :number   :format #"^[0-9]{16}$")
                                   (format-of   :cvc      :format #"^[0-9]{3}$")
                                   (format-of   :exp-date :format #"^[0-1][0-9]/20[1-9][0-9]$"))
+        editing? (atom false)
         stripe-error (atom nil)
-        stripe-success (atom nil)
         button-loading? (atom false)]
     (fn []
       (Stripe.setPublishableKey "pk_test_7ntI7D72loXtuO2F15gV0nR0")
@@ -681,13 +681,15 @@
               (prn response)
               (if response.error
                 (do
-                  (reset! stripe-error response.error.message)
-                  (reset! stripe-success nil))
-                (do
+                  (reset! stripe-error response.error.message))
+                (let [[month year] (clojure.string/split (:exp-date @form) #"/" 2)]
                   (reset! stripe-error nil)
-                  (reset! stripe-success "Success!")
+                  (reset! editing? false)
                   (swap! session assoc :stripe-token response.id)
-                  (swap! session assoc :cc-last      (subs (:number @form) 12)))))
+                  (swap! session assoc :payment-info (dissoc (assoc @form
+                                                               :exp-month (int month)
+                                                               :exp-year (int year))
+                                                             :exp-date)))))
 
             create-token
             (fn [e form]
@@ -706,18 +708,28 @@
                                        :exp-year (int year))
                                      :exp-date))
                     response-handler))))]
-        (if (nil? (:stripe-token @session))
+        #_(when (:payment-info @session)
+          (swap! form assoc
+                 :number   (str "************" (subs (get-in @session [:payment-info :number]) 12))
+                 :cvc      (get-in @session [:payment-info :cvc])
+                 :exp-date (str (get-in @session [:payment-info :exp-month])
+                                "/"
+                                (get-in @session [:payment-info :exp-year]))))
+        (if (or (nil? (:payment-info @session))
+                @editing?)
           [:div.ui.vertical.segment
            [:h2.ui.dividing.header
             "Payment Info"]
            [:div.two.fields
             [:div.required.field {:class (when (and number (:number errors))
-                                           "error")}
+                                           "error")
+                                  :on-change #(swap! session dissoc :payment-info)}
              [:label "Card Number"]
              [input-atom :text
               (r/wrap number swap! form assoc :number)]]
             [:div.required.field {:class (when (and cvc (:cvc errors))
-                                           "error")}
+                                           "error")
+                                  :on-change #(swap! session dissoc :payment-info)}
              [:label "CVC"]
              [:div.two.fields
               [:div.field
@@ -726,8 +738,9 @@
               [:div.field]]]]
            [:div.two.fields
             [:div.required.field {:class (when (and exp-date (:exp-date errors))
-                                           "error")}
-             [:label "Expiration Date"]
+                                           "error")
+                                  :on-change #(swap! session dissoc :payment-info)}
+             [:label "Expiration Date (MM/YYYY)"]
              [input-atom :text ; TODO placeholder
               (r/wrap exp-date swap! form assoc :exp-date)]]
             [:div.field]]
@@ -740,16 +753,30 @@
               "Confirm")]
            [:span.ui.red.compact.message
             {:class (when (nil? @stripe-error) "hidden")}
-            @stripe-error]
-           [:span.ui.green.compact.message
-            {:class (when (nil? @stripe-success) "hidden")}
-            @stripe-success]]
+            @stripe-error]]
           [:div.inline.fields
-           [:div.field (str "Charging card ending in " (:cc-last @session) ".")]
-           [:a.field {:on-click #(swap! session dissoc :stripe-token :cc-last)
+           [:div.field (str "Charging card ending in "
+                            (subs (get-in @session [:payment-info :number]) 12)
+                            ".")]
+           [:a.field {:on-click #(swap! session dissoc :payment-info)
                       :style {:cursor "pointer"}}
             "Charge different card"
             [:i.right.chevron.icon]]])))))
+
+
+;; Helpers
+;; =============================================================================
+
+(defn renew-stripe-token! [callback]
+  (let [response-handler
+        (fn [status response]
+          (when (not response.error)
+            (do
+              (swap! session assoc :stripe-token response.id)
+              (callback))))]
+    (Stripe.card.createToken
+      (clj->js (:payment-info @session))
+      response-handler)))
 
 
 ;; Pages
@@ -1614,13 +1641,21 @@
             register
             (fn [form]
               (when (empty? errors)
-                (attendees-endpoint :create
-                                    {:UserId (get-in @session [:user :UserId])
-                                     :EventId event-id
-                                     :Token (when (:RequiresPayment event) (:stripe-token @session))
-                                     ; TODO: maybe this logic is wrong?MIght want to buy ticket even if not required
-                                     :Amount (when (:RequiresPayment event) (:TicketPrice event))}
-                                    #(js/location.replace (events-route)))))]
+                ; TODO: maybe this logic is wrong?MIght want to buy ticket even if not required
+                (if (:RequiresPayment event)
+                  (renew-stripe-token!
+                    (fn [] (attendees-endpoint :create
+                                               {:UserId (get-in @session [:user :UserId])
+                                                :EventId event-id
+                                                :Token (:stripe-token @session)
+                                                :Amount (:TicketPrice event)}
+                                               #(do
+                                                  (swap! session dissoc :stripe-token)
+                                                  (js/location.replace (events-route))))))
+                  (attendees-endpoint :create
+                                      {:UserId (get-in @session [:user :UserId])
+                                       :EventId event-id}
+                                      #(js/location.replace (events-route))))))]
         (when (seq event)
           [:div.ui.stackable.page.grid
            [:div.sixteen.wide.column
@@ -1668,7 +1703,7 @@
                {:type :submit
                 :class (when (or (seq errors)
                                  (and (:RequiresPayment event)
-                                      (nil? (:stripe-token @session))))
+                                      (nil? (:payment-info @session))))
                          "disabled")
                 :on-click #(register @form)}
                "Register"]]]]])))))
@@ -1732,11 +1767,12 @@
            (let [activities (into [] (map (fn [[activity-id]]
                                             activity-id)
                                           @cart-activities))]
-             (schedules-endpoint :bulk
-                                 {:UserId      user-id
-                                  :Token       (:stripe-token @session)
-                                  :ActivityIds activities}
-                                 #(reset! cart-activities #{}))))]
+             (renew-stripe-token!
+               (fn [] (schedules-endpoint :bulk
+                                          {:UserId      user-id
+                                           :Token       (:stripe-token @session)
+                                           :ActivityIds activities}
+                                          #(reset! cart-activities #{}))))))]
         (when (seq event)
           [:div.sixteen.wide.column
            [:div.ui.segment
@@ -1860,7 +1896,7 @@
                 [:div.ui.divider]
                 [:button.ui.primary.button
                  {:type :submit
-                  :class (when (nil? (:stripe-token @session))
+                  :class (when (nil? (:payment-info @session))
                            "disabled")
                   :on-click #(add-cart-activities! % (get-in @session [:user :UserId]) cart-activities)}
                  "Confirm Payment and Add Activities"]]]])])))))
@@ -1957,7 +1993,8 @@
       (let [{:keys [Name]} @form
             errors (validator @form)
             create-organization
-            (fn [form]
+            (fn [e form]
+              (.preventDefault e)
               (organizations-endpoint :create
                                       form
                                       #(set! js/window.location
@@ -1976,7 +2013,7 @@
             [:button.ui.primary.button
              {:type :submit
               :class (when (seq errors) "disabled")
-              :on-click #(create-organization @form)}
+              :on-click #(create-organization % @form)}
              "Add"]]]]]))))
 
 (defn calendar-page []
