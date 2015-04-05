@@ -73,6 +73,8 @@
 ;; REST
 ;; =============================================================================
 
+(declare sign-out!)
+
 (defn endpoint [uri element-id state]
   (fn dispatch!
     ([operation params handler error-handler]
@@ -109,9 +111,11 @@
                     (fn [error]
                       (if error-handler
                         (error-handler error)
-                        (if (= (:failure error) :timeout)
-                          (add-message! :negative (str uri " timed out"))
-                          (add-message! :negative (str uri (js->clj error))))))}]
+                        (if (= (:status error) 401)
+                          (sign-out!)
+                          (if (= (:failure error) :timeout)
+                            (add-message! :negative (str uri " timed out"))
+                            (add-message! :negative (str uri (js->clj error)))))))}]
        (let [check-id (fn [op] (if (contains? params element-id)
                                  (op (str uri "/" (params element-id)) options)
                                  (throw (str "Element doesn't contain key \""
