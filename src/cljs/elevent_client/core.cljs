@@ -369,7 +369,7 @@
 ;; =============================================================================
 
 (defn input-atom
-  ([type options state in out]
+  ([type options select-options state in out]
    (let [in  (or in  identity)
          out (or out identity)]
      (r/create-class
@@ -393,10 +393,11 @@
 
         :reagent-render
         (fn render
-          ([_ options state _ _]
-           (let [attributes {:value     (in @state)
-                             :on-change #(reset! state
-                                                 (out (.-value (.-target %))))}]
+          ([_ options select-options state _ _]
+           (let [attributes (merge {:value     (in @state)
+                                    :on-change #(reset! state
+                                                        (out (.-value (.-target %))))}
+                                   options)]
              (case type
                :textarea [:textarea attributes]
                :select [:div.ui.dropdown.selection
@@ -404,22 +405,22 @@
                         [:div.text "None"]
                         [:i.dropdown.icon]
                         [:div.menu
-                         (for [[name value] options]
+                         (for [[name value] select-options]
                            ^{:key (or value 0)} [:div.item {:data-value value}
                                                  name])]]
                [:input (assoc attributes :type type)])))
-          ([_ state _ _]
-           (render nil nil state nil nil))
+          ([_ options state _ _]
+           (render nil options nil state nil nil))
+          ([_ options select-options state]
+           (render nil options select-options state nil nil))
           ([_ options state]
-           (render nil options state nil nil))
-          ([_ state]
-           (render nil nil state nil nil)))})))
-  ([type state in out]
-   (input-atom type nil state in out))
+           (render nil options nil state nil nil)))})))
+  ([type options state in out]
+   (input-atom type options nil state in out))
+  ([type options select-options state]
+   (input-atom type options select-options state nil nil))
   ([type options state]
-   (input-atom type options state nil nil))
-  ([type state]
-   (input-atom type nil state nil nil)))
+   (input-atom type options nil state nil nil)))
 
 (defn chart [config _]
   (let [data (atom nil)
@@ -743,7 +744,7 @@
                                            "error")
                                   :on-change #(swap! session dissoc :payment-info)}
              [:label "Card Number"]
-             [input-atom :text
+             [input-atom :text {}
               (r/wrap number swap! form assoc :number)]]
             [:div.required.field {:class (when (and cvc (:cvc errors))
                                            "error")
@@ -751,15 +752,15 @@
              [:label "CVC"]
              [:div.two.fields
               [:div.field
-               [input-atom :password
+               [input-atom :password {}
                 (r/wrap cvc swap! form assoc :cvc)]]
               [:div.field]]]]
            [:div.two.fields
             [:div.required.field {:class (when (and exp-date (:exp-date errors))
                                            "error")
                                   :on-change #(swap! session dissoc :payment-info)}
-             [:label "Expiration Date (MM/YYYY)"]
-             [input-atom :text ; TODO placeholder
+             [:label "Expiration Date"]
+             [input-atom :text {:placeholder "MM/YYYY"}
               (r/wrap exp-date swap! form assoc :exp-date)]]
             [:div.field]]
            [:button.ui.primary.button
@@ -836,14 +837,14 @@
                                            "error")}
              [:label "Email"]
              [:div.ui.icon.input
-              [input-atom :email
+              [input-atom :email {}
                (r/wrap Email swap! form assoc :Email)]
               [:i.mail.icon]]]
             [:div.required.field {:class (when (and Password (:Password errors))
                                            "error")}
              [:label "Password"]
              [:div.ui.icon.input
-              [input-atom :password
+              [input-atom :password {}
                (r/wrap Password swap! form assoc :Password)]
               [:i.lock.icon]]]]
            [:button.ui.primary.button {:type :submit
@@ -872,7 +873,7 @@
                                           "error")}
             [:label "Email"]
             [:div.ui.icon.input
-             [input-atom :email
+             [input-atom :email {}
               (r/wrap Email swap! form assoc :Email)]
              [:i.mail.icon]]]
            [:div.two.fields
@@ -880,7 +881,7 @@
                                            "error")}
              [:label "Password"]
              [:div.ui.icon.input
-              [input-atom :password
+              [input-atom :password {}
                (r/wrap Password swap! form assoc :Password)]
               [:i.lock.icon]]]
             [:div.required.field {:class (when (and PasswordConfirm
@@ -888,7 +889,7 @@
                                            "error")}
              [:label "Confirm Password"]
              [:div.ui.input
-              [input-atom :password
+              [input-atom :password {}
                (r/wrap PasswordConfirm swap! form assoc :PasswordConfirm)]]]]
            [:div.two.fields
             [:div.required.field {:class (when (and FirstName
@@ -896,14 +897,14 @@
                                            "error")}
              [:label "First Name"]
              [:div.ui.input
-              [input-atom :text
+              [input-atom :text {}
                (r/wrap FirstName swap! form assoc :FirstName)]]]
             [:div.required.field {:class (when (and LastName
                                                     (:LastName errors))
                                            "error")}
              [:label "Last Name"]
              [:div.ui.input
-              [input-atom :text
+              [input-atom :text {}
                (r/wrap LastName swap! form assoc :LastName)]]]]
            [:button.ui.primary.button {:type :submit
                                        :class (when (seq errors) "disabled")}
@@ -1279,30 +1280,31 @@
              [:div.required.field {:class (when (and Name (:Name errors))
                                             "error")}
               [:label "Name"]
-              [input-atom :text (r/wrap Name swap! form assoc :Name)]]
+              [input-atom :text {} (r/wrap Name swap! form assoc :Name)]]
              [:div.field
               [:label "Clone From"]
-              [input-atom :select clonable-events clone-id]]]
+              [input-atom :select {} clonable-events clone-id]]]
             [:div.two.fields
              [:div.required.field
               [:label "Organization"]
-              [input-atom :select associated-organizations
+              [input-atom :select {} associated-organizations
                (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
              [:div.required.field {:class (when (and Venue (:Venue errors))
                                             "error")}
               [:div.required.field
                [:label "Venue"]
-               [input-atom :text (r/wrap Venue swap! form assoc :Venue)]]]]
+               [input-atom :text {} (r/wrap Venue swap! form assoc :Venue)]]]]
             [:div.two.fields
-             [:div.required.field
+             [:div.required.field {:class (when (and StartDate (:StartDate errors))
+                                            "error")}
               [:label "Start Date"]
-              [input-atom :datetime-local
+              [input-atom :datetime-local {}
                (r/wrap StartDate swap! form assoc :StartDate)
                #(or % (unparse (:date-hour-minute formatters) (now)))
                #(unparse (:date-hour-minute formatters) (from-string %))]]
              [:div.required.field
               [:label "End Date"]
-              [input-atom :datetime-local
+              [input-atom :datetime-local {}
                (r/wrap EndDate swap! form assoc :EndDate)
                #(or % (unparse (:date-hour-minute formatters) (now)))
                #(unparse (:date-hour-minute formatters) (from-string %))]]]
@@ -1312,7 +1314,7 @@
               [:label "Ticket Price"]
               [:div.ui.labeled.input
                [:div.ui.label "$"]
-               [input-atom :text
+               [input-atom :text {}
                 (r/wrap TicketPrice swap! form assoc :TicketPrice)]]]]
             [:div.field
              [:div.field
@@ -1332,7 +1334,7 @@
                 " Ticket required"]]]
             [:div.field
              [:label "Description"]
-             [input-atom :textarea
+             [input-atom :textarea {}
               (r/wrap Description swap! form assoc :Description)]]
             [action-button
              {:class (str "primary" (when (seq errors) " disabled"))
@@ -1408,33 +1410,33 @@
                [:div.required.field {:class (when (and Name (:Name errors))
                                               "error")}
                 [:label "Name"]
-                [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
+                [input-atom :text {} (r/wrap Name swap! form assoc :Name)]]]
               [:div.two.fields
                [:div.field
                 [:label "Location"]
-                [input-atom :text (r/wrap Location swap! form assoc :Location)]]
+                [input-atom :text {} (r/wrap Location swap! form assoc :Location)]]
                [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
                                      "error")}
                 [:label "Enrollment Cap"]
-                [input-atom :text (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
+                [input-atom :text {} (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
               [:div.two.fields =
                [:div.required.field {:class (when (and StartTime (:StartTime errors))
                                               "error")}
                 [:label "Start Time"]
-                [input-atom :datetime-local
+                [input-atom :datetime-local {}
                  (r/wrap StartTime swap! form assoc :StartTime)
                  #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
                  #(unparse (:date-hour-minute formatters) (from-string %))]]
                [:div.required.field {:class (when (and EndTime (:EndTime errors))
                                               "error")}
                 [:label "End Time"]
-                [input-atom :datetime-local
+                [input-atom :datetime-local {}
                  (r/wrap EndTime swap! form assoc :EndTime)
                  #(or % (unparse (:date-hour-minute formatters) (now)))
                  #(unparse (:date-hour-minute formatters) (from-string %))]]]
               [:div.field
                [:label "Description"]
-               [input-atom :textarea
+               [input-atom :textarea {}
                 (r/wrap Description swap! form assoc :Description)]]
               [action-button
                {:class (str "primary" (when (seq errors) " disabled"))
@@ -1703,16 +1705,16 @@
                [:div.one.field
                 [:div.required.field
                  [:label "Email"]
-                 [input-atom :text
+                 [input-atom :text {:disabled true}
                   (r/wrap Email swap! form assoc :Email)]]]
                [:div.two.fields
                 [:div.required.field
                  [:label "First Name"]
-                 [input-atom :text
+                 [input-atom :text {:disabled true}
                   (r/wrap FirstName swap! form assoc :FirstName)]]
                 [:div.required.field
                  [:label "Last Name"]
-                 [input-atom :text
+                 [input-atom :text {:disabled true}
                   (r/wrap LastName swap! form assoc :LastName)]]]
                ; TODO: use TicketPrice > 0 instead of RequiresPayment
                (when (:RequiresPayment event)
@@ -2029,7 +2031,7 @@
              [:div.required.field {:class (when (and Name (:Name errors))
                                             "error")}
               [:label "Organization Name"]
-              [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
+              [input-atom :text {} (r/wrap Name swap! form assoc :Name)]]]
             [action-button
              {:class (str "primary" (when (seq errors) " disabled"))
               :type :submit}
@@ -2149,7 +2151,7 @@
            [:div.two.fields
             [:div.field
              [:label "Choose event:"]
-             [input-atom :select events event-id identity int]]]]
+             [input-atom :select {} events event-id identity int]]]]
           (when (seq all-attendees)
             [chart
              {:chart
