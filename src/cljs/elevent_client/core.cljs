@@ -470,6 +470,20 @@
                                      (clj->js options))
      :reagent-render (constantly [:div])}))
 
+; action must be a function that takes a callback for the API call as a param
+(defn action-button [options text action & [alt-text]]
+  (let [loading-text [:i.spinner.loading.icon]
+        button-text  (atom text)]
+    (fn [options text action & [alt-text alt-action]]
+      [:div.ui.button
+       (merge options
+              {:on-click (fn []
+                           (reset! button-text loading-text)
+                           (if alt-text
+                             (action #(reset! button-text alt-text))
+                             (action #(reset! button-text text))))})
+       @button-text])))
+
 
 ;; Compenents
 ;; =============================================================================
@@ -1239,13 +1253,14 @@
                        @organizations-db))
 
             create-event
-            (fn [e form]
-              (when (empty? errors)
-                (.preventDefault e)
-                (events-endpoint :create
-                                 form
-                                 #(set! js/window.location
-                                        (events-explore-route)))))]
+            (fn [form]
+              (fn [callback]
+                (when (empty? errors)
+                  (events-endpoint :create
+                                   form
+                                   #(do
+                                      (callback)
+                                      (js/location.replace (events-explore-route)))))))]
         [:div.sixteen.wide.column
          [:div.ui.top.attached.tabular.menu
           [:a.item {:href (events-route)}
@@ -1319,10 +1334,11 @@
              [:label "Description"]
              [input-atom :textarea
               (r/wrap Description swap! form assoc :Description)]]
-            [:button.ui.primary.button {:class (when (seq errors) "disabled")
-                                        :type :submit
-                                        :on-click #(create-event % @form)}
-             "Add"]]]]]))))
+            [action-button
+             {:class (str "primary" (when (seq errors) " disabled"))
+              :type :submit}
+             "Add"
+             (create-event @form)]]]]]))))
 
 (defn event-activity-edit-page [event-id & [activity-id]]
   (let [form (atom {:EventId event-id})
@@ -1364,18 +1380,20 @@
                              event-id)))
 
             create-activity
-            (fn [e form]
-              (when (empty? errors)
-                (.preventDefault e)
-                (activities-endpoint :create
-                                     (let [start-time (:StartTime form)
-                                           end-time   (:EndTime form)]
-                                       (assoc form
-                                         :StartTime (unparse (:date-hour-minute-second formatters)
-                                                             (from-string start-time))
-                                         :EndTime (unparse (:date-hour-minute-second formatters)
-                                                           (from-string end-time))))
-                                     #(reset-form!))))]
+            (fn [form]
+              (fn [callback]
+                (when (empty? errors)
+                  (activities-endpoint :create
+                                       (let [start-time (:StartTime form)
+                                             end-time   (:EndTime form)]
+                                         (assoc form
+                                           :StartTime (unparse (:date-hour-minute-second formatters)
+                                                               (from-string start-time))
+                                           :EndTime (unparse (:date-hour-minute-second formatters)
+                                                             (from-string end-time))))
+                                       #(do
+                                          (callback)
+                                          (reset-form!))))))]
         (when (seq event)
           [:div.sixteen.wide.column
            [:div.ui.segment
@@ -1418,10 +1436,11 @@
                [:label "Description"]
                [input-atom :textarea
                 (r/wrap Description swap! form assoc :Description)]]
-              [:button.ui.primary.button {:class (when (seq errors) "disabled")
-                                          :type :submit
-                                          :on-click #(create-activity % @form)}
-               "Add"]]]
+              [action-button
+               {:class (str "primary" (when (seq errors) " disabled"))
+                :type :submit}
+               "Add"
+               (create-activity @form)]]]
             [:div.ui.vertical.segment
              [:h2.ui.header
               "Activities"]
@@ -1445,8 +1464,7 @@
 
 (defn event-attendee-page [event-id attendee-id]
   (let [check-in-or-out
-        (fn [op url init callback]
-          (init)
+        (fn [op url callback]
           (op (str api-url url)
               {:format :json
                :keywords? true
@@ -1457,25 +1475,23 @@
                  {})
                :handler callback
                :error-handler (fn []
-                                (swap! messages conj [:error "Check in failed. Please try again."]))}))
-
-        button-loading? (atom false)]
+                                (swap! messages conj [:error "Check in failed. Please try again."]))}))]
     (fn [event-id attendee-id]
       (let [event (into {} (d/entity @events-db event-id))
 
             attendee
-            (atom (into {} (first (map (fn [[user-id attendee-id]]
-                                         (merge (into {} (d/entity @users-db
-                                                                   user-id))
-                                                (into {} (d/entity @attendees-db
-                                                                   attendee-id))))
-                                       (d/q '[:find ?e ?a
-                                              :in $ ?attendee-id
-                                              :where
-                                              [?a :AttendeeId ?attendee-id]
-                                              [?a :UserId ?e]]
-                                            @attendees-db
-                                            attendee-id)))))
+            (into {} (first (map (fn [[user-id attendee-id]]
+                                   (merge (into {} (d/entity @users-db
+                                                             user-id))
+                                          (into {} (d/entity @attendees-db
+                                                             attendee-id))))
+                                 (d/q '[:find ?e ?a
+                                        :in $ ?attendee-id
+                                        :where
+                                        [?a :AttendeeId ?attendee-id]
+                                        [?a :UserId ?e]]
+                                      @attendees-db
+                                      attendee-id))))
 
             attendee-activities
             (d/q '[:find ?schedule-id ?activity-id
@@ -1491,58 +1507,48 @@
                  @attendees-db
                  event-id
                  attendee-id)]
-        (let [button-text (atom (if @button-loading?
-                                  [:i.spinner.loading.icon]
-                                  (if (:CheckinTime @attendee)
-                                    "Check out"
-                                    "Check in")))
-
-              check-in
+        (let [check-in
               (fn [attendee-id]
-                (check-in-or-out PUT
-                                 (str "/attendees/" attendee-id "/checkin")
-                                 #(reset! button-loading? true)
-                                 (fn []
-                                   (prn "Checked in!")
-                                   (attendees-endpoint :read nil #(reset! button-loading? false)))))
+                (fn [callback]
+                  (check-in-or-out PUT
+                                   (str "/attendees/" attendee-id "/checkin")
+                                   (fn []
+                                     (prn "Checked in!")
+                                     (attendees-endpoint :read nil callback)))))
 
               check-out
               (fn [attendee-id]
-                (check-in-or-out DELETE
-                                 (str "/attendees/" attendee-id "/checkin")
-                                 #(reset! button-loading? true)
-                                 (fn []
-                                   (prn "Checked out!")
-                                   (attendees-endpoint :read nil #(reset! button-loading? false)))))
+                (fn [callback]
+                  (check-in-or-out DELETE
+                                   (str "/attendees/" attendee-id "/checkin")
+                                   (fn []
+                                     (prn "Checked out!")
+                                     (attendees-endpoint :read nil callback)))))
 
               activity-check-in
-              (fn [schedule-id checked-in callback]
-                (check-in-or-out PUT
-                                 (str "/schedules/" schedule-id "/checkin")
-                                 #()
-                                 (fn []
-                                   (prn "Checked in!")
-                                   (schedules-endpoint :read nil #(do
-                                                                    ;(reset! checked-in true)
-                                                                    (callback))))))
+              (fn [schedule-id checked-in]
+                (fn [callback]
+                  (check-in-or-out PUT
+                                   (str "/schedules/" schedule-id "/checkin")
+                                   (fn []
+                                     (prn "Checked in!")
+                                     (schedules-endpoint :read nil callback)))))
 
               activity-check-out
-              (fn [schedule-id checked-in callback]
-                (check-in-or-out DELETE
-                                 (str "/schedules/" schedule-id "/checkin")
-                                 #()
-                                 (fn []
-                                   (prn "Checked out!")
-                                   (schedules-endpoint :read nil #(do
-                                                                    ;(reset! checked-in false)
-                                                                    (callback))))))]
-          (when (seq event)
+              (fn [schedule-id checked-in]
+                (fn [callback]
+                  (check-in-or-out DELETE
+                                   (str "/schedules/" schedule-id "/checkin")
+                                   (fn []
+                                     (prn "Checked out!")
+                                     (schedules-endpoint :read nil callback)))))]
+          (when (and (seq event) (seq attendee))
             [:div.sixteen.wide.column
              [:div.ui.segment
               [:div
                [:div.ui.vertical.segment
                 [:h1.ui.header
-                 (str (:FirstName @attendee) " " (:LastName @attendee))]]
+                 (str (:FirstName attendee) " " (:LastName attendee))]]
                [:div.ui.vertical.segment
                 [:div.ui.divided.items
                  [:div.item
@@ -1564,11 +1570,17 @@
                    [:div.description
                     (:Description event)]
                    [:div.extra
-                    [:div.ui.right.floated.button
-                     {:on-click #(if (:CheckinTime @attendee)
-                                   (check-out attendee-id)
-                                   (check-in attendee-id))}
-                     @button-text]]]]]]
+                    [action-button
+                     {:class "right floated"}
+                     (if (:CheckinTime attendee)
+                       "Check out"
+                       "Check in")
+                     (if (:CheckinTime attendee)
+                       (check-out attendee-id)
+                       (check-in attendee-id))
+                     (if (:CheckinTime attendee)
+                       "Check in"
+                       "Check out")]]]]]]
                [:div.ui.vertical.segment
                 [:h3.ui.header
                  "Attendee Info"]
@@ -1576,7 +1588,7 @@
                  [:tbody
                   [:tr
                    [:td "Email"]
-                   [:td (:Email @attendee)]]]]]
+                   [:td (:Email attendee)]]]]]
                [:div.ui.vertical.segment
                 [:h3.ui.header
                  "Attendee Schedule"]
@@ -1598,8 +1610,7 @@
                           (when schedule-id
                             (d/entity @schedules-db schedule-id))]
                       (let
-                        [checked-in (atom (not (nil? (:CheckinTime schedule))))
-                         checking-in (atom false)]
+                        [checked-in (atom (not (nil? (:CheckinTime schedule))))]
                         [:tr
                          [:td {:noWrap true}
                           (when activity
@@ -1612,17 +1623,17 @@
                          [:td (:Name activity)]
                          [:td (:Location activity)]
                          [:td.right.aligned {:noWrap true}
-                          [:div.ui.button
-                           {:on-click (fn []
-                                        (reset! checking-in true)
-                                        (if @checked-in
-                                          (activity-check-out schedule-id checked-in #(reset! checking-in false))
-                                          (activity-check-in schedule-id checked-in #(reset! checking-in false))))}
-                           (if @checking-in
-                             [:i.spinner.loading.icon] ; todo: not working
-                             (if @checked-in
-                               "Check out"
-                               "Check in"))]]])))]]]]]]))))))
+                          [action-button
+                           {}
+                           (if @checked-in
+                             "Check out"
+                             "Check in")
+                           (if @checked-in
+                             (activity-check-out schedule-id checked-in)
+                             (activity-check-in schedule-id checked-in))
+                           (if @checked-in
+                             "Check in"
+                             "Check out")]]])))]]]]]]))))))
 
 (defn event-register-page [event-id]
   (let [form (atom {:Email (get-in @session [:user :Email])
@@ -1644,22 +1655,26 @@
 
             register
             (fn [form]
-              (when (empty? errors)
-                ; TODO: maybe this logic is wrong?MIght want to buy ticket even if not required
-                (if (:RequiresPayment event)
-                  (renew-stripe-token!
-                    (fn [] (attendees-endpoint :create
-                                               {:UserId (get-in @session [:user :UserId])
-                                                :EventId event-id
-                                                :Token (:stripe-token @session)
-                                                :Amount (:TicketPrice event)}
-                                               #(do
-                                                  (swap! session dissoc :stripe-token)
-                                                  (js/location.replace (events-route))))))
-                  (attendees-endpoint :create
-                                      {:UserId (get-in @session [:user :UserId])
-                                       :EventId event-id}
-                                      #(js/location.replace (events-route))))))]
+              (fn [callback]
+                (when (empty? errors)
+                  ; TODO: maybe this logic is wrong?MIght want to buy ticket even if not required
+                  (if (:RequiresPayment event)
+                    (renew-stripe-token!
+                      (fn [] (attendees-endpoint :create
+                                                 {:UserId (get-in @session [:user :UserId])
+                                                  :EventId event-id
+                                                  :Token (:stripe-token @session)
+                                                  :Amount (:TicketPrice event)}
+                                                 #(do
+                                                    (callback)
+                                                    (swap! session dissoc :stripe-token)
+                                                    (js/location.replace (events-route))))))
+                    (attendees-endpoint :create
+                                        {:UserId (get-in @session [:user :UserId])
+                                         :EventId event-id}
+                                        #(do
+                                           (callback)
+                                           (js/location.replace (events-route))))))))]
         (when (seq event)
           [:div.ui.stackable.page.grid
            [:div.sixteen.wide.column
@@ -1703,14 +1718,14 @@
                (when (:RequiresPayment event)
                  [payments-component])]
               [:div.ui.divider]
-              [:button.ui.primary.button
-               {:type :submit
-                :class (when (or (seq errors)
-                                 (and (:RequiresPayment event)
-                                      (nil? (:payment-info @session))))
-                         "disabled")
-                :on-click #(register @form)}
-               "Register"]]]]])))))
+              [action-button
+               {:class (str "primary" (when (or (seq errors)
+                                                (and (:RequiresPayment event)
+                                                     (nil? (:payment-info @session))))
+                                        " disabled"))
+                :type :submit}
+               "Register"
+               (register @form)]]]]])))))
 
 (defn event-schedule-page [event-id]
   (let [cart-activities (atom #{})
@@ -1997,12 +2012,13 @@
       (let [{:keys [Name]} @form
             errors (validator @form)
             create-organization
-            (fn [e form]
-              (.preventDefault e)
-              (organizations-endpoint :create
-                                      form
-                                      #(set! js/window.location
-                                             (organizations-route))))]
+            (fn [form]
+              (fn [callback]
+                (organizations-endpoint :create
+                                        form
+                                        #(do
+                                           (callback)
+                                           (js/location.replace (organizations-route))))))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:form.ui.form
@@ -2014,11 +2030,11 @@
                                             "error")}
               [:label "Organization Name"]
               [input-atom :text (r/wrap Name swap! form assoc :Name)]]]
-            [:button.ui.primary.button
-             {:type :submit
-              :class (when (seq errors) "disabled")
-              :on-click #(create-organization % @form)}
-             "Add"]]]]]))))
+            [action-button
+             {:class (str "primary" (when (seq errors) " disabled"))
+              :type :submit}
+             "Add"
+             (create-organization @form)]]]]]))))
 
 (defn calendar-page []
   (let [user-activities
