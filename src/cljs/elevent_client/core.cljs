@@ -22,6 +22,7 @@
                                      inclusion-of
                                      numericality-of
                                      presence-of
+                                     length-of
                                      valid?
                                      validation-set]])
     (:require-macros [elevent-client.core :refer [endpoints]])
@@ -95,7 +96,8 @@
                     :params
                     (when (or (= operation :create)
                               (= operation :update)
-                              (= operation :bulk))
+                              (= operation :bulk)
+                              (= operation :create-no-read))
                       params)
 
                     :handler
@@ -105,7 +107,8 @@
                         (when handler (handler json)))
                       (fn [json]
                         (when handler (handler json))
-                        (dispatch! :read nil nil nil)))
+                        (when-not (= operation :create-no-read)
+                          (dispatch! :read nil nil nil))))
 
                     :error-handler
                     (fn [error]
@@ -127,6 +130,7 @@
            :read   (GET  uri options)
            :update (check-id PUT)
            :delete (check-id DELETE)
+           :create-no-read (POST uri options)
            (POST (str uri "/" (name operation)) options)))))
     ([operation params handler]
      (dispatch! operation params handler nil))))
@@ -333,7 +337,7 @@
   (set! js/window.location (home-route)))
 
 (defn sign-up! [form]
-  (users-endpoint :create form #(sign-in! form)))
+  (users-endpoint :create-no-read form #(sign-in! form)))
 
 (add-watch users-db
            :find-user
@@ -859,7 +863,8 @@
                                       (inclusion-of :PasswordConfirm
                                                     :in #{(:Password @form)})
                                       (presence-of :FirstName)
-                                      (presence-of :LastName))
+                                      (presence-of :LastName)
+                                      (length-of   :Password :within (range 8 100)))
             errors                   (validator @form)]
         [:div.eight.wide.centered.column
          [:div.ui.segment
@@ -943,33 +948,35 @@
            [:div.ui.vertical.segment
             [:h1.ui.header "Events You're Attending"]]
            [:div.ui.vertical.segment
-            [:div.ui.divided.items
-             (for [event attending-events]
-               ^{:key (:EventId event)}
-               [:div.item
-                [:div.content
-                 [:a.header {:href (event-route event)}
-                  (:Name event)]
-                 [:div.meta
-                  [:strong "Date:"]
-                  (let [start (from-string (:StartDate event))
-                        end   (from-string (:EndDate   event))]
-                    (str (unparse datetime-formatter start)
-                         (when (after? end start)
-                           (str " to " (unparse datetime-formatter end)))))]
-                 [:div.meta
-                  [:strong "Venue:"]
-                  (:Venue event)]
-                 [:div.description
-                  (:Description event)]
-                 [:div.extra
-                  [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
-                   "Your activities"
-                   [:i.right.chevron.icon]]
-                  [:a.ui.right.floated.small.button
-                   {:on-click #(leave-event (:AttendeeId event))}
-                   [:i.red.remove.icon]
-                   "Leave event"]]]])]]]
+            (if (seq attending-events)
+              [:div.ui.divided.items
+               (for [event attending-events]
+                 ^{:key (:EventId event)}
+                 [:div.item
+                  [:div.content
+                   [:a.header {:href (event-route event)}
+                    (:Name event)]
+                   [:div.meta
+                    [:strong "Date:"]
+                    (let [start (from-string (:StartDate event))
+                          end   (from-string (:EndDate   event))]
+                      (str (unparse datetime-formatter start)
+                           (when (after? end start)
+                             (str " to " (unparse datetime-formatter end)))))]
+                   [:div.meta
+                    [:strong "Venue:"]
+                    (:Venue event)]
+                   [:div.description
+                    (:Description event)]
+                   [:div.extra
+                    [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+                     "Your activities"
+                     [:i.right.chevron.icon]]
+                    [:a.ui.right.floated.small.button
+                     {:on-click #(leave-event (:AttendeeId event))}
+                     [:i.red.remove.icon]
+                     "Leave event"]]]])]
+              [:p "You aren't attending any events."])]]
           [:div.ui.dimmer {:class (when (empty? @events) "active")}
            [:div.ui.loader]]]]))))
 
@@ -1013,12 +1020,11 @@
               [:strong "Date:"]
               (let [start (from-string (:StartDate event))
                     end   (from-string (:EndDate   event))]
-                (str " " (unparse datetime-formatter start)
+                (str (unparse datetime-formatter start)
                      (when (after? end start)
                        (str " to " (unparse datetime-formatter end)))))]
              [:div.meta
               [:strong "Venue:"]
-              " "
               (:Venue event)]
              [:div.description
               (:Description event)]
@@ -1048,12 +1054,12 @@
        "Owned"]
       [:a.item {:href (event-add-route)}
        "Add"]]
-     (when (seq created-events)
-       [:div.ui.bottom.attached.segment
-        [:div
-         [:div.ui.vertical.segment
-          [:h1.ui.header "Events You Own"]]
-         [:div.ui.vertical.segment
+     [:div.ui.bottom.attached.segment
+      [:div
+       [:div.ui.vertical.segment
+        [:h1.ui.header "Events You Own"]]
+       [:div.ui.vertical.segment
+        (if (seq created-events)
           [:div.ui.divided.items
            (for [event created-events]
              ^{:key (:EventId event)}
@@ -1076,9 +1082,10 @@
                [:div.extra
                 [:a.ui.right.floated.small.button {:href nil}
                  "Edit"
-                 [:i.right.chevron.icon]]]]])]]]
-        [:div.ui.dimmer {:class (when (empty? @events) "active")}
-         [:div.ui.loader]]])]))
+                 [:i.right.chevron.icon]]]]])]
+          [:p "You don't own any events."])]]
+      [:div.ui.dimmer {:class (when (empty? @events) "active")}
+       [:div.ui.loader]]]]))
 
 (defn event-page [event-id]
   (let [event (into {} (d/entity @events-db event-id))
