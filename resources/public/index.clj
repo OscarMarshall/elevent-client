@@ -5,6 +5,10 @@
           :href "bower_components/semantic-ui/dist/semantic.min.css"}]
   [:link {:rel "stylesheet" :type "text/css"
           :href "bower_components/fullcalendar/dist/fullcalendar.min.css"}]
+  [:link {:rel "stylesheet" :type "text/css" :media "print"
+          :href "bower_components/fullcalendar/dist/fullcalendar.print.css"}]
+  [:link {:rel "stylesheet" :type "text/css"
+          :href "bower_components/pikaday-time/css/pikaday.css"}]
   [:script {:type "text/javascript"
             :src "bower_components/jquery/dist/jquery.min.js"}]
   [:script {:type "text/javascript"
@@ -21,5 +25,7 @@
             :src "https://js.stripe.com/v2/"}]
   [:script {:type "text/javascript"
             :src "bower_components/jquery-qrcode/dist/jquery.qrcode.min.js"}]
+  [:script {:type "text/javascript"
+            :src "bower_components/pikaday-time/pikaday.js"}]
   [:script {:type "text/javascript" :src "js/app.js"}]]
  [:body]]

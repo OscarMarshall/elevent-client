@@ -12,8 +12,8 @@
 
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
-      [cljs-time.coerce :refer [from-string from-long to-long]]
-      [cljs-time.core :refer [after? at-midnight now plus hours]]
+      [cljs-time.coerce :refer [from-string to-string from-long to-long from-date to-date]]
+      [cljs-time.core :refer [after? at-midnight now plus minus hours]]
       [cljs-time.format :refer [formatter formatters unparse parse]]
       [datascript :as d]
       [garden.core :refer [css]]
@@ -38,11 +38,14 @@
 (def date-format "MMMM d, yyyy")
 (def time-format "h:mm a")
 (def datetime-format (str time-format " " date-format))
-(def input-date-time-format "hh:mm a YYYY-MM-dd")
+(def input-date-time-format "MM/dd/YYYY, hh:mm a")
+(def moment-date-time-format "MM/DD/YYYY, hh:mm a")
 (def date-formatter (formatter date-format))
 (def time-formatter (formatter time-format))
 (def datetime-formatter (formatter datetime-format))
 (def input-date-time-formatter (formatter input-date-time-format))
+
+(def input-date-time-re #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
 
 
 
@@ -371,6 +374,78 @@
 
 ;; Elements
 ;; =============================================================================
+
+;; Modified version of Tim Gilbert's cljs-pikaday, Copyright (c) 2012 Tim Gilbert
+;; See third-party/cljs-pikaday-license.txt
+(defn date-selector
+  "Return a date-selector reagent component. Takes a single map as its
+  argument, with the following keys:
+  date-atom: an atom or reaction bound to the date value represented by the picker.
+  max-date-atom: atom representing the maximum date for the selector.
+  min-date-atom: atom representing the minimum date for the selector.
+  pikaday-attrs: a map of options to be passed to the Pikaday constructor.
+  input-attrs: a map of options to be used as <input> tag attributes."
+  [{:keys [date-atom max-date-atom min-date-atom pikaday-attrs input-attrs]}]
+  (let [in #(if (from-string %)
+              (unparse input-date-time-formatter (from-string %))
+              %)
+        out #(if (from-string %)
+               (unparse (:date-hour-minute formatters) (from-string %))
+               %)
+        from-input-string #(let [in-date (try (parse input-date-time-formatter %) (catch :default _))]
+                             (if in-date
+                               (unparse (:date-hour-minute formatters) (parse input-date-time-formatter %))
+                               %))
+        normalize ; because of GMT
+        #(to-date (plus (from-string %) (hours 6)))]
+    (r/create-class
+      {:component-did-mount
+        (fn [this]
+          (let [default-opts
+                {:field (.getDOMNode this)
+                 :defaultDate @date-atom
+                 :setDefaultDate true
+                 :onSelect #(when date-atom (reset! date-atom (out (to-string (minus (from-date %) (hours 6))))))}
+                opts (clj->js (merge default-opts pikaday-attrs))
+                instance (js/Pikaday. opts)]
+            ; This code could probably be neater
+            (when date-atom
+              (add-watch date-atom :update-instance
+                (fn [ke ref old new]
+                  ; final parameter here causes pikaday to skip onSelect() callback
+                  (when (from-string new)
+                    (.setDate instance (normalize new) true)))))
+            (when min-date-atom
+              (add-watch min-date-atom :update-min-date
+                (fn [key ref old new]
+                  (when (from-string new)
+                    (.setMinDate instance (normalize new))
+                    ; If new min date is greater than selected date, reset actual date to min
+                    (if (< @date-atom new)
+                      (reset! date-atom new))))))
+            (when max-date-atom
+              (add-watch max-date-atom :update-max-date
+                (fn [key ref old new]
+                  (when (from-string new)
+                    (.setMaxDate instance (normalize new))
+                    ; If new max date is less than selected date, reset actual date to max
+                    (if (> @date-atom new)
+                      (reset! date-atom new))))))))
+        :component-did-update
+        (fn [this]
+          (let [value (-> this
+                          r/dom-node
+                          js/jQuery
+                          .val)]
+            (when (from-string value)
+              (-> this
+                  r/dom-node
+                  js/jQuery
+                  (.val (in @date-atom))))))
+        :reagent-render
+        (fn [input-attrs]
+          [:input (merge input-attrs {:on-change #(reset! date-atom
+                                                          (from-input-string (.-value (.-target %))))})])})))
 
 (defn input-atom
   ([type options select-options state in out]
@@ -1222,7 +1297,9 @@
                                   (presence-of :EndDate)
                                   (format-of   :TicketPrice :format #"^\d*\.\d\d$"
                                                :allow-nil true
-                                               :allow-blank true))
+                                               :allow-blank true)
+                                  (format-of   :StartDate :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
+                                  (format-of   :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))
         clone-id (atom 0)]
     (add-watch clone-id :clone
                (fn [_ _ _ id]
@@ -1300,20 +1377,20 @@
               [:div.required.field
                [:label "Venue"]
                [input-atom :text {} (r/wrap Venue swap! form assoc :Venue)]]]]
-            [:div.two.fields
-             [:div.required.field {:class (when (and StartDate (:StartDate errors))
-                                            "error")}
-              [:label "Start Date"]
-              [input-atom :datetime-local {}
-               (r/wrap StartDate swap! form assoc :StartDate)
-               #(or % (unparse (:date-hour-minute formatters) (now)))
-               #(unparse (:date-hour-minute formatters) (from-string %))]]
-             [:div.required.field
-              [:label "End Date"]
-              [input-atom :datetime-local {}
-               (r/wrap EndDate swap! form assoc :EndDate)
-               #(or % (unparse (:date-hour-minute formatters) (now)))
-               #(unparse (:date-hour-minute formatters) (from-string %))]]]
+            (let [start-date (r/wrap StartDate swap! form assoc :StartDate)
+                  end-date   (r/wrap EndDate swap! form assoc :EndDate)]
+              [:div.two.fields
+               [:div.required.field {:class (when (and StartDate (:StartDate errors))
+                                              "error")}
+                [:label "Start Date"]
+                [date-selector {:date-atom start-date
+                                :max-date-atom end-date
+                                :pikaday-attrs {:minDate (to-date (plus (now) (hours 6)))}}]]
+               [:div.required.field {:class (when (and EndDate (:EndDate errors))
+                                              "error")}
+                [:label "End Date"]
+                [date-selector {:date-atom end-date
+                                :min-date-atom start-date}]]])
             [:div.field
              [:div.four.wide.field {:class (when (and TicketPrice (:TicketPrice errors))
                                    "error")}
