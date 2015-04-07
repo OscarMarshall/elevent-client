@@ -2102,7 +2102,7 @@
             (fn [form]
               (fn [callback]
                 (organizations-endpoint :create
-                                        form
+                                        (assoc form :AdminId (get-in @session [:user :UserId]))
                                         #(do
                                            (callback)
                                            (js/location.replace (organizations-route))))))]
