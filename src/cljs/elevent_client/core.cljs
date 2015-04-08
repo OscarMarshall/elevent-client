@@ -2,6 +2,7 @@
     (:require
       [clojure.set :as set]
       [clojure.string :as str]
+      [cljs.core.async :refer [<! >! chan put! take!]]
 
       [goog.crypt.base64 :as b64]
       [goog.events :as events]
@@ -25,7 +26,9 @@
                                      length-of
                                      valid?
                                      validation-set]])
-    (:require-macros [elevent-client.core :refer [endpoints]])
+    (:require-macros
+      [cljs.core.async.macros :refer [go go-loop]]
+      [elevent-client.core :refer [endpoints]])
     (:import goog.History))
 
 
@@ -448,7 +451,11 @@
 (defn input-atom
   ([type options select-options state in out]
    (let [in  (or in  identity)
-         out (or out identity)]
+         out (or out identity)
+         change (chan 1 (filter out))]
+     (go-loop []
+       (reset! state (<! change))
+       (recur))
      (r/create-class
        {:component-did-mount
         (fn [this]
@@ -456,8 +463,7 @@
             (-> this
                 r/dom-node
                 js/jQuery
-                (.dropdown (clj->js {:onChange #(when % (reset! state
-                                                                (out %)))})))))
+                (.dropdown (clj->js {:onChange #(put! change %)})))))
 
         :component-did-update
         (fn [this]
@@ -465,16 +471,14 @@
             (-> this
                 r/dom-node
                 js/jQuery
-                (.dropdown (clj->js {:onChange #(when % (reset! state
-                                                                (out %)))})))))
+                (.dropdown (clj->js {:onChange #(put! change %)})))))
 
         :reagent-render
         (fn render
           ([_ options select-options state _ _]
-           (let [attributes (merge {:value     (in @state)
-                                    :on-change #(reset! state
-                                                        (out (.-value (.-target %))))}
-                                   options)]
+           (let [attributes (assoc options
+                              :value     (in @state)
+                              :on-change #(put! change (.-value (.-target %))))]
              (case type
                :textarea [:textarea attributes]
                :select [:div.ui.dropdown.selection
