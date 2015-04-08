@@ -131,7 +131,7 @@
          (case operation
            :create (POST uri options)
            :read   (GET  uri options)
-           :update (check-id PUT)
+           :update (PUT uri options)
            :delete (check-id DELETE)
            :create-no-read (POST uri options)
            (POST (str uri "/" (name operation)) options)))))
@@ -198,9 +198,7 @@
 
 (defroute events-route
   "/events" []
-  (if (:token @session)
-    (reset! current-page [#'events-page])
-    (location.replace (events-explore-route))))
+  (reset! current-page [#'events-page]))
 
 (defroute event-add-route
   "/events/add" []
@@ -535,20 +533,26 @@
                          [:div])})))
 
 (defn calendar [options]
-  (r/create-class
-    {:component-did-mount #(.fullCalendar (js/jQuery (r/dom-node %))
-                                          (clj->js options))
-     :component-did-update #(.fullCalendar (js/jQuery (r/dom-node %))
-                                           (clj->js options))
-     :reagent-render (constantly [:div])}))
+  (let [options (atom {})]
+    (r/create-class
+      {:component-did-mount #(.fullCalendar (js/jQuery (r/dom-node %))
+                                            (clj->js @options))
+       :component-did-update #(.fullCalendar (js/jQuery (r/dom-node %))
+                                             (clj->js @options))
+       :reagent-render (fn [x]
+                         (reset! options x)
+                         [:div])})))
 
 (defn qr-code [options]
-  (r/create-class
-    {:component-did-mount #(.qrcode (js/jQuery (r/dom-node %))
-                                    (clj->js options))
-     :component-did-update #(.qrcode (js/jQuery (r/dom-node %))
-                                     (clj->js options))
-     :reagent-render (constantly [:div])}))
+  (let [options (atom {})]
+    (r/create-class
+      {:component-did-mount #(.qrcode (js/jQuery (r/dom-node %))
+                                      (clj->js @options))
+       :component-did-update #(.qrcode (js/jQuery (r/dom-node %))
+                                       (clj->js @options))
+       :reagent-render (fn [x]
+                         (reset! options x)
+                         [:div])})))
 
 ; action must be a function that takes a callback for the API call as a param
 (defn action-button [options text action & [alt-text]]
@@ -572,12 +576,11 @@
   [:nav.ui.fixed.menu
    [:a.logo.item {:href (home-route)}
     [:img {:src "images/logo-menu.png"}]]
-   (when (:token @session)
-     [:a.blue.item {:href (events-route)
-                    :class (when (re-find (re-pattern (events-route)) @location)
-                             "active")}
-      [:i.ticket.icon]
-      "Events"])
+   [:a.blue.item {:href (events-route)
+                  :class (when (re-find (re-pattern (events-route)) @location)
+                           "active")}
+    [:i.ticket.icon]
+    "Events"]
    [:a.blue.item {:href (organizations-route)
                   :class (when (re-find (re-pattern (organizations-route))
                                         @location)
@@ -875,6 +878,36 @@
       (clj->js (:payment-info @session))
       response-handler)))
 
+(defn activity-table-component [event-id]
+  (let [activities (doall (map #(into {} (d/entity @activities-db %))
+                               (d/q '[:find [?activity-id ...]
+                                      :in $ ?event-id
+                                      :where [?activity-id :EventId ?event-id]]
+                                    @activities-db
+                                    event-id)))]
+    [:table.ui.table
+     [:thead
+      [:tr
+       [:th "Start Time"]
+       [:th "End Time"]
+       [:th "Activity"]
+       [:th "Location"]
+       [:th "Actions"]]]
+     [:tbody
+      (for [activity activities]
+        ^{:key (:ActivityId activity)}
+        [:tr
+         [:td (let [start (from-string (:StartTime activity))]
+                (unparse datetime-formatter start))]
+         [:td (let [end   (from-string (:EndTime   activity))]
+                (unparse datetime-formatter end))]
+         [:td (:Name activity)]
+         [:td (:Location activity)]
+         [:td [:a.ui.tiny.labeled.icon.button
+               {:href (event-activity-edit-route activity)}
+               [:i.edit.icon]
+               "Edit"]]])]]))
+
 
 ;; Pages
 ;; =============================================================================
@@ -996,64 +1029,68 @@
                                           (d/entity @attendees-db attendee-id)
                                           nil))]
     (fn []
-      (let [attending-events
-            (doall (map (fn [[event-id attendee-id]]
-                          (merge
-                            (into {} (d/entity @events-db event-id))
-                            {:AttendeeId attendee-id}))
-                        (d/q '[:find ?event-id ?attendee-id
-                               :in $ ?user-id
-                               :where
-                               [?attendee-id :UserId  ?user-id]
-                               [?attendee-id :EventId ?event-id]]
-                             @attendees-db
-                             (get-in @session [:user :UserId]))))]
-        [:div.sixteen.wide.column
-         [:div.ui.top.attached.tabular.menu
-          [:a.active.item {:href (events-route)}
-           "Events"]
-          [:a.item {:href (events-explore-route)}
-           "Explore"]
-          [:a.item {:href (events-owned-route)}
-           "Owned"]
-          [:a.item {:href (event-add-route)}
-           "Add"]]
-         [:div.ui.bottom.attached.segment
-          [:div
-           [:div.ui.vertical.segment
-            [:h1.ui.header "Events You're Attending"]]
-           [:div.ui.vertical.segment
-            (if (seq attending-events)
-              [:div.ui.divided.items
-               (for [event attending-events]
-                 ^{:key (:EventId event)}
-                 [:div.item
-                  [:div.content
-                   [:a.header {:href (event-route event)}
-                    (:Name event)]
-                   [:div.meta
-                    [:strong "Date:"]
-                    (let [start (from-string (:StartDate event))
-                          end   (from-string (:EndDate   event))]
-                      (str (unparse datetime-formatter start)
-                           (when (after? end start)
-                             (str " to " (unparse datetime-formatter end)))))]
-                   [:div.meta
-                    [:strong "Venue:"]
-                    (:Venue event)]
-                   [:div.description
-                    (:Description event)]
-                   [:div.extra
-                    [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
-                     "Your activities"
-                     [:i.right.chevron.icon]]
-                    [:a.ui.right.floated.small.button
-                     {:on-click #(leave-event (:AttendeeId event))}
-                     [:i.red.remove.icon]
-                     "Leave event"]]]])]
-              [:p "You aren't attending any events."])]]
-          [:div.ui.dimmer {:class (when (empty? @events) "active")}
-           [:div.ui.loader]]]]))))
+      (if (:token @session)
+        (let [attending-events
+              (doall (map (fn [[event-id attendee-id]]
+                            (merge
+                              (into {} (d/entity @events-db event-id))
+                              {:AttendeeId attendee-id}))
+                          (d/q '[:find ?event-id ?attendee-id
+                                 :in $ ?user-id
+                                 :where
+                                 [?attendee-id :UserId  ?user-id]
+                                 [?attendee-id :EventId ?event-id]]
+                               @attendees-db
+                               (get-in @session [:user :UserId]))))]
+          [:div.sixteen.wide.column
+           [:div.ui.top.attached.tabular.menu
+            [:a.active.item {:href (events-route)}
+             "Events"]
+            [:a.item {:href (events-explore-route)}
+             "Explore"]
+            [:a.item {:href (events-owned-route)}
+             "Owned"]
+            [:a.item {:href (event-add-route)}
+             "Add"]]
+           [:div.ui.bottom.attached.segment
+            [:div
+             [:div.ui.vertical.segment
+              [:h1.ui.header "Events You're Attending"]]
+             [:div.ui.vertical.segment
+              (if (seq attending-events)
+                [:div.ui.divided.items
+                 (for [event attending-events]
+                   ^{:key (:EventId event)}
+                   [:div.item
+                    [:div.content
+                     [:a.header {:href (event-route event)}
+                      (:Name event)]
+                     [:div.meta
+                      [:strong "Date:"]
+                      (let [start (from-string (:StartDate event))
+                            end   (from-string (:EndDate   event))]
+                        (str (unparse datetime-formatter start)
+                             (when (after? end start)
+                               (str " to " (unparse datetime-formatter end)))))]
+                     [:div.meta
+                      [:strong "Venue:"]
+                      (:Venue event)]
+                     [:div.description
+                      (:Description event)]
+                     [:div.extra
+                      [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+                       "Your activities"
+                       [:i.right.chevron.icon]]
+                      [:a.ui.right.floated.small.button
+                       {:on-click #(leave-event (:AttendeeId event))}
+                       [:i.red.remove.icon]
+                       "Leave event"]]]])]
+                [:p "You aren't attending any events."])]]
+            [:div.ui.dimmer {:class (when (empty? @events) "active")}
+             [:div.ui.loader]]]])
+        (do
+          (js/location.replace (events-explore-route))
+          [:div])))))
 
 (defn events-explore-page []
   (let [unattending-events
@@ -1155,7 +1192,8 @@
                [:div.description
                 (:Description event)]
                [:div.extra
-                [:a.ui.right.floated.small.button {:href nil}
+                [:a.ui.right.floated.small.button
+                 {:href (event-edit-route event)}
                  "Edit"
                  [:i.right.chevron.icon]]]]])]
           [:p "You don't own any events."])]]
@@ -1230,34 +1268,7 @@
         [:div.ui.vertical.segment
          [:h2.ui.header
           "Activities"]
-         [:table.ui.table
-          [:thead
-           [:tr
-            [:th "Start"]
-            [:th "End"]
-            [:th "Activity"]
-            [:th "Location"]]]
-          [:tbody
-           (for [activity activities]
-             ^{:key (:ActivityId activity)}
-             [:tr
-              [:td {:noWrap true}
-               (when activity
-                 (unparse datetime-formatter
-                          (from-string (:StartTime activity))))]
-              [:td {:noWrap true}
-               (when activity
-                 (unparse datetime-formatter
-                          (from-string (:EndTime activity))))]
-              [:td (:Name activity)]
-              [:td (:Location activity)]])]
-          [:tfoot
-           [:tr
-            [:th {:colSpan "4"}
-             [:a.ui.right.floated.small.labeled.icon.button
-              {:href (event-activity-add-route event)}
-              [:i.edit.icon]
-              "Edit"]]]]]]
+         [activity-table-component event-id]]
         [:div.ui.vertical.segment
          [:h2.ui.header
           "Attendees"
@@ -1426,24 +1437,29 @@
              (create-event @form)]]]]]))))
 
 (defn event-activity-edit-page [event-id & [activity-id]]
-  (let [form (atom {:EventId event-id})
+  (let [form (atom {:EventId event-id :EnrollmentCap ""})
+        reset-form!
+        (reset! form {:EventId event-id :EnrollmentCap ""})
         validator (validation-set (presence-of :Name)
                                   (presence-of :StartTime)
                                   (presence-of :EndTime)
                                   (format-of :EnrollmentCap :format #"^\d*$"
                                              :allow-blank true
-                                             :allow-nil true))
-        reset-form!
-        (fn []
-          (reset! form {:EventId event-id}))]
+                                             :allow-nil true))]
     (when activity-id
       (if-let [activity (seq (d/entity @activities-db activity-id))]
-        (reset! form (into {} activity))
+        (reset! form (let [activity (into {} activity)]
+                       (assoc activity
+                         :EnrollmentCap (str (:EnrollmentCap activity)))))
         (add-watch activities-db
                    :activity-edit
                    (fn [_ _ _ _]
-                     (reset! form (into {} (d/entity @activities-db
-                                                     activity-id)))
+                     (reset! form
+                             (let [activity (into {} (d/entity @activities-db
+                                                               activity-id))]
+                               (assoc activity
+                                 :EnrollmentCap
+                                 (str (:EnrollmentCap activity)))))
                      (remove-watch activities-db :activity-edit)))))
     (fn [event-id]
       (let [{:keys [Name Location EnrollmentCap StartTime EndTime Description]}
@@ -1461,8 +1477,7 @@
                                :in $ ?event-id
                                :where
                                [?e :EventId ?event-id]]
-                             @activities-db
-                             event-id)))
+                             @activities-db)))
 
             create-activity
             (fn [form]
@@ -1488,7 +1503,15 @@
             [:div.ui.vertical.segment
              [:h2.ui.header
               (if activity-id "Edit" "Add") " activity"]
-             [:form.ui.form
+             [:form.ui.form {:on-submit
+                             (fn [e]
+                               (when (empty? errors)
+                                 (.preventDefault e)
+                                 (activities-endpoint (if activity-id
+                                                        :update
+                                                        :create)
+                                                      @form
+                                                      #(reset-form!))))}
               [:div.one.field
                [:div.required.field {:class (when (and Name (:Name errors))
                                               "error")}
@@ -1524,28 +1547,12 @@
               [action-button
                {:class (str "primary" (when (seq errors) " disabled"))
                 :type :submit}
-               "Add"
+               (if activity-id "Edit" "Add")
                (create-activity @form)]]]
             [:div.ui.vertical.segment
              [:h2.ui.header
               "Activities"]
-             [:table.ui.table
-              [:thead
-               [:tr
-                [:th "Start Time"]
-                [:th "End Time"]
-                [:th "Activity"]
-                [:th "Location"]]]
-              [:tbody
-               (for [activity activities]
-                 ^{:key (:ActivityId activity)}
-                 [:tr
-                  [:td (let [start (from-string (:StartTime activity))]
-                         (unparse datetime-formatter start))]
-                  [:td (let [end   (from-string (:EndTime   activity))]
-                         (unparse datetime-formatter end))]
-                  [:td (:Name activity)]
-                  [:td (:Location activity)]])]]]]])))))
+             [activity-table-component event-id]]]])))))
 
 (defn event-attendees-page [event-id]
   (let [form (atom {:EventId event-id})]
