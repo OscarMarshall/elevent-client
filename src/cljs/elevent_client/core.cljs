@@ -13,9 +13,28 @@
 
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
-      [cljs-time.coerce :refer [from-string to-string from-long to-long from-date to-date]]
-      [cljs-time.core :refer [after? at-midnight now plus minus hours days minutes date-midnight local-date
-                              local-date-time year month day hour minute]]
+      [cljs-time.coerce :refer [from-string
+                                to-string
+                                from-long
+                                to-long
+                                from-date
+                                to-date]]
+      [cljs-time.core :refer [after?
+                              at-midnight
+                              date-midnight
+                              day
+                              days
+                              hour
+                              hours
+                              local-date
+                              local-date-time
+                              minus
+                              minute
+                              minutes
+                              month
+                              now
+                              plus
+                              year]]
       [cljs-time.format :refer [formatter formatters unparse parse]]
       [datascript :as d]
       [garden.core :refer [css]]
@@ -125,7 +144,8 @@
                           (sign-out!)
                           (if (= (:failure error) :timeout)
                             (add-message! :negative (str uri " timed out"))
-                            (add-message! :negative (str uri (js->clj error)))))))}]
+                            (add-message! :negative
+                                          (str uri (js->clj error)))))))}]
        (let [check-id (fn [op] (if (contains? params element-id)
                                  (op (str uri "/" (params element-id)) options)
                                  (throw (str "Element doesn't contain key \""
@@ -354,7 +374,8 @@
                       (when-let [entity-id (->> email
                                                 (d/q '[:find ?user-id
                                                        :in $ ?email
-                                                       :where [?user-id :Email ?email]]
+                                                       :where
+                                                       [?user-id :Email ?email]]
                                                      db)
                                                 ffirst)]
                         (into {} (d/entity db entity-id)))))))
@@ -377,26 +398,31 @@
 ;; Elements
 ;; =============================================================================
 
-;; Modified version of Tim Gilbert's cljs-pikaday, Copyright (c) 2012 Tim Gilbert
+;; Modified version of Tim Gilbert's cljs-pikaday
+;; Copyright (c) 2012 Tim Gilbert
 ;; See third-party/cljs-pikaday-license.txt
 (defn date-selector
-  "Return a date-selector reagent component. Takes a single map as its
-  argument, with the following keys:
-  date-atom: an atom or reaction bound to the date value represented by the picker.
+  "Return a date-selector reagent component. Takes a single map as its argument,
+  with the following keys: date-atom: an atom or reaction bound to the date
+  value represented by the picker.
   max-date-atom: atom representing the maximum date for the selector.
   min-date-atom: atom representing the minimum date for the selector.
   pikaday-attrs: a map of options to be passed to the Pikaday constructor.
   input-attrs: a map of options to be used as <input> tag attributes."
-  [{:keys [date-atom max-date-atom min-date-atom pikaday-attrs input-attrs static-attrs]}]
+  [{:keys [date-atom max-date-atom min-date-atom pikaday-attrs input-attrs
+           static-attrs]}]
   (let [in #(if (from-string %)
               (unparse input-date-time-formatter (from-string %))
               %)
         out #(if (from-string %)
                (unparse (:date-hour-minute formatters) (from-string %))
                %)
-        from-input-string #(let [in-date (try (parse input-date-time-formatter %) (catch :default _))]
+        from-input-string #(let [in-date
+                                 (try (parse input-date-time-formatter %)
+                                   (catch :default _))]
                              (if in-date
-                               (unparse (:date-hour-minute formatters) (parse input-date-time-formatter %))
+                               (unparse (:date-hour-minute formatters)
+                                        (parse input-date-time-formatter %))
                                %))
         normalize ; because of GMT
         #(to-date (plus (from-string %) (hours 6)))
@@ -409,8 +435,12 @@
                           (reset! date-atom (out (to-string max-date)))
                           (if (after? min-date (from-date new-date))
                             (reset! date-atom (out (to-string min-date)))
-                            (reset! date-atom (out (to-string (minus (from-date new-date) (hours 6)))))))
-                        (reset! date-atom (out (to-string (minus (from-date new-date) (hours 6))))))))]
+                            (reset! date-atom
+                                    (out (to-string (minus (from-date new-date)
+                                                           (hours 6)))))))
+                        (reset! date-atom
+                                (out (to-string (minus (from-date new-date)
+                                                       (hours 6))))))))]
     (r/create-class
       {:component-did-mount
         (fn [this]
@@ -427,12 +457,14 @@
                 (-> this
                     r/dom-node
                     js/jQuery
-                    (.val (in (to-string (minus (from-date (:defaultDate opts)) (hours 6))))))))
+                    (.val (in (to-string (minus (from-date (:defaultDate opts))
+                                                (hours 6))))))))
             ; This code could probably be neater
             (when date-atom
               (add-watch date-atom :update-instance
                 (fn [ke ref old new]
-                  ; final parameter here causes pikaday to skip onSelect() callback
+                  ;; final parameter here causes pikaday to skip onSelect()
+                  ;; callback
                   (when (from-string new)
                     (.setDate instance (normalize new) true)))))
             (when min-date-atom
@@ -440,7 +472,8 @@
                 (fn [key ref old new]
                   (when (from-string new)
                     (.setMinDate instance (normalize new))
-                    ; If new min date is greater than selected date, reset actual date to min
+                    ;; If new min date is greater than selected date, reset
+                    ;; actual date to min
                     (if (< @date-atom new)
                       (reset! date-atom new))))))
             (when max-date-atom
@@ -448,7 +481,8 @@
                 (fn [key ref old new]
                   (when (from-string new)
                     (.setMaxDate instance (normalize new))
-                    ; If new max date is less than selected date, reset actual date to max
+                    ;; If new max date is less than selected date, reset actual
+                    ;; date to max
                     (if (> @date-atom new)
                       (reset! date-atom new))))))))
         :component-did-update
@@ -464,8 +498,11 @@
                   (.val (in @date-atom))))))
         :reagent-render
         (fn [input-attrs]
-          [:input (merge input-attrs {:on-change #(reset! date-atom
-                                                          (from-input-string (.-value (.-target %))))})])})))
+          [:input (assoc input-attrs
+                    :on-change #(reset! date-atom (-> %
+                                                      .-target
+                                                      .-value
+                                                      from-input-string)))])})))
 
 (defn input-atom
   ([type options select-options state in out]
@@ -532,28 +569,31 @@
               [data nil])
             [nil nil]))]
     (r/create-class
-      {:component-did-mount #(let [[series-data categories] (split-data @data)]
-                               (.highcharts (js/jQuery (r/dom-node %))
-                                            (clj->js (assoc-in
-                                                       (assoc-in config
-                                                                 [:series 0 :data] series-data)
-                                                       [:xAxis :categories] categories))))
-       :component-did-update #(let [[series-data categories] (split-data @data)
-                                    chart (-> %
-                                              r/dom-node
-                                              js/jQuery
-                                              .highcharts)]
-                                (-> chart
-                                    .-series
-                                    first
-                                    (.setData (clj->js series-data)))
-                                (-> chart
-                                    .-xAxis
-                                    first
-                                    (.setCategories (clj->js categories))))
-       :reagent-render (fn [_ series]
-                         (reset! data series)
-                         [:div])})))
+      {:component-did-mount
+       #(let [[series-data categories] (split-data @data)]
+          (.highcharts (js/jQuery (r/dom-node %))
+                       (clj->js (assoc-in
+                                  (assoc-in config
+                                            [:series 0 :data] series-data)
+                                  [:xAxis :categories] categories))))
+       :component-did-update
+       #(let [[series-data categories] (split-data @data)
+              chart (-> %
+                        r/dom-node
+                        js/jQuery
+                        .highcharts)]
+          (-> chart
+              .-series
+              first
+              (.setData (clj->js series-data)))
+          (-> chart
+              .-xAxis
+              first
+              (.setCategories (clj->js categories))))
+       :reagent-render
+       (fn [_ series]
+         (reset! data series)
+         [:div])})))
 
 (defn calendar [options]
   (let [options (atom {})]
@@ -583,12 +623,13 @@
         button-text  (atom text)]
     (fn [options text action & [alt-text alt-action]]
       [:div.ui.button
-       (merge options
-              {:on-click (fn []
-                           (reset! button-text loading-text)
-                           (if alt-text
-                             (action #(reset! button-text alt-text))
-                             (action #(reset! button-text text))))})
+       (assoc options
+         :on-click (fn []
+                     (reset! button-text loading-text)
+                     (if alt-text
+                       (action #(reset! button-text alt-text))
+                       (action #(reset! button-text text))))
+         :type :button)
        @button-text])))
 
 
@@ -601,24 +642,24 @@
     [:img {:src "images/logo-menu.png"}]]
    [:a.blue.item {:href (events-route)
                   :class (when (re-find (re-pattern (events-route)) @location)
-                           "active")}
+                           :active)}
     [:i.ticket.icon]
     "Events"]
    [:a.blue.item {:href (organizations-route)
                   :class (when (re-find (re-pattern (organizations-route))
                                         @location)
-                           "active")}
+                           :active)}
     [:i.building.icon]
     "Organizations"]
    [:a.blue.item {:href (calendar-route)
                   :class (when (re-find (re-pattern (calendar-route)) @location)
-                           "active")}
+                           :active)}
     [:i.calendar.icon]
     "Calendar"]
    [:a.blue.item {:href (statistics-route)
                   :class (when (re-find (re-pattern (statistics-route))
                                         @location)
-                           "active")}
+                           :active)}
     [:i.bar.chart.icon]
     "Statistics"]
    (if (:token @session)
@@ -633,13 +674,13 @@
       [:a.blue.item {:href (sign-in-route)
                      :class (when (re-find (re-pattern (sign-in-route))
                                            @location)
-                              "active")}
+                              :active)}
        [:i.sign.in.icon]
        "Sign in"]
       [:a.blue.item {:href (sign-up-route)
                      :class (when (re-find (re-pattern (sign-up-route))
                                            @location)
-                              "active")}
+                              :active)}
        [:i.add.user.icon]
        "Sign up"]])])
 
@@ -784,12 +825,14 @@
 
 (defn payments-component []
   (let [form (atom {})
-        validator (validation-set (presence-of :number)
-                                  (presence-of :cvc)
-                                  (presence-of :exp-date)
-                                  (format-of   :number   :format #"^[0-9]{16}$")
-                                  (format-of   :cvc      :format #"^[0-9]{3}$")
-                                  (format-of   :exp-date :format #"^[0-1][0-9]/20[1-9][0-9]$"))
+        validator
+        (validation-set
+          (presence-of :number)
+          (presence-of :cvc)
+          (presence-of :exp-date)
+          (format-of   :number   :format #"^[0-9]{16}$")
+          (format-of   :cvc      :format #"^[0-9]{3}$")
+          (format-of   :exp-date :format #"^[0-1][0-9]/20[1-9][0-9]$"))
         editing? (atom false)
         stripe-error (atom nil)
         button-loading? (atom false)]
@@ -805,19 +848,22 @@
               (if response.error
                 (do
                   (reset! stripe-error response.error.message))
-                (let [[month year] (clojure.string/split (:exp-date @form) #"/" 2)]
+                (let [[month year]
+                      (clojure.string/split (:exp-date @form) #"/" 2)]
                   (reset! stripe-error nil)
                   (reset! editing? false)
                   (swap! session assoc :stripe-token response.id)
-                  (swap! session assoc :payment-info (dissoc (assoc @form
-                                                               :exp-month (int month)
-                                                               :exp-year (int year))
-                                                             :exp-date)))))
+                  (swap! session assoc
+                         :payment-info (dissoc (assoc @form
+                                                 :exp-month (int month)
+                                                 :exp-year (int year))
+                                               :exp-date)))))
 
             create-token
             (fn [e form]
               (when (empty? errors)
-                (let [[month year] (clojure.string/split (:exp-date form) #"/" 2)]
+                (let [[month year]
+                      (clojure.string/split (:exp-date form) #"/" 2)]
                   (reset! button-loading? true)
                   (prn (dissoc (assoc form
                                  :exp-month (int month)
@@ -833,7 +879,9 @@
                     response-handler))))]
         #_(when (:payment-info @session)
           (swap! form assoc
-                 :number   (str "************" (subs (get-in @session [:payment-info :number]) 12))
+                 :number   (str "************"
+                                (subs (get-in @session [:payment-info :number])
+                                      12))
                  :cvc      (get-in @session [:payment-info :cvc])
                  :exp-date (str (get-in @session [:payment-info :exp-month])
                                 "/"
@@ -845,14 +893,16 @@
             "Payment Info"]
            [:div.two.fields
             [:div.required.field {:class (when (and number (:number errors))
-                                           "error")
-                                  :on-change #(swap! session dissoc :payment-info)}
+                                           :error)
+                                  :on-change #(swap! session dissoc
+                                                     :payment-info)}
              [:label "Card Number"]
              [input-atom :text {}
               (r/wrap number swap! form assoc :number)]]
             [:div.required.field {:class (when (and cvc (:cvc errors))
-                                           "error")
-                                  :on-change #(swap! session dissoc :payment-info)}
+                                           :error)
+                                  :on-change #(swap! session dissoc
+                                                     :payment-info)}
              [:label "CVC"]
              [:div.two.fields
               [:div.field
@@ -861,21 +911,22 @@
               [:div.field]]]]
            [:div.two.fields
             [:div.required.field {:class (when (and exp-date (:exp-date errors))
-                                           "error")
-                                  :on-change #(swap! session dissoc :payment-info)}
+                                           :error)
+                                  :on-change #(swap! session dissoc
+                                                     :payment-info)}
              [:label "Expiration Date"]
              [input-atom :text {:placeholder "MM/YYYY"}
               (r/wrap exp-date swap! form assoc :exp-date)]]
             [:div.field]]
            [:button.ui.primary.button
             {:type :submit
-             :class (when (seq errors) "disabled")
+             :class (when (seq errors) :disabled)
              :on-click #(create-token % @form)}
             (if @button-loading?
               [:i.spinner.loading.icon]
               "Confirm")]
            [:span.ui.red.compact.message
-            {:class (when (nil? @stripe-error) "hidden")}
+            {:class (when (nil? @stripe-error) :hidden)}
             @stripe-error]]
           [:div.inline.fields
            [:div.field (str "Charging card ending in "
@@ -968,21 +1019,21 @@
                                          (sign-in! @form)))}
            [:div.two.fields
             [:div.required.field {:class (when (and Email (:Email errors))
-                                           "error")}
+                                           :error)}
              [:label "Email"]
              [:div.ui.icon.input
               [input-atom :email {}
                (r/wrap Email swap! form assoc :Email)]
               [:i.mail.icon]]]
             [:div.required.field {:class (when (and Password (:Password errors))
-                                           "error")}
+                                           :error)}
              [:label "Password"]
              [:div.ui.icon.input
               [input-atom :password {}
                (r/wrap Password swap! form assoc :Password)]
               [:i.lock.icon]]]]
            [:button.ui.primary.button {:type :submit
-                                       :class (when (seq errors) "disabled")}
+                                       :class (when (seq errors) :disabled)}
             "Sign in"]]]]))))
 
 (defn sign-up-page []
@@ -995,7 +1046,8 @@
                                                     :in #{(:Password @form)})
                                       (presence-of :FirstName)
                                       (presence-of :LastName)
-                                      (length-of   :Password :within (range 8 100)))
+                                      (length-of :Password
+                                                 :within (range 8 100)))
             errors                   (validator @form)]
         [:div.eight.wide.centered.column
          [:div.ui.segment
@@ -1005,7 +1057,7 @@
                                        (when (empty? errors)
                                          (sign-up! @form)))}
            [:div.required.field {:class (when (and Email (:Email errors))
-                                          "error")}
+                                          :error)}
             [:label "Email"]
             [:div.ui.icon.input
              [input-atom :email {}
@@ -1013,7 +1065,7 @@
              [:i.mail.icon]]]
            [:div.two.fields
             [:div.required.field {:class (when (and Password (:Password errors))
-                                           "error")}
+                                           :error)}
              [:label "Password"]
              [:div.ui.icon.input
               [input-atom :password {}
@@ -1021,7 +1073,7 @@
               [:i.lock.icon]]]
             [:div.required.field {:class (when (and PasswordConfirm
                                                     (:PasswordConfirm errors))
-                                           "error")}
+                                           :error)}
              [:label "Confirm Password"]
              [:div.ui.input
               [input-atom :password {}
@@ -1029,20 +1081,20 @@
            [:div.two.fields
             [:div.required.field {:class (when (and FirstName
                                                     (:FirstName errors))
-                                           "error")}
+                                           :error)}
              [:label "First Name"]
              [:div.ui.input
               [input-atom :text {}
                (r/wrap FirstName swap! form assoc :FirstName)]]]
             [:div.required.field {:class (when (and LastName
                                                     (:LastName errors))
-                                           "error")}
+                                           :error)}
              [:label "Last Name"]
              [:div.ui.input
               [input-atom :text {}
                (r/wrap LastName swap! form assoc :LastName)]]]]
            [:button.ui.primary.button {:type :submit
-                                       :class (when (seq errors) "disabled")}
+                                       :class (when (seq errors) :disabled)}
             "Sign up"]]]]))))
 
 (defn events-page []
@@ -1055,9 +1107,9 @@
       (if (:token @session)
         (let [attending-events
               (doall (map (fn [[event-id attendee-id]]
-                            (merge
+                            (assoc
                               (into {} (d/entity @events-db event-id))
-                              {:AttendeeId attendee-id}))
+                              :AttendeeId attendee-id))
                           (d/q '[:find ?event-id ?attendee-id
                                  :in $ ?user-id
                                  :where
@@ -1101,7 +1153,8 @@
                      [:div.description
                       (:Description event)]
                      [:div.extra
-                      [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+                      [:a.ui.right.floated.small.button
+                       {:href (event-schedule-route event)}
                        "Your activities"
                        [:i.right.chevron.icon]]
                       [:a.ui.right.floated.small.button
@@ -1109,7 +1162,7 @@
                        [:i.red.remove.icon]
                        "Leave event"]]]])]
                 [:p "You aren't attending any events."])]]
-            [:div.ui.dimmer {:class (when (empty? @events) "active")}
+            [:div.ui.dimmer {:class (when (empty? @events) :active)}
              [:div.ui.loader]]]])
         (do
           (js/location.replace (events-explore-route))
@@ -1168,7 +1221,7 @@
                {:href (event-register-route event)}
                "Register"
                [:i.right.chevron.icon]]]]])]]]
-      [:div.ui.dimmer {:class (when-not @events "active")}
+      [:div.ui.dimmer {:class (when-not @events :active)}
        [:div.ui.loader]]]]))
 
 (defn events-owned-page []
@@ -1220,7 +1273,7 @@
                  "Edit"
                  [:i.right.chevron.icon]]]]])]
           [:p "You don't own any events."])]]
-      [:div.ui.dimmer {:class (when (empty? @events) "active")}
+      [:div.ui.dimmer {:class (when (empty? @events) :active)}
        [:div.ui.loader]]]]))
 
 (defn event-page [event-id]
@@ -1309,8 +1362,9 @@
              [:tr
               [:td (str (:FirstName attendee) " " (:LastName attendee))]
               [:td [:a.ui.right.floated.small.labeled.button
-                    {:href (event-attendee-route {:EventId (:EventId event)
-                                                  :AttendeeId (:AttendeeId attendee)})
+                    {:href (event-attendee-route
+                             {:EventId (:EventId event)
+                              :AttendeeId (:AttendeeId attendee)})
                      :class (when (:CheckinTime attendee) :green)}
                     (if (:CheckinTime attendee)
                       "Checked in"
@@ -1324,16 +1378,18 @@
 
 (defn event-edit-page []
   (let [form (atom {})
-        validator (validation-set (presence-of :Name)
-                                  (presence-of :OrganizationId)
-                                  (presence-of :Venue)
-                                  (presence-of :StartDate)
-                                  (presence-of :EndDate)
-                                  (format-of   :TicketPrice :format #"^\d*\.\d\d$"
-                                               :allow-nil true
-                                               :allow-blank true)
-                                  (format-of   :StartDate :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
-                                  (format-of   :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))
+        validator
+        (validation-set
+          (presence-of :Name)
+          (presence-of :OrganizationId)
+          (presence-of :Venue)
+          (presence-of :StartDate)
+          (presence-of :EndDate)
+          (format-of   :TicketPrice :format #"^\d*\.\d\d$"
+                     :allow-nil true
+                     :allow-blank true)
+          (format-of   :StartDate :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
+          (format-of   :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))
         clone-id (atom 0)]
     (add-watch clone-id :clone
                (fn [_ _ _ id]
@@ -1343,16 +1399,20 @@
                                           (d/entity @events-db)
                                           seq
                                           (into {}))]
-                     (reset! form (dissoc
-                                    (assoc
-                                      clone-event
-                                      :TicketPrice
-                                      (if (> (:TicketPrice clone-event) 0)
-                                        (goog.string.format "%.2f" (:TicketPrice clone-event))
-                                        ""))
-                                    :EventId))))))
+                     (reset!
+                       form
+                       (dissoc
+                         (assoc
+                           clone-event
+                           :TicketPrice
+                           (if (> (:TicketPrice clone-event) 0)
+                             (goog.string.format "%.2f"
+                                                 (:TicketPrice clone-event))
+                             ""))
+                         :EventId))))))
     (fn []
-      (let [{:keys [Name OrganizationId Venue StartDate EndDate RequiresPayment TicketPrice Description]}
+      (let [{:keys [Name OrganizationId Venue StartDate EndDate RequiresPayment
+                    TicketPrice Description]}
             @form
 
             errors
@@ -1378,7 +1438,8 @@
                                    form
                                    #(do
                                       (callback)
-                                      (js/location.replace (events-explore-route)))))))]
+                                      (js/location.replace
+                                        (events-explore-route)))))))]
         [:div.sixteen.wide.column
          [:div.ui.top.attached.tabular.menu
           [:a.item {:href (events-route)}
@@ -1395,7 +1456,7 @@
             [:h2.ui.dividing.header "Add an Event"]
             [:div.two.fields
              [:div.required.field {:class (when (and Name (:Name errors))
-                                            "error")}
+                                            :error)}
               [:label "Name"]
               [input-atom :text {} (r/wrap Name swap! form assoc :Name)]]
              [:div.field
@@ -1407,27 +1468,32 @@
               [input-atom :select {} associated-organizations
                (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
              [:div.required.field {:class (when (and Venue (:Venue errors))
-                                            "error")}
+                                            :error)}
               [:div.required.field
                [:label "Venue"]
                [input-atom :text {} (r/wrap Venue swap! form assoc :Venue)]]]]
             (let [start-date (r/wrap StartDate swap! form assoc :StartDate)
                   end-date   (r/wrap EndDate swap! form assoc :EndDate)]
               [:div.two.fields
-               [:div.required.field {:class (when (and StartDate (:StartDate errors))
-                                              "error")}
+               [:div.required.field {:class (when (and StartDate
+                                                       (:StartDate errors))
+                                              :error)}
                 [:label "Start Date"]
                 [date-selector {:date-atom start-date
                                 :max-date-atom end-date
-                                :pikaday-attrs {:minDate (to-date (plus (now) (hours 6)))}}]]
-               [:div.required.field {:class (when (and EndDate (:EndDate errors))
-                                              "error")}
+                                :pikaday-attrs {:minDate (-> (now)
+                                                             (plus (hours 6))
+                                                             to-date)}}]]
+               [:div.required.field {:class (when (and EndDate
+                                                       (:EndDate errors))
+                                              :error)}
                 [:label "End Date"]
                 [date-selector {:date-atom end-date
                                 :min-date-atom start-date}]]])
             [:div.field
-             [:div.four.wide.field {:class (when (and TicketPrice (:TicketPrice errors))
-                                   "error")}
+             [:div.four.wide.field {:class (when (and TicketPrice
+                                                      (:TicketPrice errors))
+                                             :error)}
               [:label "Ticket Price"]
               [:div.ui.labeled.input
                [:div.ui.label "$"]
@@ -1438,39 +1504,43 @@
               ; TODO: someday make UI checkboxes work
               #_[:div.field
               [(with-meta identity
-                          {:component-did-mount #(.checkbox (js/$ ".ui.checkbox"))})
+                          {:component-did-mount
+                           #(.checkbox (js/$ ".ui.checkbox"))})
                [:div#requires-payment.ui.checkbox
                 [:input {:type "checkbox"}]
                 [:label "Ticket required"]]]]
                [:label
-                [:input#requires-payment {:type "checkbox"
-                                          :on-change #(swap! form assoc :RequiresPayment
-                                                             (if (nil? (:RequiresPayment @form))
-                                                               true
-                                                               (not (:RequiresPayment @form))))}]
+                [:input#requires-payment
+                 {:type "checkbox"
+                  :on-change #(swap! form assoc :RequiresPayment
+                                     (if (nil? (:RequiresPayment @form))
+                                       true
+                                       (not (:RequiresPayment @form))))}]
                 " Ticket required"]]]
             [:div.field
              [:label "Description"]
              [input-atom :textarea {}
               (r/wrap Description swap! form assoc :Description)]]
             [action-button
-             {:class (str "primary" (when (seq errors) " disabled"))
-              :type :submit}
+             {:class [:primary (when (seq errors) :disabled)]}
              "Add"
              (create-event @form)]]]]]))))
 
 (defn event-activity-edit-page [event-id & [activity-id]]
   (let [form (atom {:EventId event-id :EnrollmentCap ""})
-        reset-form!
-        (reset! form {:EventId event-id :EnrollmentCap ""})
+        reset-form! #(reset! form {:EventId event-id :EnrollmentCap ""})
         validator (validation-set (presence-of :Name)
                                   (presence-of :StartTime)
                                   (presence-of :EndTime)
                                   (format-of :EnrollmentCap :format #"^\d*$"
                                              :allow-blank true
                                              :allow-nil true)
-                                  (format-of   :StartTime :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
-                                  (format-of   :EndTime   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))]
+                                  (format-of
+                                    :StartTime
+                                    :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
+                                  (format-of
+                                    :EndTime
+                                    :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))]
     (when activity-id
       (if-let [activity (seq (d/entity @activities-db activity-id))]
         (reset! form (let [activity (into {} activity)]
@@ -1508,17 +1578,22 @@
             (fn [form]
               (fn [callback]
                 (when (empty? errors)
-                  (activities-endpoint :create
-                                       (let [start-time (:StartTime form)
-                                             end-time   (:EndTime form)]
-                                         (assoc form
-                                           :StartTime (unparse (:date-hour-minute-second formatters)
-                                                               (from-string start-time))
-                                           :EndTime (unparse (:date-hour-minute-second formatters)
-                                                             (from-string end-time))))
-                                       #(do
-                                          (callback)
-                                          (reset-form!))))))]
+                  (activities-endpoint
+                    (if activity-id
+                      :update
+                      :create)
+                    (let [start-time (:StartTime form)
+                          end-time   (:EndTime form)]
+                      (assoc form
+                        :StartTime
+                        (unparse (:date-hour-minute-second formatters)
+                                 (from-string start-time))
+                        :EndTime
+                        (unparse (:date-hour-minute-second formatters)
+                                 (from-string end-time))))
+                    (fn [_]
+                       (callback)
+                       (when-not activity-id (reset-form!)))))))]
         (when (seq event)
           [:div.sixteen.wide.column
            [:div.ui.segment
@@ -1539,29 +1614,57 @@
                                                       #(reset-form!))))}
               [:div.one.field
                [:div.required.field {:class (when (and Name (:Name errors))
-                                              "error")}
+                                              :error)}
                 [:label "Name"]
                 [input-atom :text {} (r/wrap Name swap! form assoc :Name)]]]
               [:div.two.fields
                [:div.field
                 [:label "Location"]
-                [input-atom :text {} (r/wrap Location swap! form assoc :Location)]]
-               [:div.field {:class (when (and EnrollmentCap (:EnrollmentCap errors))
-                                     "error")}
+                [input-atom
+                 :text
+                 {}
+                 (r/wrap Location swap! form assoc :Location)]]
+               [:div.field {:class (when (and EnrollmentCap
+                                              (:EnrollmentCap errors))
+                                     :error)}
                 [:label "Enrollment Cap"]
-                [input-atom :text {} (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
-              (let [start-time     (r/wrap StartTime swap! form assoc :StartTime)
-                    end-time       (r/wrap EndTime swap! form assoc :EndTime)
-                    event-start    (let [d (from-string (:StartDate event))]
-                                     (local-date-time (year d) (month d) (day d) (hour d) (minute d)))
-                    event-end      (let [d (from-string (:EndDate event))]
-                                     (local-date-time (year d) (month d) (day d) (hour d) (minute d)))
-                    event-start-js (let [d (from-string (:StartDate event))]
-                                     (to-date (date-midnight (local-date (year d) (month d) (day d)))))
-                    event-end-js   (let [d (from-string (:EndDate event))]
-                                     (to-date (date-midnight (local-date-time (year d) (month d) (day d) 23 59))))]
+                [input-atom
+                 :text
+                 {}
+                 (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
+              (let [start-time
+                    (r/wrap StartTime swap! form assoc :StartTime)
+                    end-time
+                    (r/wrap EndTime swap! form assoc :EndTime)
+                    event-start
+                    (let [d (from-string (:StartDate event))]
+                      (local-date-time (year d)
+                                       (month d)
+                                       (day d)
+                                       (hour d)
+                                       (minute d)))
+                    event-end
+                    (let [d (from-string (:EndDate event))]
+                      (local-date-time (year d)
+                                       (month d)
+                                       (day d)
+                                       (hour d)
+                                       (minute d)))
+                    event-start-js
+                    (let [d (from-string (:StartDate event))]
+                      (to-date (date-midnight (local-date (year d)
+                                                          (month d)
+                                                          (day d)))))
+                    event-end-js
+                    (let [d (from-string (:EndDate event))]
+                      (to-date (date-midnight (local-date-time (year d)
+                                                               (month d)
+                                                               (day d)
+                                                               23
+                                                               59))))]
                 [:div.two.fields
-                 [:div.required.field {:class (when (and StartTime (:StartTime errors))
+                 [:div.required.field {:class (when (and StartTime
+                                                         (:StartTime errors))
                                                 "error")}
                   [:label "Start Time"]
                   [date-selector {:date-atom start-time
@@ -1573,7 +1676,8 @@
                                                   }
                                   :static-attrs  {:min-date event-start
                                                   :max-date event-end}}]]
-                 [:div.required.field {:class (when (and EndTime (:EndTime errors))
+                 [:div.required.field {:class (when (and EndTime
+                                                         (:EndTime errors))
                                                 "error")}
                   [:label "End Time"]
                   [date-selector {:date-atom end-time
@@ -1590,8 +1694,7 @@
                [input-atom :textarea {}
                 (r/wrap Description swap! form assoc :Description)]]
               [action-button
-               {:class (str "primary" (when (seq errors) " disabled"))
-                :type :submit}
+               {:class [:primary (when (seq errors) :disabled)]}
                (if activity-id "Edit" "Add")
                (create-activity @form)]]]
             [:div.ui.vertical.segment
@@ -1630,10 +1733,11 @@
                                 (str/lower-case (or (% attribute) "")))))
 
          passes-filters?
-         #(every? identity ((apply juxt (map create-filter
-                                             [[email-filter       :Email]
-                                              [last-name-filter   :LastName]
-                                              [first-name-filter  :FirstName]])) %))]
+         #(every? identity
+                  ((apply juxt (map create-filter
+                                    [[email-filter       :Email]
+                                     [last-name-filter   :LastName]
+                                     [first-name-filter  :FirstName]])) %))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:h2.ui.header
@@ -1648,11 +1752,20 @@
            [:tbody
             [:tr.ui.form
              [:td
-              [input-atom :text {} (r/wrap email-filter swap! form assoc :email-filter)]]
+              [input-atom
+               :text
+               {}
+               (r/wrap email-filter swap! form assoc :email-filter)]]
              [:td
-              [input-atom :text {} (r/wrap last-name-filter swap! form assoc :last-name-filter)]]
+              [input-atom
+               :text
+               {}
+               (r/wrap last-name-filter swap! form assoc :last-name-filter)]]
              [:td
-              [input-atom :text {} (r/wrap first-name-filter swap! form assoc :first-name-filter)]]
+              [input-atom
+               :text
+               {}
+               (r/wrap first-name-filter swap! form assoc :first-name-filter)]]
              [:td {:style {:text-align :center}}
               (str (reduce #(if (:CheckinTime %2)
                               (inc %1)
@@ -1670,10 +1783,11 @@
                [:td (:FirstName  attendee)]
                [:td {:noWrap true}
                 [:a.ui.right.floated.small.labeled.button
-                 {:class (when (:CheckinTime attendee) "green")
+                 {:class (when (:CheckinTime attendee) :green)
                   :style {:width "100%"}
-                  :href (event-attendee-route {:EventId event-id
-                                               :AttendeeId (:AttendeeId attendee)})}
+                  :href (event-attendee-route
+                          {:EventId event-id
+                           :AttendeeId (:AttendeeId attendee)})}
                  (if (:CheckinTime attendee)
                    "Checked in"
                    "Check in")]]])]]]]))))
@@ -1690,8 +1804,10 @@
                   (str "Bearer " (:token @session))}
                  {})
                :handler callback
-               :error-handler (fn []
-                                (swap! messages conj [:error "Check in failed. Please try again."]))}))]
+               :error-handler
+               (fn [] (swap! messages conj
+                             [:error
+                              "Check in failed. Please try again."]))}))]
     (fn [event-id attendee-id]
       (let [event (into {} (d/entity @events-db event-id))
 
@@ -1757,7 +1873,9 @@
                                    (str "/schedules/" schedule-id "/checkin")
                                    (fn []
                                      (prn "Checked out!")
-                                     (schedules-endpoint :read nil callback)))))]
+                                     (schedules-endpoint :read
+                                                         nil
+                                                         callback)))))]
           (when (and (seq event) (seq attendee))
             [:div.sixteen.wide.column
              [:div.ui.segment
@@ -1779,7 +1897,8 @@
                             end   (from-string (:EndDate   event))]
                         (str (unparse datetime-formatter start)
                              (when (after? end start)
-                               (str " to " (unparse datetime-formatter end))))))]
+                               (str " to "
+                                    (unparse datetime-formatter end))))))]
                    [:div.meta
                     [:b "Venue: "]
                     (:Venue event)]
@@ -1787,7 +1906,7 @@
                     (:Description event)]
                    [:div.extra
                     [action-button
-                     {:class "right floated"}
+                     {:class [:right :floated]}
                      (if (:CheckinTime attendee)
                        "Check out"
                        "Check in")
@@ -1873,24 +1992,27 @@
             (fn [form]
               (fn [callback]
                 (when (empty? errors)
-                  ; TODO: maybe this logic is wrong?MIght want to buy ticket even if not required
+                  ; TODO: maybe this logic is wrong? Might want to buy ticket
+                  ;       even if not required
                   (if (:RequiresPayment event)
                     (renew-stripe-token!
-                      (fn [] (attendees-endpoint :create
-                                                 {:UserId (get-in @session [:user :UserId])
-                                                  :EventId event-id
-                                                  :Token (:stripe-token @session)
-                                                  :Amount (:TicketPrice event)}
-                                                 #(do
-                                                    (callback)
-                                                    (swap! session dissoc :stripe-token)
-                                                    (js/location.replace (events-route))))))
-                    (attendees-endpoint :create
-                                        {:UserId (get-in @session [:user :UserId])
-                                         :EventId event-id}
-                                        #(do
-                                           (callback)
-                                           (js/location.replace (events-route))))))))]
+                      (fn [] (attendees-endpoint
+                               :create
+                               {:UserId (get-in @session [:user :UserId])
+                                :EventId event-id
+                                :Token (:stripe-token @session)
+                                :Amount (:TicketPrice event)}
+                               #(do
+                                  (callback)
+                                  (swap! session dissoc :stripe-token)
+                                  (js/location.replace (events-route))))))
+                    (attendees-endpoint
+                      :create
+                      {:UserId (get-in @session [:user :UserId])
+                       :EventId event-id}
+                      #(do
+                         (callback)
+                         (js/location.replace (events-route))))))))]
         (when (seq event)
           [:div.ui.stackable.page.grid
            [:div.sixteen.wide.column
@@ -1935,11 +2057,11 @@
                  [payments-component])]
               [:div.ui.divider]
               [action-button
-               {:class (str "primary" (when (or (seq errors)
-                                                (and (:RequiresPayment event)
-                                                     (nil? (:payment-info @session))))
-                                        " disabled"))
-                :type :submit}
+               {:class [:primary
+                        (when (or (seq errors)
+                                  (and (:RequiresPayment event)
+                                       (nil? (:payment-info @session))))
+                          :disabled)]}
                "Register"
                (register @form)]]]]])))))
 
@@ -2013,7 +2135,8 @@
            [:div.ui.segment
             [:div.ui.vertical.segment
              [:h2.ui.header
-              (str (get-in @session [:user :FirstName]) "'s Schedule for " (:Name event))]]
+              (str (get-in @session [:user :FirstName]) "'s Schedule for "
+                   (:Name event))]]
             [:div.ui.vertical.segment
              [:table.ui.table
               [:thead
@@ -2081,11 +2204,13 @@
                     [:div.extra
                      (if (> (:TicketPrice activity) 0)
                        [:div.ui.right.floated.button
-                        {:on-click #(add-activity-to-cart! (:ActivityId activity))}
+                        {:on-click #(add-activity-to-cart!
+                                      (:ActivityId activity))}
                         "Add to cart"
                         [:i.right.chevron.icon]]
                        [:div.ui.right.floated.primary.button
-                        {:on-click #(add-activity! (get-in @session [:user :UserId])
+                        {:on-click #(add-activity! (get-in @session
+                                                           [:user :UserId])
                                                    (:ActivityId activity))}
                         "Add"
                         [:i.right.chevron.icon]])]]]))]]]
@@ -2122,7 +2247,8 @@
                         (:Description activity)]
                        [:div.extra
                         [:div.ui.right.floated.button
-                         {:on-click #(remove-activity-from-cart! (:ActivityId activity))}
+                         {:on-click #(remove-activity-from-cart!
+                                       (:ActivityId activity))}
                          [:i.red.remove.icon]
                          "Remove"]]]]))]]
                [:div.ui.vertical.segment
@@ -2132,8 +2258,10 @@
                 [:button.ui.primary.button
                  {:type :submit
                   :class (when (nil? (:payment-info @session))
-                           "disabled")
-                  :on-click #(add-cart-activities! % (get-in @session [:user :UserId]) cart-activities)}
+                           :disabled)
+                  :on-click #(add-cart-activities! % (get-in @session
+                                                             [:user :UserId])
+                                                   cart-activities)}
                  "Confirm Payment and Add Activities"]]]])])))))
 
 ;TODO: Display only organizations you're a member of
@@ -2159,10 +2287,11 @@
           [:a.header
            (:Name organization)]
           [:div.extra
+           ; TODO: make this work
            [:a.ui.right.floated.small.icon.button
             {:href (events-explore-route {:query-params
                                           (select-keys organization
-                                                       [:OrganizationId])})} ; TODO: make this work
+                                                       [:OrganizationId])})}
             "View events"]]]])]]]])
 
 ;TODO: Display only organizations you're not a member of
@@ -2231,10 +2360,13 @@
             (fn [form]
               (fn [callback]
                 (organizations-endpoint :create
-                                        (assoc form :AdminId (get-in @session [:user :UserId]))
+                                        (assoc form
+                                          :AdminId (get-in @session
+                                                           [:user :UserId]))
                                         #(do
                                            (callback)
-                                           (js/location.replace (organizations-route))))))]
+                                           (js/location.replace
+                                             (organizations-route))))))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:form.ui.form
@@ -2243,12 +2375,11 @@
              "Add an Organization"]
             [:div.field
              [:div.required.field {:class (when (and Name (:Name errors))
-                                            "error")}
+                                            :error)}
               [:label "Organization Name"]
               [input-atom :text {} (r/wrap Name swap! form assoc :Name)]]]
             [action-button
-             {:class (str "primary" (when (seq errors) " disabled"))
-              :type :submit}
+             {:class [:primary (when (seq errors) :disabled)]}
              "Add"
              (create-organization @form)]]]]]))))
 
@@ -2347,15 +2478,15 @@
             (into []
                   (map
                     (fn [[activity-name activity-id]]
-                      (vector activity-name
-                              (count
-                                (d/q '[:find [?check-in-time ...]
-                                       :in $ ?activity-id
-                                       :where
-                                       [?schedule-id :ActivityId ?activity-id]
-                                       [?schedule-id :CheckinTime ?check-in-time]]
-                                     @schedules-db
-                                     activity-id))))
+                      [activity-name
+                       (count
+                         (d/q '[:find [?check-in-time ...]
+                                :in $ ?activity-id
+                                :where
+                                [?schedule-id :ActivityId ?activity-id]
+                                [?schedule-id :CheckinTime ?check-in-time]]
+                              @schedules-db
+                              activity-id))])
                     activities))]
         [:div.sixteen.wide.column
          [:div.ui.segment
@@ -2411,9 +2542,10 @@
    [:div.ui.segment
     ; TODO: expire stripe token if payment info changes
     [(with-meta identity
-                {:component-did-mount (fn [] (.change (js/$ "#payments-form")
-                                                      #_(swap! session assoc :stripe-token nil)
-                                                      #(prn "changed")))})
+                {:component-did-mount
+                 (fn [] (.change (js/$ "#payments-form")
+                                 #_(swap! session assoc :stripe-token nil)
+                                 #(prn "changed")))})
      [:form#payments-form.ui.form
     [payments-component]]]]])
 
