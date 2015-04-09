@@ -1,6 +1,7 @@
 [:html
  [:head
   [:title "Elevent Solutions"]
+  [:link {:rel "icon" :href "images/favicon.png"}]
   [:link {:rel "stylesheet" :type "text/css"
           :href "bower_components/semantic-ui/dist/semantic.min.css"}]
   [:link {:rel "stylesheet" :type "text/css"
