@@ -14,7 +14,8 @@
       [alandipert.storage-atom :refer [local-storage]]
       [ajax.core :refer [DELETE GET POST PUT]]
       [cljs-time.coerce :refer [from-string to-string from-long to-long from-date to-date]]
-      [cljs-time.core :refer [after? at-midnight now plus minus hours]]
+      [cljs-time.core :refer [after? at-midnight now plus minus hours days minutes date-midnight local-date
+                              local-date-time year month day hour minute]]
       [cljs-time.format :refer [formatter formatters unparse parse]]
       [datascript :as d]
       [garden.core :refer [css]]
@@ -386,7 +387,7 @@
   min-date-atom: atom representing the minimum date for the selector.
   pikaday-attrs: a map of options to be passed to the Pikaday constructor.
   input-attrs: a map of options to be used as <input> tag attributes."
-  [{:keys [date-atom max-date-atom min-date-atom pikaday-attrs input-attrs]}]
+  [{:keys [date-atom max-date-atom min-date-atom pikaday-attrs input-attrs static-attrs]}]
   (let [in #(if (from-string %)
               (unparse input-date-time-formatter (from-string %))
               %)
@@ -398,7 +399,18 @@
                                (unparse (:date-hour-minute formatters) (parse input-date-time-formatter %))
                                %))
         normalize ; because of GMT
-        #(to-date (plus (from-string %) (hours 6)))]
+        #(to-date (plus (from-string %) (hours 6)))
+        min-date (when (:min-date static-attrs) (:min-date static-attrs))
+        max-date (when (:max-date static-attrs) (:max-date static-attrs))
+        set-date! (fn [new-date]
+                    (when (and date-atom new-date)
+                      (if (and min-date max-date)
+                        (if (after? (from-date new-date) max-date)
+                          (reset! date-atom (out (to-string max-date)))
+                          (if (after? min-date (from-date new-date))
+                            (reset! date-atom (out (to-string min-date)))
+                            (reset! date-atom (out (to-string (minus (from-date new-date) (hours 6)))))))
+                        (reset! date-atom (out (to-string (minus (from-date new-date) (hours 6))))))))]
     (r/create-class
       {:component-did-mount
         (fn [this]
@@ -406,9 +418,16 @@
                 {:field (.getDOMNode this)
                  :defaultDate @date-atom
                  :setDefaultDate true
-                 :onSelect #(when date-atom (reset! date-atom (out (to-string (minus (from-date %) (hours 6))))))}
-                opts (clj->js (merge default-opts pikaday-attrs))
-                instance (js/Pikaday. opts)]
+                 :onSelect set-date!}
+                opts (merge default-opts pikaday-attrs)
+                instance (js/Pikaday. (clj->js opts))]
+            (when (and (:defaultDate opts)
+                       (:setDefaultDate opts))
+              (when (from-date (:defaultDate opts))
+                (-> this
+                    r/dom-node
+                    js/jQuery
+                    (.val (in (to-string (minus (from-date (:defaultDate opts)) (hours 6))))))))
             ; This code could probably be neater
             (when date-atom
               (add-watch date-atom :update-instance
@@ -1449,7 +1468,9 @@
                                   (presence-of :EndTime)
                                   (format-of :EnrollmentCap :format #"^\d*$"
                                              :allow-blank true
-                                             :allow-nil true))]
+                                             :allow-nil true)
+                                  (format-of   :StartTime :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
+                                  (format-of   :EndTime   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))]
     (when activity-id
       (if-let [activity (seq (d/entity @activities-db activity-id))]
         (reset! form (let [activity (into {} activity)]
@@ -1529,21 +1550,41 @@
                                      "error")}
                 [:label "Enrollment Cap"]
                 [input-atom :text {} (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
-              [:div.two.fields =
-               [:div.required.field {:class (when (and StartTime (:StartTime errors))
-                                              "error")}
-                [:label "Start Time"]
-                [input-atom :datetime-local {}
-                 (r/wrap StartTime swap! form assoc :StartTime)
-                 #(or % (unparse (:date-hour-minute formatters) (now))) ; todo: date inputs clear on input
-                 #(unparse (:date-hour-minute formatters) (from-string %))]]
-               [:div.required.field {:class (when (and EndTime (:EndTime errors))
-                                              "error")}
-                [:label "End Time"]
-                [input-atom :datetime-local {}
-                 (r/wrap EndTime swap! form assoc :EndTime)
-                 #(or % (unparse (:date-hour-minute formatters) (now)))
-                 #(unparse (:date-hour-minute formatters) (from-string %))]]]
+              (let [start-time     (r/wrap StartTime swap! form assoc :StartTime)
+                    end-time       (r/wrap EndTime swap! form assoc :EndTime)
+                    event-start    (let [d (from-string (:StartDate event))]
+                                     (local-date-time (year d) (month d) (day d) (hour d) (minute d)))
+                    event-end      (let [d (from-string (:EndDate event))]
+                                     (local-date-time (year d) (month d) (day d) (hour d) (minute d)))
+                    event-start-js (let [d (from-string (:StartDate event))]
+                                     (to-date (date-midnight (local-date (year d) (month d) (day d)))))
+                    event-end-js   (let [d (from-string (:EndDate event))]
+                                     (to-date (date-midnight (local-date-time (year d) (month d) (day d) 23 59))))]
+                [:div.two.fields
+                 [:div.required.field {:class (when (and StartTime (:StartTime errors))
+                                                "error")}
+                  [:label "Start Time"]
+                  [date-selector {:date-atom start-time
+                                  :max-date-atom end-time
+                                  :pikaday-attrs {:minDate event-start-js
+                                                  :maxDate event-end-js
+                                                  :defaultDate event-start
+                                                  :setDefaultDate false
+                                                  }
+                                  :static-attrs  {:min-date event-start
+                                                  :max-date event-end}}]]
+                 [:div.required.field {:class (when (and EndTime (:EndTime errors))
+                                                "error")}
+                  [:label "End Time"]
+                  [date-selector {:date-atom end-time
+                                  :min-date-atom start-time
+                                  :pikaday-attrs {:minDate event-start-js
+                                                  :maxDate event-end-js
+                                                  :defaultDate event-start
+                                                  :setDefaultDate false
+                                                  }
+                                  :static-attrs  {:min-date event-start
+                                                  :max-date event-end}}]]])
               [:div.field
                [:label "Description"]
                [input-atom :textarea {}
