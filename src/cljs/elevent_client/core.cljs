@@ -95,6 +95,7 @@
 
 
 (def api-url "https://elevent.solutions:44300")
+(def api-url-http "http://elevent.solutions:8860")
 
 
 ;; REST
@@ -937,6 +938,81 @@
             "Charge different card"
             [:i.right.chevron.icon]]])))))
 
+(defn event-details-component [event]
+  [:div
+   [:div
+    [:b "Date: "]
+    (when (and (:StartDate event)
+               (:EndDate event))
+      (let [start (from-string (:StartDate event))
+            end   (from-string (:EndDate   event))]
+        (str (unparse datetime-formatter start)
+             (when (after? end start)
+               (str " to "
+                    (unparse datetime-formatter end))))))]
+   [:div
+    [:b "Venue: "] (:Venue event)]
+   [:p (:Description event)]])
+
+(defn activity-details-component [activity]
+  [:div
+   [:div.meta [:strong "Location: "] (:Location activity)]
+   [:div.meta [:strong "Time: "]
+    (str (when activity
+           (unparse datetime-formatter
+                    (from-string
+                      (:StartTime activity))))
+         " - "
+         (when activity
+           (unparse datetime-formatter
+                    (from-string
+                      (:EndTime activity)))))]
+   (when (> (:TicketPrice activity) 0)
+     [:div.meta
+      [:strong "Ticket Price: "]
+      (goog.string.format "$%.2f" (:TicketPrice activity))])
+   [:div.description
+    (:Description activity)]])
+
+(defn schedule-component [scheduled-activities & [button-text button-action footer-button]]
+  [:table.ui.table
+   [:thead
+    [:tr
+     [:th "Start"]
+     [:th "End"]
+     [:th "Activity"]
+     [:th "Location"]
+     [:th]]]
+   [:tbody
+    (for [[schedule-id activity-id] scheduled-activities]
+      ^{:key schedule-id}
+      (let [activity
+            (when activity-id
+              (d/entity @activities-db activity-id))]
+        [:tr
+         [:td {:noWrap true}
+          (when activity
+            (unparse datetime-formatter
+                     (from-string (:StartTime activity))))]
+         [:td {:noWrap true}
+          (when activity
+            (unparse datetime-formatter
+                     (from-string (:EndTime activity))))]
+         [:td (:Name activity)]
+         [:td (:Location activity)]
+         [:td.right.aligned {:noWrap true}
+          (when button-text
+            [:div.ui.small.button
+             {:on-click #(button-action schedule-id activity-id)}
+             button-text])]]))]
+   (when footer-button
+     [:tfoot
+      [:tr
+       [:th {:colSpan "6"}
+        footer-button
+        #_[:div.ui.small.labeled.icon.button
+         [:i.print.icon] "Print"]]]])])
+
 
 ;; Helpers
 ;; =============================================================================
@@ -958,7 +1034,12 @@
                                       :in $ ?event-id
                                       :where [?activity-id :EventId ?event-id]]
                                     @activities-db
-                                    event-id)))]
+                                    event-id)))
+        delete-activity! (fn [activity-id]
+                           (prn (d/entity @activities-db activity-id))
+                           (activities-endpoint :delete
+                                                (d/entity @activities-db activity-id)
+                                                nil))]
     [:table.ui.table
      [:thead
       [:tr
@@ -977,10 +1058,14 @@
                 (unparse datetime-formatter end))]
          [:td (:Name activity)]
          [:td (:Location activity)]
-         [:td [:a.ui.tiny.labeled.icon.button
-               {:href (event-activity-edit-route activity)}
-               [:i.edit.icon]
-               "Edit"]]])]]))
+         [:td
+          [:a
+           {:href (event-activity-edit-route activity)}
+           [:i.edit.icon]]
+          [:span
+           {:style {:cursor "pointer"}
+            :on-click #(delete-activity! (:ActivityId activity))}
+           [:i.red.remove.icon]]]])]]))
 
 
 ;; Pages
@@ -1098,75 +1183,55 @@
             "Sign up"]]]]))))
 
 (defn events-page []
-  (let [leave-event (fn [attendee-id]
-                      ; TODO: this doesn't delete schedules
-                      (attendees-endpoint :delete
-                                          (d/entity @attendees-db attendee-id)
-                                          nil))]
-    (fn []
-      (if (:token @session)
-        (let [attending-events
-              (doall (map (fn [[event-id attendee-id]]
-                            (assoc
-                              (into {} (d/entity @events-db event-id))
-                              :AttendeeId attendee-id))
-                          (d/q '[:find ?event-id ?attendee-id
-                                 :in $ ?user-id
-                                 :where
-                                 [?attendee-id :UserId  ?user-id]
-                                 [?attendee-id :EventId ?event-id]]
-                               @attendees-db
-                               (get-in @session [:user :UserId]))))]
-          [:div.sixteen.wide.column
-           [:div.ui.top.attached.tabular.menu
-            [:a.active.item {:href (events-route)}
-             "Events"]
-            [:a.item {:href (events-explore-route)}
-             "Explore"]
-            [:a.item {:href (events-owned-route)}
-             "Owned"]
-            [:a.item {:href (event-add-route)}
-             "Add"]]
-           [:div.ui.bottom.attached.segment
-            [:div
-             [:div.ui.vertical.segment
-              [:h1.ui.header "Events You're Attending"]]
-             [:div.ui.vertical.segment
-              (if (seq attending-events)
-                [:div.ui.divided.items
-                 (for [event attending-events]
-                   ^{:key (:EventId event)}
-                   [:div.item
-                    [:div.content
-                     [:a.header {:href (event-route event)}
-                      (:Name event)]
-                     [:div.meta
-                      [:strong "Date:"]
-                      (let [start (from-string (:StartDate event))
-                            end   (from-string (:EndDate   event))]
-                        (str (unparse datetime-formatter start)
-                             (when (after? end start)
-                               (str " to " (unparse datetime-formatter end)))))]
-                     [:div.meta
-                      [:strong "Venue:"]
-                      (:Venue event)]
-                     [:div.description
-                      (:Description event)]
-                     [:div.extra
-                      [:a.ui.right.floated.small.button
-                       {:href (event-schedule-route event)}
-                       "Your activities"
-                       [:i.right.chevron.icon]]
-                      [:a.ui.right.floated.small.button
-                       {:on-click #(leave-event (:AttendeeId event))}
-                       [:i.red.remove.icon]
-                       "Leave event"]]]])]
-                [:p "You aren't attending any events."])]]
-            [:div.ui.dimmer {:class (when (empty? @events) :active)}
-             [:div.ui.loader]]]])
-        (do
-          (js/location.replace (events-explore-route))
-          [:div])))))
+  (fn []
+    (if (:token @session)
+      (let [attending-events
+            (doall (map (fn [[event-id attendee-id]]
+                          (merge
+                            (into {} (d/entity @events-db event-id))
+                            {:AttendeeId attendee-id}))
+                        (d/q '[:find ?event-id ?attendee-id
+                               :in $ ?user-id
+                               :where
+                               [?attendee-id :UserId  ?user-id]
+                               [?attendee-id :EventId ?event-id]]
+                             @attendees-db
+                             (get-in @session [:user :UserId]))))]
+        [:div.sixteen.wide.column
+         [:div.ui.top.attached.tabular.menu
+          [:a.active.item {:href (events-route)}
+           "Events"]
+          [:a.item {:href (events-explore-route)}
+           "Explore"]
+          [:a.item {:href (events-owned-route)}
+           "Owned"]
+          [:a.item {:href (event-add-route)}
+           "Add"]]
+         [:div.ui.bottom.attached.segment
+          [:div
+           [:div.ui.vertical.segment
+            [:h1.ui.header "Events You're Attending"]]
+           [:div.ui.vertical.segment
+            (if (seq attending-events)
+              [:div.ui.divided.items
+               (for [event attending-events]
+                 ^{:key (:EventId event)}
+                 [:div.item
+                  [:div.content
+                   [:a.header {:href (event-route event)}
+                    (:Name event)]
+                   [:div.meta
+                    [event-details-component event]
+                   [:div.extra
+                    [:a.ui.right.floated.small.button {:href (event-schedule-route event)}
+                     "Your activities"
+                     [:i.right.chevron.icon]]]]]])]
+              [:p "You aren't attending any events."])]]
+          [:div.ui.dimmer {:class (when (empty? @events) "active")}
+           [:div.ui.loader]]]])
+      (do
+        (js/location.replace (events-explore-route))
+        [:div]))))
 
 (defn events-explore-page []
   (let [unattending-events
@@ -1276,6 +1341,145 @@
       [:div.ui.dimmer {:class (when (empty? @events) :active)}
        [:div.ui.loader]]]]))
 
+(defn event-details-attendee [event leave-event]
+  (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
+                                       :in $ ?event-id ?user-id
+                                       :where
+                                       [?attendee-id :EventId ?event-id]
+                                       [?attendee-id :UserId ?user-id]]
+                                     @attendees-db
+                                     (:EventId event)
+                                     (:UserId (:user @session))))]
+    (let [scheduled-activities
+          (d/q '[:find ?schedule-id ?activity-id
+                 :in $activities $schedules ?event-id ?user-id
+                 :where
+                 [$activities ?activity-id :EventId ?event-id]
+                 [$schedules  ?schedule-id :UserId     ?user-id]
+                 [$schedules  ?schedule-id :ActivityId ?activity-id]]
+               @activities-db
+               @schedules-db
+               (:EventId event)
+               (get-in @session [:user :UserId]))]
+      [:div.sixteen.wide.column
+       [:div.ui.segment
+        [:div.ui.vertical.segment
+         [:h1.ui.dividing.header
+          (:Name event)]
+         [event-details-component event]
+         [action-button {:class "right floated small"}
+          [:div
+           [:i.red.remove.icon]
+           "Leave event"]
+          (leave-event attendee-id)]]
+        [:div.ui.vertical.segment
+         [:h2 "QR-Code"]
+         [qr-code
+          {:text (event-attendee-route (into {} (d/entity @attendees-db
+                                                          attendee-id)))}]]
+        [:div.ui.vertical.segment
+         [:h2 "Your Schedule"]
+         [schedule-component scheduled-activities
+          (list "Details" [:i.right.chevron.icon])
+          (fn [_ activity-id]
+            (js/location.replace (event-activity-route {:EventId (:EventId event)
+                                                        :ActivityId activity-id})))
+          [:a.ui.small.right.floated.labeled.icon.button
+           {:href (event-schedule-route event)}
+           [:i.edit.icon]
+           "Edit"]]]]])))
+
+(defn event-details-owner [event activities attendees leave-event]
+  (let [submit-image
+        (fn [e]
+          (.preventDefault e)
+          (let [form-data
+                (doto
+                  (js/FormData.)
+                  (.append "Logo"
+                           (-> (js/jQuery "#file")
+                               (aget 0)
+                               (aget "files")
+                               (aget 0))))]
+            (POST (str api-url-http "/logos")
+                  {:keywords?       true
+                   :timeout         8000
+                   :headers
+                   (if (:token @session)
+                     {:Authentication
+                      (str "Bearer " (:token @session))}
+                     {})
+                   :params form-data
+                   :handler #(prn "success!")
+                   :error-handler #(prn "failed...")})))]
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:div.ui.vertical.segment
+       [:h1.ui.dividing.header
+        (:Name event)]
+       [:div.ui.right.floated.small.labeled.icon.button
+        [:i.edit.icon]
+        "Edit"]
+       [event-details-component event]]
+      (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
+                                           :in $ ?event-id ?user-id
+                                           :where
+                                           [?attendee-id :EventId ?event-id]
+                                           [?attendee-id :UserId ?user-id]]
+                                         @attendees-db
+                                         (:EventId event)
+                                         (:UserId (:user @session))))]
+        [:div.ui.vertical.segment
+         [:h2 "QR-Code"]
+         [qr-code
+          {:text (event-attendee-route (into {} (d/entity @attendees-db
+                                                          attendee-id)))}]])
+      [:div.ui.vertical.segment
+       [:h2 "Event Logo"]
+       [:form.ui.form
+        [:div.two.fields
+         [:div.field
+          [:label "Choose image"]
+          [:input#file {:type "file"}]]
+         [:div.field]]
+        [:button.ui.primary.button
+         {:type :submit
+          :on-click submit-image}
+         "Submit"]]]
+      [:div.ui.vertical.segment
+       [:h2.ui.header
+        "Activities"]
+       [activity-table-component (:EventId event)]]
+      [:div.ui.vertical.segment
+       [:h2.ui.header
+        "Attendees"
+        [:a.ui.right.floated.small.button
+         {:href (event-attendees-route event)}
+         "View"]]
+       [:table.ui.table
+        [:thead
+         [:tr
+          [:th "Name"]
+          [:th]]]
+        [:tbody
+         (for [attendee attendees]
+           ^{:key (:AttendeeId attendee)}
+           [:tr
+            [:td (str (:FirstName attendee) " " (:LastName attendee))]
+            [:td [:a.ui.right.floated.small.labeled.button
+                  {:href (event-attendee-route {:EventId (:EventId event)
+                                                :AttendeeId (:AttendeeId attendee)})
+                   :class (when (:CheckinTime attendee) :green)}
+                  (if (:CheckinTime attendee)
+                    "Checked in"
+                    "Check in")]]])]
+        [:tfoot
+         [:tr
+          [:th {:colSpan "4"}
+           [:div.ui.right.floated.small.labeled.icon.button
+            [:i.edit.icon]
+            "Edit"]]]]]]]]))
+
 (defn event-page [event-id]
   (let [event (into {} (d/entity @events-db event-id))
 
@@ -1305,76 +1509,25 @@
                                            [?a :EventId ?event-id]
                                            [?a :UserId ?e]]
                                          @attendees-db
-                                         event-id))))]
+                                         event-id))))
+        leave-event (fn [attendee-id]
+                      (fn [callback]
+                        (attendees-endpoint :delete
+                                            (d/entity @attendees-db attendee-id)
+                                            #(do
+                                               (callback)
+                                               (js/location.replace (events-route))))))]
     (when (seq event)
-      [:div.sixteen.wide.column
-       [:div.ui.segment
-        [:div.ui.vertical.segment
-         [:h1.ui.dividing.header
-          (:Name event)]
-         [:div.ui.right.floated.small.labeled.icon.button
-          [:i.edit.icon]
-          "Edit"]
-         [:div
-          [:b "Date: "]
-          (when (and (:StartDate event)
-                     (:EndDate event))
-            (let [start (from-string (:StartDate event))
-                  end   (from-string (:EndDate   event))]
-              (str (unparse datetime-formatter start)
-                   (when (after? end start)
-                     (str " to "
-                          (unparse datetime-formatter end))))))]
-         [:div
-          [:b "Venue: "] (:Venue event)]
-         [:p (:Description event)]]
-        (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
-                                             :in $ ?event-id ?user-id
-                                             :where
-                                             [?attendee-id :EventId ?event-id]
-                                             [?attendee-id :UserId ?user-id]]
-                                           @attendees-db
-                                           event-id
-                                           (:UserId (:user @session))))]
-          [:div.ui.vertical.segment
-           [:h2 "QR-Code"]
-           [qr-code
-            {:text (event-attendee-route (into {} (d/entity @attendees-db
-                                                            attendee-id)))}]])
-        [:div.ui.vertical.segment
-         [:h2.ui.header
-          "Activities"]
-         [activity-table-component event-id]]
-        [:div.ui.vertical.segment
-         [:h2.ui.header
-          "Attendees"
-          [:a.ui.right.floated.small.button
-           {:href (event-attendees-route event)}
-           "View"]]
-         [:table.ui.table
-          [:thead
-           [:tr
-            [:th "Name"]
-            [:th]]]
-          [:tbody
-           (for [attendee attendees]
-             ^{:key (:AttendeeId attendee)}
-             [:tr
-              [:td (str (:FirstName attendee) " " (:LastName attendee))]
-              [:td [:a.ui.right.floated.small.labeled.button
-                    {:href (event-attendee-route
-                             {:EventId (:EventId event)
-                              :AttendeeId (:AttendeeId attendee)})
-                     :class (when (:CheckinTime attendee) :green)}
-                    (if (:CheckinTime attendee)
-                      "Checked in"
-                      "Check in")]]])]
-          [:tfoot
-           [:tr
-            [:th {:colSpan "4"}
-             [:div.ui.right.floated.small.labeled.icon.button
-              [:i.edit.icon]
-              "Edit"]]]]]]]])))
+      (if true ;TODO: if owner
+        [event-details-owner event activities attendees leave-event]
+        (if true ;TODO: if attending
+          [event-details-attendee event leave-event]
+          [:div.sixteen.wide.column
+           [:div.ui.segment
+            [:div.ui.vertical.segment
+             [:h1.ui.dividing.header
+              (:Name event)]
+             [event-details-component event]]]])))))
 
 (defn event-edit-page []
   (let [form (atom {})
@@ -1598,8 +1751,9 @@
           [:div.sixteen.wide.column
            [:div.ui.segment
             [:div.ui.vertical.segment
-             [:h2.ui.header
-              (:Name event)]]
+             [:h2.ui.dividing.header
+              (:Name event)]
+             [event-details-component event]]
             [:div.ui.vertical.segment
              [:h2.ui.header
               (if activity-id "Edit" "Add") " activity"]
@@ -1701,6 +1855,15 @@
              [:h2.ui.header
               "Activities"]
              [activity-table-component event-id]]]])))))
+
+(defn event-activity-page [event-id activity-id]
+  (let [activity (d/entity @activities-db activity-id)]
+    (when (seq activity)
+      [:div.sixteen.wide.column
+       [:div.ui.segment
+        [:div.ui.vertical.segment
+         [:h2.ui.dividing.header (:Name activity)]
+         [activity-details-component activity]]]])))
 
 (defn event-attendees-page [event-id]
   (let [form (atom {:EventId event-id})]
@@ -2076,7 +2239,7 @@
                               nil))
 
         remove-activity!
-        (fn [schedule]
+        (fn [schedule _]
           (schedules-endpoint :delete schedule nil))]
     (fn [event-id]
       (let
@@ -2138,42 +2301,9 @@
               (str (get-in @session [:user :FirstName]) "'s Schedule for "
                    (:Name event))]]
             [:div.ui.vertical.segment
-             [:table.ui.table
-              [:thead
-               [:tr
-                [:th "Start"]
-                [:th "End"]
-                [:th "Activity"]
-                [:th "Location"]
-                [:th]]]
-              [:tbody
-               (for [[schedule-id activity-id] scheduled-activities]
-                 ^{:key schedule-id}
-                 (let [activity
-                       (when activity-id
-                         (d/entity @activities-db activity-id))]
-                   [:tr
-                    [:td {:noWrap true}
-                     (when activity
-                       (unparse datetime-formatter
-                                (from-string (:StartTime activity))))]
-                    [:td {:noWrap true}
-                     (when activity
-                       (unparse datetime-formatter
-                                (from-string (:EndTime activity))))]
-                    [:td (:Name activity)]
-                    [:td (:Location activity)]
-                    [:td.right.aligned {:noWrap true}
-                     [:div.ui.button
-                      {:on-click #(remove-activity!
-                                    (d/entity @schedules-db
-                                              schedule-id))}
-                      [:i.red.remove.icon] "Remove"]]]))]
-              [:tfoot
-               [:tr
-                [:th {:colSpan "6"}
-                 [:div.ui.small.labeled.icon.button
-                  [:i.print.icon] "Print"]]]]]]
+             [schedule-component scheduled-activities
+              (list [:i.red.remove.icon] "Remove")
+              remove-activity!]]
             [:div.ui.vertical.segment
              [:div.ui.divided.items
               (for [[activity-id] unscheduled-activities]
@@ -2183,24 +2313,8 @@
                         (d/entity @activities-db activity-id))]
                   [:div.item
                    [:div.content
-                    [:a.header (:Name activity)]
-                    [:div.meta [:strong "Location: "] (:Location activity)]
-                    [:div.meta [:strong "Time: "]
-                     (str (when activity
-                            (unparse datetime-formatter
-                                     (from-string
-                                       (:StartTime activity))))
-                          " - "
-                          (when activity
-                            (unparse datetime-formatter
-                                     (from-string
-                                       (:EndTime activity)))))]
-                    (when (> (:TicketPrice activity) 0)
-                      [:div.meta
-                       [:strong "Ticket Price: "]
-                       (goog.string.format "$%.2f" (:TicketPrice activity))])
-                    [:div.description
-                     (:Description activity)]
+                    [:div.header (:Name activity)]
+                    [activity-details-component activity]
                     [:div.extra
                      (if (> (:TicketPrice activity) 0)
                        [:div.ui.right.floated.button
@@ -2227,24 +2341,8 @@
                            (d/entity @activities-db activity-id))]
                      [:div.item
                       [:div.content
-                       [:a.header (:Name activity)]
-                       [:div.meta [:strong "Location: "] (:Location activity)]
-                       [:div.meta [:strong "Time: "]
-                        (str (when activity
-                               (unparse datetime-formatter
-                                        (from-string
-                                          (:StartTime activity))))
-                             " - "
-                             (when activity
-                               (unparse datetime-formatter
-                                        (from-string
-                                          (:EndTime activity)))))]
-                       (when (> (:TicketPrice activity) 0)
-                         [:div.meta
-                          [:strong "Ticket Price: "]
-                          (goog.string.format "$%.2f" (:TicketPrice activity))])
-                       [:div.description
-                        (:Description activity)]
+                       [:div.header (:Name activity)]
+                       [activity-details-component activity]
                        [:div.extra
                         [:div.ui.right.floated.button
                          {:on-click #(remove-activity-from-cart!
