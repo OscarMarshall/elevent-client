@@ -20,12 +20,18 @@
                                                    (str db-symbol))
                                           (datascript/db-with
                                             (datascript/empty-db)
-                                            (map #(assoc
-                                                    (->> %
-                                                         (remove (comp nil?
-                                                                       second))
-                                                         (into {}))
-                                                    :db/id (~element-id %))
+                                            (map (fn [~'x]
+                                                   (assoc
+                                                     (->> ~'x
+                                                          (remove
+                                                            (comp
+                                                              (some-fn
+                                                                nil?
+                                                                #(when (coll? %)
+                                                                   (empty? %)))
+                                                              second))
+                                                          (into {}))
+                                                     :db/id (~element-id ~'x)))
                                                  ~'elements))))))))
                  endpoints)
      (defn ~'refresh! []

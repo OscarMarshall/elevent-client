@@ -169,7 +169,8 @@
   [events        (str api-url "/events")        :EventId        false]
   [activities    (str api-url "/activities")    :ActivityId     false]
   [users         (str api-url "/users")         :UserId         true]
-  [schedules     (str api-url "/schedules")     :ScheduleId     true])
+  [schedules     (str api-url "/schedules")     :ScheduleId     true]
+  [permissions   (str api-url "/permissions")   :UserId         true])
 
 
 ;; Routes
