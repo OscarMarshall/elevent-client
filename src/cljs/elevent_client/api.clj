@@ -1,4 +1,4 @@
-(ns elevent-client.core)
+(ns elevent-client.api)
 
 (defmacro endpoints [& endpoints]
   `(do
@@ -7,16 +7,16 @@
                        db-symbol       (symbol (str collection "-db"))]
                    `((def ~collection (reagent.core/atom []))
                      (def ~endpoint-symbol
-                       (elevent-client.core/endpoint ~url
+                       (elevent-client.api/endpoint ~url
                                                      ~element-id
                                                      ~(symbol
-                                                        "elevent-client.core"
+                                                        "elevent-client.api"
                                                         (str collection))))
                      (def ~db-symbol (reagent.core/atom (datascript/empty-db)))
-                     (add-watch ~(symbol "elevent-client.core" (str collection))
+                     (add-watch ~(symbol "elevent-client.api" (str collection))
                                 ~(keyword (gensym))
                                 (fn [~'_ ~'_ ~'_ ~'elements]
-                                  (reset! ~(symbol "elevent-client.core"
+                                  (reset! ~(symbol "elevent-client.api"
                                                    (str db-symbol))
                                           (datascript/db-with
                                             (datascript/empty-db)
@@ -37,8 +37,8 @@
      (defn ~'refresh! []
        ~@(map (fn [[collection _ _ requires-token]]
                 `(if (or (not ~requires-token)
-                         (:token @elevent-client.core/session))
-                   (~(symbol "elevent-client.core" (str collection "-endpoint"))
+                         (:token @elevent-client.state/session))
+                   (~(symbol "elevent-client.api" (str collection "-endpoint"))
                       :read nil nil)
                    (reset! ~(symbol collection) [])))
               endpoints))
