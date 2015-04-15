@@ -40,16 +40,19 @@
           (let [env
                 (assoc env :AttendeeId fragment)
 
+                user-id
+                (first (d/q '[:find [?user-id ...]
+                              :in $ ?attendee-id
+                              :where [?attendee-id :UserId ?user-id]]
+                            @api/attendees-db
+                            (int fragment)))
+
                 entity
-                (d/entity @api/users-db
-                          (first (d/q '[:find [?user-id ...]
-                                        :in $ ?attendee-id
-                                        :where [?attendee-id :UserId ?user-id]]
-                                      @api/attendees-db
-                                      (int fragment))))]
+                (when user-id (d/entity @api/users-db user-id))]
             [[(str (:FirstName entity) " " (:LastName entity))
-              env
-              routes/event-attendee]]))
+              (routes/event-attendee env)]
+             env
+             nil]))
 
         event-breadcrumbs
         (fn [env fragment]
