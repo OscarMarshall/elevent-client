@@ -1,6 +1,6 @@
 (ns elevent-client.api
   (:require [ajax.core :refer [DELETE GET POST PUT]]
-            [cljs.core.async :refer [put!]]
+            [cljs.core.async :as async :refer [put! chan <!]]
             [datascript :as d]
 
             [elevent-client.state :as state]
@@ -11,6 +11,21 @@
 
 ;; REST
 ;; =============================================================================
+
+(defn api-call [op uri params handler & [error-handler]]
+  (op (str config/https-url uri)
+      {:format          :json
+       :response-format :json
+       :keywords?       true
+       :timeout         8000
+       :headers
+       (if (:token @state/session)
+         {:Authentication
+          (str "Bearer " (:token @state/session))}
+         {})
+       :params params
+       :handler handler
+       :error-handler error-handler}))
 
 (defn endpoint [uri element-id state]
   (fn dispatch!
@@ -99,8 +114,10 @@
     (users-endpoint :create-no-read form #(auth/sign-in! form))
     (recur)))
 
+(def update-user-permissions-chan (chan))
+
 (add-watch users-db
-           :find-user
+           :users-update
            (fn [_ _ _ db]
              (when-let [email (get-in @state/session [:user :Email])]
                (swap! state/session
@@ -113,4 +130,17 @@
                                                        [?user-id :Email ?email]]
                                                      db)
                                                 ffirst)]
-                        (into {} (d/entity db entity-id)))))))
+                        (into {} (d/entity db entity-id)))))
+             (put! update-user-permissions-chan true)))
+
+(add-watch permissions-db
+           :permissions-update
+           (fn [_ _ _ db]
+             (put! update-user-permissions-chan true)))
+
+(go-loop []
+  (<! update-user-permissions-chan)
+  (when-let [user-id (get-in @state/session [:user :UserId])]
+    (swap! state/session assoc
+           :permissions (into {} (d/entity @permissions-db user-id))))
+  (recur))

@@ -16,6 +16,8 @@
             [elevent-client.pages.home]
             [elevent-client.pages.sign-in]
             [elevent-client.pages.sign-up]
+            [elevent-client.pages.password-reset]
+            [elevent-client.pages.forgot-password]
             [elevent-client.pages.calendar]
             [elevent-client.pages.statistics]
             [elevent-client.pages.payments]

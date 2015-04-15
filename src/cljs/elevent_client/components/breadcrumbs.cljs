@@ -104,7 +104,9 @@
             "statistics" [["Statistics" (routes/statistics)] env nil]
             "payments" [["Payments" (routes/payments)] env nil]
             "sign-in" [["Sign in" (routes/sign-in)] env nil]
-            "sign-up" [["Sign up" (routes/sign-up)] env nil]))
+            "sign-up" [["Sign up" (routes/sign-up)] env nil]
+            "password-reset" [["Password reset" (routes/password-reset)] env nil]
+            "forgot-password" [["Forgot password" (routes/forgot-password)] env nil]))
 
         get-breadcrumbs
         (fn
@@ -117,7 +119,7 @@
             fragment)))
 
         breadcrumbs
-        ((reduce #(%1 %2) get-breadcrumbs (str/split @state/location #"/")))]
+        ((reduce #(%1 %2) get-breadcrumbs (str/split (first (str/split @state/location #"\?")) #"/")))]
     [:div.sixteen.wide.column
      [:div.ui.breadcrumb
       (map-indexed (fn [index [name hash]]

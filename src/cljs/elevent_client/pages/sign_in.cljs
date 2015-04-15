@@ -36,6 +36,11 @@
               [input/component :password {}
                (r/wrap Password swap! form assoc :Password)]
               [:i.lock.icon]]]]
+           [:div.two.fields
+            [:div.field
+             [:a {:href (routes/forgot-password)}
+              "Forgot password?"]]
+            [:div.field]]
            [:button.ui.primary.button {:type :submit
                                        :class (when (seq errors) :disabled)}
             "Sign in"]]]]))))

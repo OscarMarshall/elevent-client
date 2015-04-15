@@ -11,6 +11,8 @@
 (def home-chan (chan))
 (def sign-in-chan (chan))
 (def sign-up-chan (chan))
+(def password-reset-chan (chan))
+(def forgot-password-chan (chan))
 (def events-chan (chan))
 (def events-explore-chan (chan))
 (def events-owned-chan (chan))
@@ -47,6 +49,14 @@
 (defroute sign-up
   "/sign-up" []
   (put! sign-up-chan []))
+
+(defroute password-reset
+  "/password-reset" {:keys [params query-params]}
+  (put! password-reset-chan [(:id query-params)]))
+
+(defroute forgot-password
+  "/forgot-password" []
+  (put! forgot-password-chan []))
 
 (defroute events-explore
   "/events/explore" []
@@ -148,6 +158,8 @@
   (secretary/uri-dispatcher [home
                              sign-in
                              sign-up
+                             password-reset
+                             forgot-password
                              events-explore
                              events-owned
                              events

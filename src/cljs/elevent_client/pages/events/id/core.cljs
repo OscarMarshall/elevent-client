@@ -73,7 +73,7 @@
                                (aget 0)
                                (aget "files")
                                (aget 0))))]
-            (POST (str config/http-url "/logos")
+            (POST (str config/http-url "/events/" (:EventId event) "/logos")
                   {:keywords?       true
                    :timeout         8000
                    :headers
