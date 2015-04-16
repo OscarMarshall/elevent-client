@@ -17,27 +17,28 @@
      [:th "Location"]
      [:th]]]
    [:tbody
-    (for [[schedule-id activity-id] scheduled-activities]
-      ^{:key schedule-id}
-      (let [activity
-            (when activity-id
-              (d/entity @api/activities-db activity-id))]
-        [:tr
-         [:td {:noWrap true}
-          (when activity
-            (unparse locale/datetime-formatter
-                     (from-string (:StartTime activity))))]
-         [:td {:noWrap true}
-          (when activity
-            (unparse locale/datetime-formatter
-                     (from-string (:EndTime activity))))]
-         [:td (:Name activity)]
-         [:td (:Location activity)]
-         [:td.right.aligned {:noWrap true}
-          (when button-text
-            [:div.ui.small.button
-             {:on-click #(button-action schedule-id activity-id)}
-             button-text])]]))]
+    (doall
+      (for [[schedule-id activity-id] scheduled-activities]
+        ^{:key schedule-id}
+        (let [activity
+              (when activity-id
+                (d/entity @api/activities-db activity-id))]
+          [:tr
+           [:td {:noWrap true}
+            (when activity
+              (unparse locale/datetime-formatter
+                       (from-string (:StartTime activity))))]
+           [:td {:noWrap true}
+            (when activity
+              (unparse locale/datetime-formatter
+                       (from-string (:EndTime activity))))]
+           [:td (:Name activity)]
+           [:td (:Location activity)]
+           [:td.right.aligned {:noWrap true}
+            (when button-text
+              [:div.ui.small.button
+               {:on-click #(button-action schedule-id activity-id)}
+               button-text])]])))]
    (when footer-button
      [:tfoot
       [:tr

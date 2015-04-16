@@ -20,7 +20,6 @@
         validator
         (validation-set
           (presence-of :Name)
-          (presence-of :OrganizationId)
           (presence-of :Venue)
           (presence-of :StartDate)
           (presence-of :EndDate)
