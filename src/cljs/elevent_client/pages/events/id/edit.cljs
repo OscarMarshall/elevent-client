@@ -58,12 +58,13 @@
 
             clonable-events
             (cons ["None" 0]
-                  (filter (fn [[event-name event-id]]
-                            (get-in (:EventPermissions (:permissions @state/session))
-                                    [event-id :EditEvent]))
-                          (d/q '[:find ?name ?id
-                                 :where [?id :Name ?name]]
-                               @api/events-db)))
+                  (doall
+                    (filter (fn [[event-name event-id]]
+                              (get-in (:EventPermissions (:permissions @state/session))
+                                      [event-id :EditEvent]))
+                            (d/q '[:find ?name ?id
+                                   :where [?id :Name ?name]]
+                                 @api/events-db))))
 
             associated-organizations
             (cons ["None" 0]
