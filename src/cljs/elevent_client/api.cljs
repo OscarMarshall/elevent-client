@@ -13,19 +13,22 @@
 ;; =============================================================================
 
 (defn api-call [op uri params handler & [error-handler]]
-  (op (str config/https-url uri)
-      {:format          :json
-       :response-format :json
-       :keywords?       true
-       :timeout         8000
-       :headers
-       (if (:token @state/session)
-         {:Authentication
-          (str "Bearer " (:token @state/session))}
-         {})
-       :params params
-       :handler handler
-       :error-handler error-handler}))
+  (let [options {:format          :json
+                 :timeout         8000
+                 :headers
+                 (if (:token @state/session)
+                   {:Authentication
+                    (str "Bearer " (:token @state/session))}
+                   {})
+                 :params params
+                 :handler handler
+                 :error-handler error-handler}
+        url (str config/https-url uri)]
+    (case op
+      :create (POST url options)
+      :update (PUT url options)
+      :read   (GET url options)
+      :delete (DELETE url options))))
 
 (defn endpoint [uri element-id state]
   (fn dispatch!
