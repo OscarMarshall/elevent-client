@@ -1,5 +1,8 @@
 (ns elevent-client.pages.events.id.activities.core
-  (:require [elevent-client.routes :as routes]
+  (:require [datascript :as d]
+
+            [elevent-client.api :as api]
+            [elevent-client.routes :as routes]
             [elevent-client.components.activity-details :as activity-details]))
 
 (defn page [event-id activity-id]

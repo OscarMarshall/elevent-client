@@ -6,7 +6,7 @@
             [elevent-client.state :as state]
             [elevent-client.authentication :as auth]
             [elevent-client.config :as config])
-  (:require-macros [elevent-client.api :refer [endpoints]]
+  (:require-macros elevent-client.api :refer [endpoints]
                    [cljs.core.async.macros :refer [go-loop]]))
 
 ;; REST
