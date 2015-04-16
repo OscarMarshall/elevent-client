@@ -13,12 +13,13 @@
   (let [event-id (atom 0)]
     (fn []
       (let [events
-            (filter (fn [[event-name event-id]]
-                      (get-in (:EventPermissions (:permissions @state/session))
-                              [event-id :EditEvent]))
-                    (d/q '[:find ?name ?id
-                           :where [?id :Name ?name]]
-                         @api/events-db))
+            (doall
+              (filter (fn [[event-name event-id]]
+                        (get-in (:EventPermissions (:permissions @state/session))
+                                [event-id :EditEvent]))
+                      (d/q '[:find ?name ?id
+                             :where [?id :Name ?name]]
+                           @api/events-db)))
 
             attendees
             (d/q '[:find [?check-in-time ...]
