@@ -5,6 +5,7 @@
 
             [elevent-client.api :as api]
             [elevent-client.routes :as routes]
+            [elevent-client.state :as state]
             [elevent-client.components.chart :as chart]
             [elevent-client.components.input :as input]))
 
@@ -12,9 +13,12 @@
   (let [event-id (atom 0)]
     (fn []
       (let [events
-            (d/q '[:find ?name ?id
-                   :where [?id :Name ?name]]
-                 @api/events-db)
+            (filter (fn [[event-name event-id]]
+                      (get-in (:EventPermissions (:permissions @state/session))
+                              [event-id :EditEvent]))
+                    (d/q '[:find ?name ?id
+                           :where [?id :Name ?name]]
+                         @api/events-db))
 
             attendees
             (d/q '[:find [?check-in-time ...]

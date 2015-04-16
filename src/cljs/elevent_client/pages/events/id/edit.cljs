@@ -10,6 +10,7 @@
 
     [elevent-client.api :as api]
     [elevent-client.routes :as routes]
+    [elevent-client.state :as state]
     [elevent-client.components.action-button :as action-button]
     [elevent-client.components.input :as input]
     [elevent-client.components.date-selector :as date-selector]))
@@ -57,9 +58,12 @@
 
             clonable-events
             (cons ["None" 0]
-                  (d/q '[:find ?name ?id
-                         :where [?id :Name ?name]]
-                       @api/events-db))
+                  (filter (fn [[event-name event-id]]
+                            (get-in (:EventPermissions (:permissions @state/session))
+                                    [event-id :EditEvent]))
+                          (d/q '[:find ?name ?id
+                                 :where [?id :Name ?name]]
+                               @api/events-db)))
 
             associated-organizations
             (cons ["None" 0]

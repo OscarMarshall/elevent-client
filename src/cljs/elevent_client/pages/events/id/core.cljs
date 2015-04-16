@@ -190,15 +190,25 @@
                           (d/entity @api/attendees-db attendee-id)
                           #(do
                              (callback)
-                             (js/location.replace (routes/events))))))]
+                             (js/location.replace (routes/events))))))
+        is-owner
+        (get-in (:EventPermissions (:permissions @state/session))
+                [event-id :EditEvent])
+        is-attendee
+        (not (empty? (d/q '[:find [?attendee-id ...]
+                            :in $ ?event-id ?user-id
+                            :where
+                            [?attendee-id :EventId ?event-id]
+                            [?attendee-id :UserId ?user-id]]
+                          @api/attendees-db
+                          (:EventId event)
+                          (:UserId (:user @state/session)))))]
     (when (seq event)
       (cond
-        ; TODO: if owner
-        true
+        is-owner
         [details-owner event activities attendees leave-event]
 
-        ; TODO: if attendee
-        true
+        is-attendee
         [details-attendee event leave-event]
 
         :else

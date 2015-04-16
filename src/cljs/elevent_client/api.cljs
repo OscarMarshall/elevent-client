@@ -145,5 +145,13 @@
   (<! update-user-permissions-chan)
   (when-let [user-id (get-in @state/session [:user :UserId])]
     (swap! state/session assoc
-           :permissions (into {} (d/entity @permissions-db user-id))))
+           :permissions
+           (let [permissions (into {} (d/entity @permissions-db user-id))]
+             (merge permissions
+                    {:EventPermissions        (apply merge (map (fn [event] {(:EventId event) event})
+                                                                (:EventPermissions permissions)))
+                     :ActivityPermissions     (apply merge (map (fn [activity] {(:ActivityId activity) activity})
+                                                                (:ActivityPermissions permissions)))
+                     :OrganizationPermissions (apply merge (map (fn [org] {(:OrganizationId org) org})
+                                                                (:OrganizationPermissions permissions)))}))))
   (recur))
