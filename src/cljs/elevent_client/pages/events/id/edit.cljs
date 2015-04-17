@@ -6,7 +6,7 @@
     [datascript :as d]
     [validateur.validation :refer [format-of presence-of validation-set]]
     [cljs-time.coerce :refer [to-date]]
-      [cljs-time.core :refer [hours now plus]]
+    [cljs-time.core :refer [hours now plus]]
 
     [elevent-client.api :as api]
     [elevent-client.routes :as routes]
@@ -15,20 +15,34 @@
     [elevent-client.components.input :as input]
     [elevent-client.components.date-selector :as date-selector]))
 
-(defn page []
+(def validator
+  (validation-set
+    (presence-of :Name)
+    (presence-of :Venue)
+    (presence-of :StartDate)
+    (presence-of :EndDate)
+    (format-of :TicketPrice
+               :format      #"^\d*\.\d\d$"
+               :allow-nil   true
+               :allow-blank true)
+    (format-of :StartDate :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
+    (format-of :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")))
+
+(defn page [& [event-id]]
   (let [form (atom {})
-        validator
-        (validation-set
-          (presence-of :Name)
-          (presence-of :Venue)
-          (presence-of :StartDate)
-          (presence-of :EndDate)
-          (format-of   :TicketPrice :format #"^\d*\.\d\d$"
-                       :allow-nil true
-                       :allow-blank true)
-          (format-of   :StartDate :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
-          (format-of   :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))
         clone-id (atom 0)]
+    (when event-id
+      (if-let [event (seq (d/entity @api/events-db event-id))]
+        (reset! form (let [event (into {} event)]
+                       (assoc event
+                         :TicketPrice (str (:TicketPrice event)))))
+        (add-watch api/events-db
+                   :event-edit
+                   (fn [_ _ _ db]
+                     (reset! form (let [event (into {} (d/entity db event-id))]
+                                    (assoc event
+                                      :TicketPrice (str (:TicketPrice event)))))
+                     (remove-watch api/events-db :event-edit)))))
     (add-watch clone-id :clone
                (fn [_ _ _ id]
                  (when-not (zero? (int id))
@@ -59,8 +73,11 @@
             (cons ["None" 0]
                   (doall
                     (filter (fn [[event-name event-id]]
-                              (get-in (:EventPermissions (:permissions @state/session))
-                                      [event-id :EditEvent]))
+                              (get-in @state/session
+                                      [:permissions
+                                       :EventPermissions
+                                       event-id
+                                       :EditEvent]))
                             (d/q '[:find ?name ?id
                                    :where [?id :Name ?name]]
                                  @api/events-db))))
@@ -75,12 +92,12 @@
             (fn [form]
               (fn [callback]
                 (when (empty? errors)
-                  (api/events-endpoint :create
-                                   form
-                                   #(do
-                                      (callback)
-                                      (js/location.replace
-                                        (routes/events-explore)))))))]
+                  (api/events-endpoint (if event-id :update :create)
+                                       form
+                                       #(do
+                                          (callback)
+                                          (js/location.replace
+                                            (routes/events-explore)))))))]
         [:div.sixteen.wide.column
          [:div.ui.top.attached.tabular.menu
           [:a.item {:href (routes/events)}
@@ -92,9 +109,10 @@
           [:a.active.item {:href (routes/event-add)}
            "Add"]]
          [:div.ui.bottom.attached.segment
+          (prn-str @form)
           [:form.ui.form
            [:div.ui.vertical.segment
-            [:h2.ui.dividing.header "Add an Event"]
+            [:h2.ui.dividing.header (if event-id "Edit" "Add") " an Event"]
             [:div.two.fields
              [:div.required.field {:class (when (and Name (:Name errors))
                                             :error)}
@@ -130,7 +148,8 @@
                                               :error)}
                 [:label "End Date"]
                 [date-selector/component {:date-atom end-date
-                                :min-date-atom start-date}]]])
+                                ;:min-date-atom start-date
+                                }]]])
             [:div.field
              [:div.four.wide.field {:class (when (and TicketPrice
                                                       (:TicketPrice errors))
@@ -164,7 +183,7 @@
               (r/wrap Description swap! form assoc :Description)]]
             [action-button/component
              {:class [:primary (when (seq errors) :disabled)]}
-             "Add"
+             (if event-id "Edit" "Add")
              (create-event @form)]]]]]))))
 
 (routes/register-page routes/event-edit-chan #'page)

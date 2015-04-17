@@ -1,16 +1,10 @@
 (ns elevent-client.components.input
-  (:require [cljs.core.async :refer [<! chan put!]]
-            [reagent.core :as r])
-  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
+  (:require [reagent.core :as r]))
 
 (defn component
   ([type options select-options state in out]
    (let [in  (or in  identity)
-         out (or out identity)
-         change (chan 1 (filter out))]
-     (go-loop []
-       (reset! state (<! change))
-       (recur))
+         out (or out identity)]
      (r/create-class
        {:component-did-mount
         (fn [this]
@@ -18,7 +12,8 @@
             (-> this
                 r/dom-node
                 js/jQuery
-                (.dropdown (clj->js {:onChange #(when % (put! change %))})))))
+                (.dropdown (clj->js {:onChange #(when % (reset! state
+                                                                (out %)))})))))
 
         :component-did-update
         (fn [this]
@@ -26,15 +21,18 @@
             (-> this
                 r/dom-node
                 js/jQuery
-                (.dropdown (clj->js {:onChange #(when % (put! change %))})))))
+                (.dropdown (clj->js {:onChange #(when % (reset! state
+                                                                (out %)))})))))
 
         :reagent-render
         (fn render
           ([_ options select-options state _ _]
            (let [attributes (assoc options
-                              :value     (in @state)
-                              :on-change #(when-let [x (.-value (.-target %))]
-                                            (put! change x)))]
+                              :value
+                              (in @state)
+
+                              :on-change
+                              #(reset! state (out (.-value (.-target %)))))]
              (case type
                :textarea [:textarea attributes]
                :select [:div.ui.dropdown.selection

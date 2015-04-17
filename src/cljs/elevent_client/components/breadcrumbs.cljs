@@ -97,7 +97,7 @@
         (fn [env fragment]
           (case fragment
             "events" [["Events" (routes/events)] env events-breadcrumbs]
-            "organizations" [["Organizations" (routes/organization)]
+            "organizations" [["Organizations" (routes/organizations)]
                              env
                              organizations-breadcrumbs]
             "calendar" [["Calendar" (routes/calendar)] env nil]

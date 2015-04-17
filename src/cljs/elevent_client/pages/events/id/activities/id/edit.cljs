@@ -101,7 +101,7 @@
              [event-details/component event]]
             [:div.ui.vertical.segment
              [:h2.ui.header
-              (if activity-id "Edit" "Add") " activity"]
+              (if activity-id "Edit" "Add") " an activity"]
              [:form.ui.form {:on-submit
                              (fn [e]
                                (when (empty? errors)
