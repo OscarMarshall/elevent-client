@@ -44,9 +44,7 @@
             (fn [form]
               (fn [callback]
                 (when (empty? errors)
-                  ; TODO: maybe this logic is wrong? Might want to buy ticket
-                  ;       even if not required
-                  (if (:RequiresPayment event)
+                  (if (> (:TicketPrice event) 0)
                     (stripe/renew-token!
                       (fn [] (api/attendees-endpoint
                                :create
@@ -98,16 +96,15 @@
                   [:label "Last Name"]
                   [input/component :text {:disabled true}
                    (r/wrap LastName swap! form assoc :LastName)]]]
-                ; TODO: use TicketPrice > 0 instead of RequiresPayment
-                (when (:RequiresPayment event)
+                (when (> (:TicketPrice event) 0)
                   [payments/component])]
                [:div.ui.divider]
                [action-button/component
-                {:class [:primary
-                         (when (or (seq errors)
-                                   (and (:RequiresPayment event)
-                                        (nil? (:payment-info @state/session))))
-                           :disabled)]}
+                {:class (str "primary"
+                             (when (or (seq errors)
+                                       (and (> (:TicketPrice event) 0)
+                                            (nil? (:payment-info @state/session))))
+                               " disabled"))}
                 "Register"
                 (register @form)]]]]
             [logo/component @event-logo]]])))))
