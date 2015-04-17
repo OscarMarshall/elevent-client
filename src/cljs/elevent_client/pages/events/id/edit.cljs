@@ -62,7 +62,7 @@
                              ""))
                          :EventId))))))
     (fn []
-      (let [{:keys [Name OrganizationId Venue StartDate EndDate RequiresPayment
+      (let [{:keys [Name OrganizationId Venue StartDate EndDate
                     TicketPrice Description]}
             @form
 
@@ -158,29 +158,11 @@
                [input/component :text {}
                 (r/wrap TicketPrice swap! form assoc :TicketPrice)]]]]
             [:div.field
-             [:div.field
-              ; TODO: someday make UI checkboxes work
-              #_[:div.field
-              [(with-meta identity
-                          {:component-did-mount
-                           #(.checkbox (js/$ ".ui.checkbox"))})
-               [:div#requires-payment.ui.checkbox
-                [:input {:type "checkbox"}]
-                [:label "Ticket required"]]]]
-               [:label
-                [:input#requires-payment
-                 {:type "checkbox"
-                  :on-change #(swap! form assoc :RequiresPayment
-                                     (if (nil? (:RequiresPayment @form))
-                                       true
-                                       (not (:RequiresPayment @form))))}]
-                " Ticket required"]]]
-            [:div.field
              [:label "Description"]
              [input/component :textarea {}
               (r/wrap Description swap! form assoc :Description)]]
             [action-button/component
-             {:class [:primary (when (seq errors) :disabled)]}
+             {:class (str "primary" (when (seq errors) " disabled"))}
              (if event-id "Edit" "Add")
              (create-event @form)]]]]]))))
 
