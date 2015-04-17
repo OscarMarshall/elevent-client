@@ -8,7 +8,8 @@
     (fn [options text action & [alt-text alt-action]]
       [:div.ui.button
        (assoc options
-         :on-click (fn []
+         :on-click (fn [e]
+                     (.preventDefault e)
                      (reset! button-text loading-text)
                      (if alt-text
                        (action #(reset! button-text alt-text))

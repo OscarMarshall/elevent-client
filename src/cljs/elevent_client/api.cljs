@@ -14,6 +14,8 @@
 
 (defn api-call [op uri params handler & [error-handler]]
   (let [options {:format          :json
+                 :response-format (when (= op :read) :json)
+                 :keywords?       true
                  :timeout         8000
                  :headers
                  (if (:token @state/session)

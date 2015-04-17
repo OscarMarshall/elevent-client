@@ -1,6 +1,7 @@
 (ns elevent-client.pages.events.id.core
   (:require [datascript :as d]
-            [ajax.core :refer [POST]]
+            [reagent.core :as r :refer [atom]]
+            [ajax.core :refer [POST DELETE]]
 
             [elevent-client.api :as api]
             [elevent-client.config :as config]
@@ -10,9 +11,10 @@
             [elevent-client.components.schedule :as schedule]
             [elevent-client.components.activity-table :as activity-table]
             [elevent-client.components.action-button :as action-button]
+            [elevent-client.components.logo :as logo]
             [elevent-client.components.qr-code :as qr-code]))
 
-(defn details-attendee [event leave-event]
+(defn details-attendee [event leave-event event-logo]
   (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
                                        :in $ ?event-id ?user-id
                                        :where
@@ -33,46 +35,52 @@
                (:EventId event)
                (get-in @state/session [:user :UserId]))]
       [:div.sixteen.wide.column
-       [:div.ui.segment
-        [:div.ui.vertical.segment
-         [:h1.ui.dividing.header
-          (:Name event)]
-         [event-details/component event]
-         [action-button/component {:class "right floated small"}
-          [:div
-           [:i.red.remove.icon]
-           "Leave event"]
-          (leave-event attendee-id)]]
-        [:div.ui.vertical.segment
-         [:h2 "QR-Code"]
-         [qr-code/component
-          {:text (routes/event-attendee (into {} (d/entity @api/attendees-db
-                                                          attendee-id)))}]]
-        [:div.ui.vertical.segment
-         [:h2 "Your Schedule"]
-         [schedule/component scheduled-activities
-          (list "Details" [:i.right.chevron.icon])
-          (fn [_ activity-id]
-            (js/location.replace (routes/event-activity
-                                   {:EventId (:EventId event)
-                                    :ActivityId activity-id})))
-          [:a.ui.small.right.floated.labeled.icon.button
-           {:href (routes/event-schedule event)}
-           [:i.edit.icon]
-           "Edit"]]]]])))
+       [:div.ui.sixteen.column.grid
+        [:div.column {:class (str (if (:HasLogo event)
+                                    "thirteen"
+                                    "sixteen")
+                                  " wide")}
+         [:div.ui.segment
+          [:div.ui.vertical.segment
+           [:h1.ui.dividing.header
+            (:Name event)]
+           [event-details/component event]
+           [action-button/component {:class "right floated small"}
+            [:div
+             [:i.red.remove.icon]
+             "Leave event"]
+            (leave-event attendee-id)]]
+          [:div.ui.vertical.segment
+           [:h2 "QR-Code"]
+           [qr-code/component
+            {:text (routes/event-attendee (into {} (d/entity @api/attendees-db
+                                                             attendee-id)))}]]
+          [:div.ui.vertical.segment
+           [:h2 "Your Schedule"]
+           [schedule/component scheduled-activities
+            (list "Details" [:i.right.chevron.icon])
+            (fn [_ activity-id]
+              (js/location.assign (routes/event-activity
+                                    {:EventId (:EventId event)
+                                     :ActivityId activity-id})))
+            [:a.ui.small.right.floated.labeled.icon.button
+             {:href (routes/event-schedule event)}
+             [:i.edit.icon]
+             "Edit"]]]]]
+        [logo/component @event-logo]]])))
 
-(defn details-owner [event activities attendees leave-event]
+(defn details-owner [event activities attendees leave-event
+                     logo-to-upload event-logo image-error get-logo]
   (let [submit-image
-        (fn [e]
-          (.preventDefault e)
-          (let [form-data
+        (fn [callback]
+          (let [file (-> (js/jQuery "#file")
+                         (aget 0)
+                         (aget "files")
+                         (aget 0))
+                form-data
                 (doto
                   (js/FormData.)
-                  (.append "Logo"
-                           (-> (js/jQuery "#file")
-                               (aget 0)
-                               (aget "files")
-                               (aget 0))))]
+                  (.append "Logo" file))]
             (POST (str config/http-url "/events/" (:EventId event) "/logos")
                   {:keywords?       true
                    :timeout         8000
@@ -82,8 +90,35 @@
                       (str "Bearer " (:token @state/session))}
                      {})
                    :params form-data
-                   :handler #(prn "success!")
-                   :error-handler #(prn "failed...")})))]
+                   :handler (fn []
+                              (callback)
+                              (api/events-endpoint :read nil nil)
+                              #_(get-logo))
+                   :error-handler #(prn "failed...")}))) ; TODO: real error message
+        delete-image
+        (fn [callback]
+          (DELETE (str config/http-url "/events/" (:EventId event) "/logos")
+                  {:keywords?       true
+                   :timeout         8000
+                   :headers
+                   (if (:token @state/session)
+                     {:Authentication
+                      (str "Bearer " (:token @state/session))}
+                     {})
+                   :handler (fn []
+                              (reset! event-logo nil)
+                              (callback)
+                              (api/events-endpoint :read nil nil))}))
+        file-changed
+        (fn []
+          (let [file (-> (js/jQuery "#file")
+                         (aget 0)
+                         (aget "files")
+                         (aget 0))]
+            (reset! logo-to-upload (not (= (.val (js/jQuery "#file")) "")))
+                    (if (> (aget file "size") 1000000) ; image is too large
+                      (reset! image-error "Image is too large. Must be under 1 MB.")
+                      (reset! image-error nil))))]
     [:div.sixteen.wide.column
      [:div.ui.segment
       [:div.ui.vertical.segment
@@ -103,21 +138,35 @@
                                          (:UserId (:user @state/session))))]
         [:div.ui.vertical.segment
          [:h2 "QR-Code"]
+         [action-button/component {:class "right floated small"}
+          [:div
+           [:i.red.remove.icon]
+           "Leave event"]
+          (leave-event attendee-id)]
          [qr-code/component
           {:text (routes/event-attendee (into {} (d/entity @api/attendees-db
                                                           attendee-id)))}]])
       [:div.ui.vertical.segment
        [:h2 "Event Logo"]
+       (when @event-logo
+         [:img {:style {:height "100px"} :src @event-logo}])
        [:form.ui.form
         [:div.two.fields
          [:div.field
           [:label "Choose image"]
-          [:input#file {:type "file"}]]
+          [:input#file {:type "file"
+                        :on-change file-changed}]
+          (when @image-error [:div.ui.red.pointing.prompt.label @image-error])]
          [:div.field]]
-        [:button.ui.primary.button
-         {:type :submit
-          :on-click submit-image}
-         "Submit"]]]
+        [action-button/component
+         {:class (str "primary" (when (or (not @logo-to-upload) @image-error) " disabled"))}
+         "Upload"
+         submit-image]
+        (when @event-logo
+          [action-button/component
+           {}
+           (list [:i.red.remove.icon] "Remove")
+           delete-image])]]
       [:div.ui.vertical.segment
        [:h2.ui.header
         "Activities"]
@@ -154,69 +203,86 @@
             "Edit"]]]]]]]]))
 
 (defn page [event-id]
-  (let [event (into {} (d/entity @api/events-db event-id))
+  (let [logo-to-upload (atom false)
+        event-logo (atom false)
+        image-error (atom nil)]
+    (fn [event-id]
+      (let [event (into {} (d/entity @api/events-db event-id))
+            activities (map #(d/entity @api/activities-db %)
+                            (d/q '[:find [?e ...]
+                                   :in $ ?event-id
+                                   :where
+                                   [?e :EventId ?event-id]]
+                                 @api/activities-db
+                                 event-id))
+            attendees (doall (take 10
+                                   (map (fn [[user-id attendee-id]]
+                                          (merge
+                                            (into
+                                              {}
+                                              (d/entity
+                                                @api/users-db
+                                                user-id))
+                                            (into
+                                              {}
+                                              (d/entity
+                                                @api/attendees-db
+                                                attendee-id))))
+                                        (d/q '[:find ?e ?a
+                                               :in $ ?event-id
+                                               :where
+                                               [?a :EventId ?event-id]
+                                               [?a :UserId ?e]]
+                                             @api/attendees-db
+                                             event-id))))
+            leave-event (fn [attendee-id]
+                          (fn [callback]
+                            (api/attendees-endpoint
+                              :delete
+                              (d/entity @api/attendees-db attendee-id)
+                              #(do
+                                 (callback)
+                                 (js/location.replace (routes/events))))))
+            is-owner
+            (get-in (:EventPermissions (:permissions @state/session))
+                    [event-id :EditEvent])
+            is-attendee
+            (not (empty? (d/q '[:find [?attendee-id ...]
+                                :in $ ?event-id ?user-id
+                                :where
+                                [?attendee-id :EventId ?event-id]
+                                [?attendee-id :UserId ?user-id]]
+                              @api/attendees-db
+                              (:EventId event)
+                              (:UserId (:user @state/session)))))
+            get-logo #(api/api-call :read
+                                    (str "/events/" event-id "/logos")
+                                    {}
+                                    (fn [json] (reset! event-logo (:URL json)))
+                                    (fn [] (reset! event-logo nil)))]
+        (when (seq event)
+          (when (:HasLogo event)
+            (get-logo))
+          (cond
+            is-owner
+            [details-owner event activities attendees leave-event
+             logo-to-upload event-logo image-error get-logo]
 
-        activities (map #(d/entity @api/activities-db %)
-                        (d/q '[:find [?e ...]
-                               :in $ ?event-id
-                               :where
-                               [?e :EventId ?event-id]]
-                             @api/activities-db
-                             event-id))
-        attendees (doall (take 10
-                               (map (fn [[user-id attendee-id]]
-                                      (merge
-                                        (into
-                                          {}
-                                          (d/entity
-                                            @api/users-db
-                                            user-id))
-                                        (into
-                                          {}
-                                          (d/entity
-                                            @api/attendees-db
-                                            attendee-id))))
-                                    (d/q '[:find ?e ?a
-                                           :in $ ?event-id
-                                           :where
-                                           [?a :EventId ?event-id]
-                                           [?a :UserId ?e]]
-                                         @api/attendees-db
-                                         event-id))))
-        leave-event (fn [attendee-id]
-                      (fn [callback]
-                        (api/attendees-endpoint
-                          :delete
-                          (d/entity @api/attendees-db attendee-id)
-                          #(do
-                             (callback)
-                             (js/location.replace (routes/events))))))
-        is-owner
-        (get-in (:EventPermissions (:permissions @state/session))
-                [event-id :EditEvent])
-        is-attendee
-        (not (empty? (d/q '[:find [?attendee-id ...]
-                            :in $ ?event-id ?user-id
-                            :where
-                            [?attendee-id :EventId ?event-id]
-                            [?attendee-id :UserId ?user-id]]
-                          @api/attendees-db
-                          (:EventId event)
-                          (:UserId (:user @state/session)))))]
-    (when (seq event)
-      (cond
-        is-owner
-        [details-owner event activities attendees leave-event]
+            is-attendee
+            [details-attendee event leave-event event-logo]
 
-        is-attendee
-        [details-attendee event leave-event]
-
-        :else
-        [:div.sixteen.wide.column
-         [:div.ui.segment
-          [:div.ui.vertical.segment
-           [:h1.ui.dividing.header
-            (:Name event)]
-           [event-details/component event]]]]))))
+            :else
+            [:div.sixteen.wide.column
+             [:div.ui.sixteen.column.grid
+              [:div.column {:class (str (if (:HasLogo event)
+                                          "thirteen"
+                                          "sixteen")
+                                        " wide")}
+               [:div.ui.segment
+                [:div.ui.vertical.segment
+                 [:h1.ui.dividing.header
+                  (:Name event)]
+                 [event-details/component event]]]]
+              [logo/component @event-logo]]]))))))
 
 (routes/register-page routes/event-chan #'page)

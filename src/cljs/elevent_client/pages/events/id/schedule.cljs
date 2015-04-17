@@ -10,7 +10,8 @@
             [elevent-client.stripe :as stripe]
             [elevent-client.components.payments :as payments]
             [elevent-client.components.activity-details :as activity-details]
-            [elevent-client.components.schedule :as schedule]))
+            [elevent-client.components.schedule :as schedule]
+            [elevent-client.components.logo :as logo]))
 
 (defn page [event-id]
   (let [cart-activities (atom #{})
@@ -24,7 +25,9 @@
 
         remove-activity!
         (fn [schedule _]
-          (api/schedules-endpoint :delete schedule nil))]
+          (api/schedules-endpoint :delete schedule nil))
+
+        event-logo (atom nil)]
     (fn [event-id]
       (let
         [event (into {} (d/entity @api/events-db event-id))
@@ -78,73 +81,86 @@
                                            :ActivityIds activities}
                                           #(reset! cart-activities #{}))))))]
         (when (seq event)
+          (when (and (:HasLogo event)
+                     (not @event-logo))
+            (api/api-call :read
+                          (str "/events/" event-id "/logos")
+                          {}
+                          (fn [json] (reset! event-logo (:URL json)))
+                          (fn [] (reset! event-logo nil))))
           [:div.sixteen.wide.column
-           [:div.ui.segment
-            [:div.ui.vertical.segment
-             [:h2.ui.header
-              (str (get-in @state/session [:user :FirstName]) "'s Schedule for "
-                   (:Name event))]]
-            [:div.ui.vertical.segment
-             [schedule/component scheduled-activities
-              (list [:i.red.remove.icon] "Remove")
-              remove-activity!]]
-            [:div.ui.vertical.segment
-             [:div.ui.divided.items
-              (doall
-                (for [[activity-id] unscheduled-activities]
-                  ^{:key activity-id}
-                  (let [activity
-                        (when activity-id
-                          (d/entity @api/activities-db activity-id))]
-                    [:div.item
-                     [:div.content
-                      [:div.header (:Name activity)]
-                      [activity-details/component activity]
-                      [:div.extra
-                       (if (> (:TicketPrice activity) 0)
-                         [:div.ui.right.floated.button
-                          {:on-click #(add-activity-to-cart!
-                                        (:ActivityId activity))}
-                          "Add to cart"
-                          [:i.right.chevron.icon]]
-                         [:div.ui.right.floated.primary.button
-                          {:on-click #(add-activity! (get-in @state/session
-                                                             [:user :UserId])
-                                                     (:ActivityId activity))}
-                          "Add"
-                          [:i.right.chevron.icon]])]]])))]]]
-           (when (seq @cart-activities)
+           [:div.ui.sixteen.column.grid
+            [:div.column {:class (str (if (:HasLogo event)
+                                        "thirteen"
+                                        "sixteen")
+                                      " wide")}
              [:div.ui.segment
               [:div.ui.vertical.segment
-               [:div.ui.vertical.segment
-                [:h2.ui.dividing.header "Cart"]
-                [:div.ui.divided.items
-                 (for [[activity-id] @cart-activities]
-                   ^{:key activity-id}
-                   (let [activity
-                         (when activity-id
-                           (d/entity @api/activities-db activity-id))]
-                     [:div.item
-                      [:div.content
-                       [:div.header (:Name activity)]
-                       [activity-details/component activity]
-                       [:div.extra
-                        [:div.ui.right.floated.button
-                         {:on-click #(remove-activity-from-cart!
-                                       (:ActivityId activity))}
-                         [:i.red.remove.icon]
-                         "Remove"]]]]))]]
-               [:div.ui.vertical.segment
-                [:form.ui.form
-                 [payments/component]]
-                [:div.ui.divider]
-                [:button.ui.primary.button
-                 {:type :submit
-                  :class (when (nil? (:payment-info @state/session))
-                           :disabled)
-                  :on-click #(add-cart-activities! % (get-in @state/session
-                                                             [:user :UserId])
-                                                   cart-activities)}
-                 "Confirm Payment and Add Activities"]]]])])))))
+               [:h2.ui.header
+                (str (get-in @state/session [:user :FirstName]) "'s Schedule for "
+                     (:Name event))]]
+              [:div.ui.vertical.segment
+               [schedule/component scheduled-activities
+                (list [:i.red.remove.icon] "Remove")
+                remove-activity!]]
+              [:div.ui.vertical.segment
+               [:div.ui.divided.items
+                (doall
+                  (for [[activity-id] unscheduled-activities]
+                    ^{:key activity-id}
+                    (let [activity
+                          (when activity-id
+                            (d/entity @api/activities-db activity-id))]
+                      [:div.item
+                       [:div.content
+                        [:div.header (:Name activity)]
+                        [activity-details/component activity]
+                        [:div.extra
+                         (if (> (:TicketPrice activity) 0)
+                           [:div.ui.right.floated.button
+                            {:on-click #(add-activity-to-cart!
+                                          (:ActivityId activity))}
+                            "Add to cart"
+                            [:i.right.chevron.icon]]
+                           [:div.ui.right.floated.primary.button
+                            {:on-click #(add-activity! (get-in @state/session
+                                                               [:user :UserId])
+                                                       (:ActivityId activity))}
+                            "Add"
+                            [:i.right.chevron.icon]])]]])))]]]
+             (when (seq @cart-activities)
+               [:div.ui.segment
+                [:div.ui.vertical.segment
+                 [:div.ui.vertical.segment
+                  [:h2.ui.dividing.header "Cart"]
+                  [:div.ui.divided.items
+                   (for [[activity-id] @cart-activities]
+                     ^{:key activity-id}
+                     (let [activity
+                           (when activity-id
+                             (d/entity @api/activities-db activity-id))]
+                       [:div.item
+                        [:div.content
+                         [:div.header (:Name activity)]
+                         [activity-details/component activity]
+                         [:div.extra
+                          [:div.ui.right.floated.button
+                           {:on-click #(remove-activity-from-cart!
+                                         (:ActivityId activity))}
+                           [:i.red.remove.icon]
+                           "Remove"]]]]))]]
+                 [:div.ui.vertical.segment
+                  [:form.ui.form
+                   [payments/component]]
+                  [:div.ui.divider]
+                  [:button.ui.primary.button
+                   {:type :submit
+                    :class (when (nil? (:payment-info @state/session))
+                             :disabled)
+                    :on-click #(add-cart-activities! % (get-in @state/session
+                                                               [:user :UserId])
+                                                     cart-activities)}
+                   "Confirm Payment and Add Activities"]]]])]
+            [logo/component @event-logo]]])))))
 
 (routes/register-page routes/event-schedule-chan #'page)

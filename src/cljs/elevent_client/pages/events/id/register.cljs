@@ -17,6 +17,7 @@
             [elevent-client.components.payments :as payments]
             [elevent-client.components.input :as input]
             [elevent-client.components.event-details :as event-details]
+            [elevent-client.components.logo :as logo]
             [elevent-client.locale :as locale]
             [elevent-client.stripe :as stripe]))
 
@@ -27,7 +28,8 @@
         validator (validation-set (presence-of :Email)
                                   (presence-of :FirstName)
                                   (presence-of :LastName)
-                                  (format-of :Email :format #"@"))]
+                                  (format-of :Email :format #"@"))
+        event-logo (atom nil)]
     (fn []
       (let [{:keys [Email FirstName LastName]}
             @form
@@ -64,41 +66,50 @@
                          (callback)
                          (js/location.replace (routes/events))))))))]
         (when (seq event)
-          [:div.ui.stackable.page.grid
-           [:div.sixteen.wide.column
-            [:div.ui.segment
-             [:div.ui.vertical.segment
-              [:h2.ui.dividing.header
-               (str "Register for " (:Name event))]
-              [:div.meta
-               [event-details/component event]]]
-             [:div.ui.vertical.segment
-              [:form.ui.form
-               [:div.one.field
-                [:div.required.field
-                 [:label "Email"]
-                 [input/component :text {:disabled true}
-                  (r/wrap Email swap! form assoc :Email)]]]
-               [:div.two.fields
-                [:div.required.field
-                 [:label "First Name"]
-                 [input/component :text {:disabled true}
-                  (r/wrap FirstName swap! form assoc :FirstName)]]
-                [:div.required.field
-                 [:label "Last Name"]
-                 [input/component :text {:disabled true}
-                  (r/wrap LastName swap! form assoc :LastName)]]]
-               ; TODO: use TicketPrice > 0 instead of RequiresPayment
-               (when (:RequiresPayment event)
-                 [payments/component])]
-              [:div.ui.divider]
-              [action-button/component
-               {:class [:primary
-                        (when (or (seq errors)
-                                  (and (:RequiresPayment event)
-                                       (nil? (:payment-info @state/session))))
-                          :disabled)]}
-               "Register"
-               (register @form)]]]]])))))
+          (when (and (:HasLogo event)
+                     (not @event-logo))
+            (api/api-call :read
+                          (str "/events/" event-id "/logos")
+                          {}
+                          (fn [json] (reset! event-logo (:URL json)))
+                          (fn [] (reset! event-logo nil))))
+          [:div.sixteen.wide.column
+           [:div.ui.sixteen.column.grid
+            [:div.thirteen.wide.column {:class (when-not (:HasLogo event) "centered")}
+             [:div.ui.segment
+              [:div.ui.vertical.segment
+               [:h2.ui.dividing.header
+                (str "Register for " (:Name event))]
+               [:div.meta
+                [event-details/component event]]]
+              [:div.ui.vertical.segment
+               [:form.ui.form
+                [:div.one.field
+                 [:div.required.field
+                  [:label "Email"]
+                  [input/component :text {:disabled true}
+                   (r/wrap Email swap! form assoc :Email)]]]
+                [:div.two.fields
+                 [:div.required.field
+                  [:label "First Name"]
+                  [input/component :text {:disabled true}
+                   (r/wrap FirstName swap! form assoc :FirstName)]]
+                 [:div.required.field
+                  [:label "Last Name"]
+                  [input/component :text {:disabled true}
+                   (r/wrap LastName swap! form assoc :LastName)]]]
+                ; TODO: use TicketPrice > 0 instead of RequiresPayment
+                (when (:RequiresPayment event)
+                  [payments/component])]
+               [:div.ui.divider]
+               [action-button/component
+                {:class [:primary
+                         (when (or (seq errors)
+                                   (and (:RequiresPayment event)
+                                        (nil? (:payment-info @state/session))))
+                           :disabled)]}
+                "Register"
+                (register @form)]]]]
+            [logo/component @event-logo]]])))))
 
 (routes/register-page routes/event-register-chan #'page)
