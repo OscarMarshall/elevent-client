@@ -73,11 +73,15 @@
             ; This code could probably be neater
             (when date-atom
               (add-watch date-atom :update-instance
-                (fn [ke ref old new]
+                (fn [key ref old new]
                   ;; final parameter here causes pikaday to skip onSelect()
                   ;; callback
                   (when (from-string new)
-                    (.setDate instance (normalize new) true)))))
+                    (if min-date-atom
+                      (if (> @min-date-atom new)
+                        (reset! date-atom @min-date-atom)
+                        (.setDate instance (normalize new) true))
+                      (.setDate instance (normalize new) true))))))
             (when min-date-atom
               (add-watch min-date-atom :update-min-date
                 (fn [key ref old new]

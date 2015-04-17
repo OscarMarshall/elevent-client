@@ -168,11 +168,10 @@
                                                 "error")}
                   [:label "Start Time"]
                   [date-selector/component {:date-atom start-time
-                                  :max-date-atom end-time
                                   :pikaday-attrs {:minDate event-start-js
                                                   :maxDate event-end-js
-                                                  :defaultDate event-start
-                                                  :setDefaultDate false ; TODO: if true, date is filled but not selected
+                                                  :defaultDate event-start-js
+                                                  :setDefaultDate false
                                                   }
                                   :static-attrs  {:min-date event-start
                                                   :max-date event-end}}]]
@@ -184,7 +183,7 @@
                                   :min-date-atom start-time
                                   :pikaday-attrs {:minDate event-start-js
                                                   :maxDate event-end-js
-                                                  :defaultDate event-start
+                                                  :defaultDate event-start-js
                                                   :setDefaultDate false
                                                   }
                                   :static-attrs  {:min-date event-start

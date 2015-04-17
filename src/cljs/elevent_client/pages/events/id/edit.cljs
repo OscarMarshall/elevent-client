@@ -139,7 +139,6 @@
                                               :error)}
                 [:label "Start Date"]
                 [date-selector/component {:date-atom start-date
-                                :max-date-atom end-date
                                 :pikaday-attrs {:minDate (-> (now)
                                                              (plus (hours 6))
                                                              to-date)}}]]
@@ -148,8 +147,7 @@
                                               :error)}
                 [:label "End Date"]
                 [date-selector/component {:date-atom end-date
-                                ;:min-date-atom start-date
-                                }]]])
+                                :min-date-atom start-date}]]])
             [:div.field
              [:div.four.wide.field {:class (when (and TicketPrice
                                                       (:TicketPrice errors))
