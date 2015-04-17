@@ -3,7 +3,7 @@
             [datascript :as d]
             [cljs-time.coerce :refer [from-string]]
             [cljs-time.core :refer [after?]]
-            [cljs-time.format :refer [ formatters unparse parse]]
+            [cljs-time.format :refer [formatters unparse parse]]
 
             [elevent-client.state :as state]
             [elevent-client.locale :as locale]
