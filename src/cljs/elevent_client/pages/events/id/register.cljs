@@ -16,6 +16,7 @@
             [elevent-client.components.action-button :as action-button]
             [elevent-client.components.payments :as payments]
             [elevent-client.components.input :as input]
+            [elevent-client.components.event-details :as event-details]
             [elevent-client.locale :as locale]
             [elevent-client.stripe :as stripe]))
 
@@ -70,21 +71,7 @@
               [:h2.ui.dividing.header
                (str "Register for " (:Name event))]
               [:div.meta
-               [:strong "Date: "]
-               (let [start (from-string (:StartDate event))
-                     end   (from-string (:EndDate   event))]
-                 (str (unparse locale/datetime-formatter start)
-                      (when (after? end start)
-                        (str " to " (unparse locale/datetime-formatter end)))))]
-              [:div.meta
-               [:strong "Venue: "]
-               (:Venue event)]
-              (when (> (:TicketPrice event) 0)
-                [:div.meta
-                 [:strong "Ticket Price: "]
-                 (string/format "$%.2f" (:TicketPrice event))])
-              [:div.description
-               (:Description event)]]
+               [event-details/component event]]]
              [:div.ui.vertical.segment
               [:form.ui.form
                [:div.one.field

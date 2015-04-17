@@ -7,9 +7,9 @@
 (defn renew-token! [callback]
   (let [response-chan (chan)]
     (Stripe.card.createToken (clj->js (:payment-info @state/session))
-                             #(put! response-chan %&))
+                             #(put! response-chan (js->clj %& :keywordize-keys true)))
     (go
       (let [response (second (<! response-chan))]
-       (when (not (-.error response))
-        (swap! state/session assoc :stripe-token (-.id response))
+       (when (not (:error response))
+        (swap! state/session assoc :stripe-token (:id response))
         (callback))))))

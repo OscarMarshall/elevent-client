@@ -1,6 +1,7 @@
 (ns elevent-client.components.payments
   (:require
     [reagent.core :as r]
+    [reagent.core :as r :refer [atom]]
     [validateur.validation :refer [format-of presence-of validation-set]]
 
     [elevent-client.state :as state]

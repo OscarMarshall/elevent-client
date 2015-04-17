@@ -44,4 +44,11 @@
           [:span
            {:style {:cursor "pointer"}
             :on-click #(delete-activity! (:ActivityId activity))}
-           [:i.red.remove.icon]]]])]]))
+           [:i.red.remove.icon]]]])]
+     [:tfoot
+      [:tr
+       [:th {:colSpan "6"}
+        [:a.ui.small.right.floated.labeled.icon.button
+         {:href (routes/event-activity-add {:EventId event-id})}
+         [:i.edit.icon]
+         "Edit"]]]]]))

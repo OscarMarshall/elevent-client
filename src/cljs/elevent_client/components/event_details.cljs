@@ -1,5 +1,6 @@
 (ns elevent-client.components.event-details
-  (:require [cljs-time.core :refer [after?]]
+  (:require [goog.string :as string]
+            [cljs-time.core :refer [after?]]
             [cljs-time.coerce :refer [from-string]]
             [cljs-time.format :refer [unparse]]
 
@@ -19,4 +20,8 @@
                     (unparse locale/datetime-formatter end))))))]
    [:div
     [:b "Venue: "] (:Venue event)]
+   (when (> (:TicketPrice event) 0)
+     [:div.meta
+      [:strong "Ticket Price: "]
+      (string/format "$%.2f" (:TicketPrice event))])
    [:p (:Description event)]])

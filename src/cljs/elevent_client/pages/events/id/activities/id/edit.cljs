@@ -172,7 +172,7 @@
                                   :pikaday-attrs {:minDate event-start-js
                                                   :maxDate event-end-js
                                                   :defaultDate event-start
-                                                  :setDefaultDate false
+                                                  :setDefaultDate false ; TODO: if true, date is filled but not selected
                                                   }
                                   :static-attrs  {:min-date event-start
                                                   :max-date event-end}}]]
@@ -202,4 +202,5 @@
               "Activities"]
              [activity-table/component event-id]]]])))))
 
+(routes/register-page routes/event-activity-add-chan #'page)
 (routes/register-page routes/event-activity-edit-chan #'page)

@@ -22,6 +22,7 @@
 (def event-activities-chan (chan))
 (def event-activities-explore-chan (chan))
 (def event-activity-chan (chan))
+(def event-activity-add-chan (chan))
 (def event-activity-edit-chan (chan))
 (def event-schedule-chan (chan))
 (def event-attendees-chan (chan))
