@@ -12,7 +12,9 @@
                             local-date-time
                             minute
                             month
-                            year]]
+                            year
+                            plus
+                            hours]]
     [cljs-time.format :refer [formatters unparse]]
 
     [elevent-client.api :as api]
@@ -170,8 +172,12 @@
                   [date-selector/component {:date-atom start-time
                                   :pikaday-attrs {:minDate event-start-js
                                                   :maxDate event-end-js
-                                                  :defaultDate event-start-js
-                                                  :setDefaultDate false
+                                                  :defaultDate (-> (if @start-time
+                                                                     (from-string @start-time)
+                                                                     event-start)
+                                                                   (plus (hours 6))
+                                                                   to-date)
+                                                  :setDefaultDate true
                                                   }
                                   :static-attrs  {:min-date event-start
                                                   :max-date event-end}}]]
@@ -183,8 +189,12 @@
                                   :min-date-atom start-time
                                   :pikaday-attrs {:minDate event-start-js
                                                   :maxDate event-end-js
-                                                  :defaultDate event-start-js
-                                                  :setDefaultDate false
+                                                  :defaultDate (-> (if @end-time
+                                                                     (from-string @end-time)
+                                                                     event-start)
+                                                                   (plus (hours 6))
+                                                                   to-date)
+                                                  :setDefaultDate true
                                                   }
                                   :static-attrs  {:min-date event-start
                                                   :max-date event-end}}]]])
@@ -193,7 +203,7 @@
                [input/component :textarea {}
                 (r/wrap Description swap! form assoc :Description)]]
               [action-button/component
-               {:class [:primary (when (seq errors) :disabled)]}
+               {:class (str "primary" (when (seq errors) " disabled"))}
                (if activity-id "Edit" "Add")
                (create-activity @form)]]]
             [:div.ui.vertical.segment

@@ -5,7 +5,7 @@
     [reagent.core :as r :refer [atom]]
     [datascript :as d]
     [validateur.validation :refer [format-of presence-of validation-set]]
-    [cljs-time.coerce :refer [to-date]]
+    [cljs-time.coerce :refer [to-date from-string]]
     [cljs-time.core :refer [hours now plus]]
 
     [elevent-client.api :as api]
@@ -138,16 +138,33 @@
                                                        (:StartDate errors))
                                               :error)}
                 [:label "Start Date"]
-                [date-selector/component {:date-atom start-date
-                                :pikaday-attrs {:minDate (-> (now)
-                                                             (plus (hours 6))
-                                                             to-date)}}]]
+                [date-selector/component
+                 {:date-atom start-date
+                  :pikaday-attrs (merge
+                                   {:minDate (-> (now)
+                                                 (plus (hours 6))
+                                                 to-date)}
+                                   (when @start-date
+                                     {:defaultDate (-> (from-string @start-date)
+                                                       (plus (hours 6))
+                                                       to-date)
+                                      :setDefaultDate true}))}]]
                [:div.required.field {:class (when (and EndDate
                                                        (:EndDate errors))
                                               :error)}
                 [:label "End Date"]
-                [date-selector/component {:date-atom end-date
-                                :min-date-atom start-date}]]])
+                [date-selector/component
+                 {:date-atom end-date
+                  :min-date-atom start-date
+                  :pikaday-attrs (merge
+                                   {:minDate (-> (now)
+                                                 (plus (hours 6))
+                                                 to-date)}
+                                   (when @end-date
+                                     {:defaultDate (-> (from-string @end-date)
+                                                       (plus (hours 6))
+                                                       to-date)
+                                      :setDefaultDate true}))}]]])
             [:div.field
              [:div.four.wide.field {:class (when (and TicketPrice
                                                       (:TicketPrice errors))
