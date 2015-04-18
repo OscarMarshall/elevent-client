@@ -30,9 +30,11 @@
             (fn [form]
               (fn [callback]
                 (api/organizations-endpoint (if organization-id :update :create)
-                                        (assoc form
-                                          :AdminId (get-in @state/session
-                                                           [:user :UserId]))
+                                        (if organization-id
+                                          form
+                                          (assoc form
+                                            :AdminId (get-in @state/session
+                                                             [:user :UserId])))
                                         #(do
                                            (callback)
                                            (js/location.replace
