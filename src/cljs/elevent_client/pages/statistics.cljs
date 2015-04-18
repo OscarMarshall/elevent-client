@@ -119,4 +119,4 @@
               :series [{:name "Attendee count"}]}
              schedules])]]))))
 
-(routes/register-page routes/statistics-chan #'page)
+(routes/register-page routes/statistics-chan #'page true)

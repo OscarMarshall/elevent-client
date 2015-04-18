@@ -13,7 +13,7 @@
 ;; User Account
 ;; =============================================================================
 
-(defn sign-in! [form]
+(defn sign-in! [form & [signed-in-chan]]
   (let [{:keys [Email Password]} form
         auth-string (b64/encodeString (str Email ":" Password))]
     (GET (str config/https-url "/token")
@@ -31,15 +31,20 @@
                              (put! state/add-messages-chan
                                    [:sign-in-succeeded
                                     [:positive "Sign in succeeded"]])
-                             (js/location.replace (routes/events)))
+                             (if signed-in-chan
+                               (put! signed-in-chan true)
+                               (.replace js/window.location (routes/events))))
           :error-handler   #(put! state/add-messages-chan
                                   [:sign-in-failed
                                    [:negative "Sign in failed"]])})))
 
 (defn sign-out! []
+  (set! js/window.location (routes/home))
   (swap! state/session dissoc :token :user :stripe-token :payment-info)
   (put! state/api-refresh-chan true)
-  (set! js/window.location (routes/home)))
+  (put! state/remove-messages-chan :sign-in-succeeded)
+  (put! state/add-messages-chan [:sign-out-succeeded
+                                 [:positive "Sign out succeeded"]]))
 
 (defn sign-up! [form]
   (put! state/auth-sign-up-chan form))

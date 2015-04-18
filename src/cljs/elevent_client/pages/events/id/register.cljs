@@ -109,4 +109,4 @@
                 (register @form)]]]]
             [logo/component @event-logo]]])))))
 
-(routes/register-page routes/event-register-chan #'page)
+(routes/register-page routes/event-register-chan #'page true)

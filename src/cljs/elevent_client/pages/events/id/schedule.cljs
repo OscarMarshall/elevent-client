@@ -163,4 +163,4 @@
                    "Confirm Payment and Add Activities"]]]])]
             [logo/component @event-logo]]])))))
 
-(routes/register-page routes/event-schedule-chan #'page)
+(routes/register-page routes/event-schedule-chan #'page true)

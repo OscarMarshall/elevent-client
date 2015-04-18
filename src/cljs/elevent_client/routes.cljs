@@ -1,5 +1,5 @@
 (ns elevent-client.routes
-  (:require [cljs.core.async :refer [<! chan put!]]
+  (:require [cljs.core.async :refer [<! >! chan put!]]
             [secretary.core :as secretary :refer-macros [defroute]]
 
             [elevent-client.state :as state])
@@ -186,7 +186,15 @@
                              statistics
                              payments]))
 
-(defn register-page [channel page]
+(defn register-page [channel page & [authentication?]]
   (go-loop []
-    (reset! state/current-page (into [] (cons page (<! channel))))
+    (let [page (into [] (cons page (<! channel)))]
+      (if (or (not authentication?) (:token @state/session))
+        (reset! state/current-page page)
+        (let [signed-in-chan (chan)]
+          (>! state/add-messages-chan
+              [:please-sign-in [:negative "Please sign in."]])
+          (>! sign-in-chan [signed-in-chan])
+          (<! signed-in-chan)
+          (reset! state/current-page page))))
     (recur)))

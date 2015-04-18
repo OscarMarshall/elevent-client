@@ -13,7 +13,8 @@
     [elevent-client.state :as state]
     [elevent-client.components.action-button :as action-button]
     [elevent-client.components.input :as input]
-    [elevent-client.components.date-selector :as date-selector]))
+    [elevent-client.components.date-selector :as date-selector]
+    [elevent-client.pages.events.core :as events]))
 
 (def validator
   (validation-set
@@ -99,15 +100,7 @@
                                           (js/location.replace
                                             (routes/events-explore)))))))]
         [:div.sixteen.wide.column
-         [:div.ui.top.attached.tabular.menu
-          [:a.item {:href (routes/events)}
-           "Events"]
-          [:a.item {:href (routes/events-explore)}
-           "Explore"]
-          [:a.item {:href (routes/events-owned)}
-           "Owned"]
-          [:a.item {:href (routes/event-add) :class (when-not event-id :active)}
-           "Add"]]
+         [events/tabs (if event-id :edit :add)]
          [:div.ui.bottom.attached.segment
           [:form.ui.form
            [:div.ui.vertical.segment
@@ -188,4 +181,4 @@
              (if event-id "Edit" "Add")
              (create-event @form)]]]]]))))
 
-(routes/register-page routes/event-edit-chan #'page)
+(routes/register-page routes/event-edit-chan #'page true)

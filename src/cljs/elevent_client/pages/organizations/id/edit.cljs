@@ -7,7 +7,8 @@
             [elevent-client.routes :as routes]
             [elevent-client.state :as state]
             [elevent-client.components.action-button :as action-button]
-            [elevent-client.components.input :as input]))
+            [elevent-client.components.input :as input]
+            [elevent-client.pages.organizations.core :as organizations]))
 
 (defn page [& [organization-id]]
   (let [form (atom {})
@@ -37,16 +38,7 @@
                                            (js/location.replace
                                              (routes/organizations))))))]
         [:div.sixteen.wide.column
-         [:div.ui.top.attached.tabular.menu
-          [:a.item {:href (routes/organizations)}
-           "Organizations"]
-          [:a.item {:href (routes/organizations-explore)}
-           "Explore"]
-          [:a.item {:href (routes/organizations-owned)}
-           "Owned"]
-          [:a.item {:href (routes/organization-add)
-                    :class (when-not organization-id "active")}
-           "Add"]]
+         [organizations/tabs (if organization-id :edit :add)]
          [:div.ui.bottom.attached.segment
           [:form.ui.form
            [:div.ui.vertical.segment

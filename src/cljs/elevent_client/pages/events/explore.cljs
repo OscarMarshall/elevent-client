@@ -8,7 +8,8 @@
             [elevent-client.state :as state]
             [elevent-client.locale :as locale]
             [elevent-client.routes :as routes]
-            [elevent-client.api :as api]))
+            [elevent-client.api :as api]
+            [elevent-client.pages.events.core :as events]))
 
 (defn page []
   (let [unattending-events
@@ -25,15 +26,7 @@
                                             (get-in @state/session
                                                     [:user :UserId])))))]
     [:div.sixteen.wide.column
-     [:div.ui.top.attached.tabular.menu
-      [:a.item {:href (routes/events)}
-       "Events"]
-      [:a.active.item {:href (routes/events-explore)}
-       "Explore"]
-      [:a.item {:href (routes/events-owned)}
-       "Owned"]
-      [:a.item {:href (routes/event-add)}
-       "Add"]]
+     [events/tabs :explore]
      [:div.ui.bottom.attached.segment
       [:div
        [:div.ui.vertical.segment

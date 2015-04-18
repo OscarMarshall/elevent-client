@@ -55,4 +55,4 @@
                           :right "today prev,next month,agendaWeek,agendaDay"}
                  :defaultView "agendaWeek"}]]]))
 
-(routes/register-page routes/calendar-chan #'page)
+(routes/register-page routes/calendar-chan #'page true)

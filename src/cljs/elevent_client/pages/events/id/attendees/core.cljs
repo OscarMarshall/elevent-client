@@ -97,4 +97,4 @@
                    "Checked in"
                    "Check in")]]])]]]]))))
 
-(routes/register-page routes/event-attendees-chan #'page)
+(routes/register-page routes/event-attendees-chan #'page true)

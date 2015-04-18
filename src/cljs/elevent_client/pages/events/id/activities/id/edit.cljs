@@ -211,5 +211,5 @@
               "Activities"]
              [activity-table/component event-id]]]])))))
 
-(routes/register-page routes/event-activity-add-chan #'page)
-(routes/register-page routes/event-activity-edit-chan #'page)
+(routes/register-page routes/event-activity-add-chan #'page true)
+(routes/register-page routes/event-activity-edit-chan #'page true)

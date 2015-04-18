@@ -8,7 +8,8 @@
             [elevent-client.state :as state]
             [elevent-client.routes :as routes]
             [elevent-client.locale :as locale]
-            [elevent-client.components.action-button :as action-button]))
+            [elevent-client.components.action-button :as action-button]
+            [elevent-client.pages.events.core :as events]))
 
 (defn delete-event [form]
   (fn [callback]
@@ -24,15 +25,7 @@
                          @api/events-db
                          (get-in @state/session [:user :UserId]))))]
     [:div.sixteen.wide.column
-     [:div.ui.top.attached.tabular.menu
-      [:a.item {:href (routes/events)}
-       "Events"]
-      [:a.item {:href (routes/events-explore)}
-       "Explore"]
-      [:a.active.item {:href (routes/events-owned)}
-       "Owned"]
-      [:a.item {:href (routes/event-add)}
-       "Add"]]
+     [events/tabs :owned]
      [:div.ui.bottom.attached.segment
       [:div
        [:div.ui.vertical.segment
@@ -72,4 +65,4 @@
       [:div.ui.dimmer {:class (when (empty? @api/events) :active)}
        [:div.ui.loader]]]]))
 
-(routes/register-page routes/events-owned-chan #'page)
+(routes/register-page routes/events-owned-chan #'page true)

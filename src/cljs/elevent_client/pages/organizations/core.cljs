@@ -5,6 +5,25 @@
             [elevent-client.state :as state]
             [elevent-client.components.action-button :as action-button]))
 
+(defn tabs [page]
+  (let [logged-in? (:token @state/session)]
+    [:div.ui.top.attached.tabular.menu
+     (when logged-in?
+       [:a.item {:href (routes/organizations) :class (when (= page :core)
+                                                       "active")}
+        "Organizations"])
+     [:a.item {:href (routes/organizations-explore)
+               :class (when (= page :explore) "active")}
+      "Explore"]
+     (when logged-in?
+       [:a.item {:href (routes/organizations-owned) :class (when (= page :owned)
+                                                             "active")}
+        "Owned"])
+     (when logged-in?
+       [:a.item {:href (routes/organization-add) :class (when (= page :add)
+                                                          "active")}
+        "Add"])]))
+
 (defn page []
   (let [organizations-joined
         (->> (d/q '[:find ?organization-id ?membership-id
@@ -20,15 +39,7 @@
                       :MembershipId membership-id)))
              doall)]
     [:div.sixteen.wide.column
-     [:div.ui.top.attached.tabular.menu
-      [:a.active.item {:href (routes/organizations)}
-       "Organizations"]
-      [:a.item {:href (routes/organizations-explore)}
-       "Explore"]
-      [:a.item {:href (routes/organizations-owned)}
-       "Owned"]
-      [:a.item {:href (routes/organization-add)}
-       "Add"]]
+     [tabs :core]
      [:div.ui.bottom.attached.segment
       [:div.ui.vertical.segment
        [:h1.ui.header "Organizations You're a Member of"]]
@@ -60,4 +71,4 @@
                     nil))]]]])]
          [:p "You aren't a member of any organizations."])]]]))
 
-(routes/register-page routes/organizations-chan #'page)
+(routes/register-page routes/organizations-chan #'page true)

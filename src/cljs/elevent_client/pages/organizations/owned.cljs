@@ -4,7 +4,8 @@
             [elevent-client.api :as api]
             [elevent-client.routes :as routes]
             [elevent-client.state :as state]
-            [elevent-client.components.action-button :as action-button]))
+            [elevent-client.components.action-button :as action-button]
+            [elevent-client.pages.organizations.core :as organizations]))
 
 ;TODO: Display only organizations you own
 (defn page []
@@ -17,15 +18,7 @@
                          @api/organizations-db
                          (get-in @state/session [:user :UserId]))))]
     [:div.sixteen.wide.column
-     [:div.ui.top.attached.tabular.menu
-      [:a.item {:href (routes/organizations)}
-       "Organizations"]
-      [:a.item {:href (routes/organizations-explore)}
-       "Explore"]
-      [:a.active.item {:href (routes/organizations-owned)}
-       "Owned"]
-      [:a.item {:href (routes/organization-add)}
-       "Add"]]
+     [organizations/tabs :owned]
      [:div.ui.bottom.attached.segment
       [:div.ui.vertical.segment
        [:h1.ui.header "Organizations You Own"]]
@@ -59,4 +52,4 @@
                   callback
                   nil))]]]])]]]]))
 
-(routes/register-page routes/organizations-owned-chan #'page)
+(routes/register-page routes/organizations-owned-chan #'page true)

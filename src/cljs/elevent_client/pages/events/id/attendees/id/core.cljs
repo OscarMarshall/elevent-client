@@ -187,4 +187,4 @@
                        "Check out")]]])))]]]]]]
       [:div "Loading..."])))
 
-(routes/register-page routes/event-attendee-chan #'page)
+(routes/register-page routes/event-attendee-chan #'page true)
