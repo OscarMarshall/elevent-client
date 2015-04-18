@@ -107,11 +107,12 @@
   [activities    (str config/https-url "/activities")    :ActivityId     false]
   [users         (str config/https-url "/users")         :UserId         true]
   [schedules     (str config/https-url "/schedules")     :ScheduleId     true]
+  [memberships   (str config/https-url "/memberships")   :MembershipId   true]
   [permissions   (str config/https-url "/permissions")   :UserId         true])
 
 (go-loop []
-  (<! state/api-refresh-chan)
   (refresh!)
+  (<! state/api-refresh-chan)
   (recur))
 
 (go-loop []

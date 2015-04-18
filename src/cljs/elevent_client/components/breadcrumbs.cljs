@@ -86,6 +86,7 @@
         (fn [env fragment]
           (case fragment
             "explore" [["Explore" (routes/organizations-explore)] env nil]
+            "owned" [["Owned" (routes/organizations-owned)] env nil]
             "add" [["Add" (routes/organization-add)] env nil]
             (let [env (assoc env :OrganizationId fragment)]
               [[(:Name (d/entity @api/organizations-db (int fragment)))

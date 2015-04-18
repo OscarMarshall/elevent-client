@@ -41,5 +41,4 @@
                    (~(symbol "elevent-client.api" (str collection "-endpoint"))
                       :read nil nil)
                    (reset! ~(symbol collection) [])))
-              endpoints))
-     (~'refresh!)))
+              endpoints))))

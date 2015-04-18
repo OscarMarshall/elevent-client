@@ -37,7 +37,17 @@
                                            (js/location.replace
                                              (routes/organizations))))))]
         [:div.sixteen.wide.column
-         [:div.ui.segment
+         [:div.ui.top.attached.tabular.menu
+          [:a.item {:href (routes/organizations)}
+           "Organizations"]
+          [:a.item {:href (routes/organizations-explore)}
+           "Explore"]
+          [:a.item {:href (routes/organizations-owned)}
+           "Owned"]
+          [:a.item {:href (routes/organization-add)
+                    :class (when-not organization-id "active")}
+           "Add"]]
+         [:div.ui.bottom.attached.segment
           [:form.ui.form
            [:div.ui.vertical.segment
             [:h2.ui.dividing.header
