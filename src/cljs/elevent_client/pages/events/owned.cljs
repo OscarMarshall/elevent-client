@@ -7,7 +7,12 @@
             [elevent-client.api :as api]
             [elevent-client.state :as state]
             [elevent-client.routes :as routes]
-            [elevent-client.locale :as locale]))
+            [elevent-client.locale :as locale]
+            [elevent-client.components.action-button :as action-button]))
+
+(defn delete-event [form]
+  (fn [callback]
+    (api/events-endpoint :delete form #(callback))))
 
 (defn page []
   (let [created-events
@@ -58,7 +63,11 @@
                 [:a.ui.right.floated.small.button
                  {:href (routes/event-edit event)}
                  "Edit"
-                 [:i.right.chevron.icon]]]]])]
+                 [:i.right.chevron.icon]]
+                [action-button/component
+                 {:class "ui right floated small negative"}
+                 "Delete"
+                 (delete-event event)]]]])]
           [:p "You don't own any events."])]]
       [:div.ui.dimmer {:class (when (empty? @api/events) :active)}
        [:div.ui.loader]]]]))
