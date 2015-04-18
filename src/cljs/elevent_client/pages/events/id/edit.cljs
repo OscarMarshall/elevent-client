@@ -106,21 +106,26 @@
            "Explore"]
           [:a.item {:href (routes/events-owned)}
            "Owned"]
-          [:a.active.item {:href (routes/event-add)}
+          [:a.item {:href (routes/event-add) :class (when-not event-id :active)}
            "Add"]]
          [:div.ui.bottom.attached.segment
-          (prn-str @form)
           [:form.ui.form
            [:div.ui.vertical.segment
             [:h2.ui.dividing.header (if event-id "Edit" "Add") " an Event"]
-            [:div.two.fields
-             [:div.required.field {:class (when (and Name (:Name errors))
-                                            :error)}
-              [:label "Name"]
-              [input/component :text {} (r/wrap Name swap! form assoc :Name)]]
-             [:div.field
-              [:label "Clone From"]
-              [input/component :select {} clonable-events clone-id]]]
+            (let [name-field [:div.required.field
+                              {:class (when (and Name (:Name errors)) :error)}
+                              [:label "Name"]
+                              [input/component
+                               :text
+                               {}
+                               (r/wrap Name swap! form assoc :Name)]]]
+              (if event-id
+                name-field
+                [:div.two.fields
+                 name-field
+                 [:div.field
+                  [:label "Clone From"]
+                  [input/component :select {} clonable-events clone-id]]]))
             [:div.two.fields
              [:div.required.field
               [:label "Organization"]
