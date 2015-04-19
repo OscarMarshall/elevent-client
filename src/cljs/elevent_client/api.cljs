@@ -72,10 +72,9 @@
                         (error-handler error)
                         (if (= (:status error) 401)
                           (when (:token @state/session)
-                            (do
-                              (put! state/add-messages-chan
-                                    [::logged-out [:negative "Logged out"]])
-                              (auth/sign-out!)))
+                            (put! state/add-messages-chan
+                                  [:logged-out [:negative "Logged out"]])
+                            (auth/sign-out!))
                           (if (= (:failure error) :timeout)
                             (put! state/add-messages-chan
                                   [(keyword "elevent-client.api"
@@ -108,6 +107,7 @@
   [users         (str config/https-url "/users")         :UserId         true]
   [schedules     (str config/https-url "/schedules")     :ScheduleId     true]
   [memberships   (str config/https-url "/memberships")   :MembershipId   true]
+  [groups        (str config/https-url "/groups")        :GroupsId       true]
   [permissions   (str config/https-url "/permissions")   :UserId         true])
 
 (go-loop []

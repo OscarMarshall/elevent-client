@@ -22,9 +22,12 @@
 (def event-activities-chan (chan))
 (def event-activities-explore-chan (chan))
 (def event-activity-chan (chan))
-(def event-activity-add-chan (chan))
 (def event-activity-edit-chan (chan))
 (def event-schedule-chan (chan))
+(def event-groups-chan (chan))
+(def event-groups-explore-chan (chan))
+(def event-group-chan (chan))
+(def event-group-edit-chan (chan))
 (def event-attendees-chan (chan))
 (def event-attendee-chan (chan))
 (def organizations-chan (chan))
@@ -111,6 +114,26 @@
   "/events/:EventId/activities/:ActivityId/edit" [EventId ActivityId]
   (put! event-activity-edit-chan [(int EventId) (int ActivityId)]))
 
+(defroute event-groups
+  "/events/:EventId/groups" [EventId]
+  (put! event-groups-chan [(int EventId)]))
+
+(defroute event-groups-explore
+  "/events/:EventId/groups/explore" [EventId]
+  (put! event-groups-explore-chan [(int EventId)]))
+
+(defroute event-group-add
+  "/events/:EventId/groups/add" [EventId]
+  (put! event-group-edit-chan [(int EventId)]))
+
+(defroute event-group
+  "/events/:EventId/groups/:GroupId" [EventId GroupId]
+  (put! event-group-chan [(int EventId) (int GroupId)]))
+
+(defroute event-group-edit
+  "/events/:EventId/groups/:GroupId/edit" [EventId GroupId]
+  (put! event-group-edit-chan [(int EventId) (int GroupId)]))
+
 (defroute event-attendees
   "/events/:EventId/attendees" [EventId]
   (put! event-attendees-chan [(int EventId)]))
@@ -174,6 +197,11 @@
                              event-activity
                              event-activity-edit
                              event-schedule
+                             event-groups
+                             event-groups-explore
+                             event-group-add
+                             event-group
+                             event-group-edit
                              event-attendees
                              event-attendee
                              organizations

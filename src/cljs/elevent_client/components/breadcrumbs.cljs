@@ -35,6 +35,23 @@
                env
                event-activity-breadcrumbs])))
 
+        event-group-breadcrumbs
+        (fn [env _]
+          [["Edit" (routes/event-group-edit env)] env nil])
+
+        event-groups-breadcrumbs
+        (fn [env fragment]
+          (case fragment
+            "explore" [["Explore" (routes/event-groups-explore env)]
+                       env
+                       nil]
+            "add" [["Add" (routes/event-group-add env)] env nil]
+            (let [env (assoc env :GroupId fragment)]
+              [[(:Name (d/entity @api/groups-db (int fragment)))
+                (routes/event-group env)]
+               env
+               event-group-breadcrumbs])))
+
         event-attendees-breadcrumbs
         (fn [env fragment]
           (let [env
@@ -62,6 +79,9 @@
             "activities" [["Activities" (routes/event-activities env)]
                           env
                           event-activities-breadcrumbs]
+            "groups" [["Groups" (routes/event-groups env)]
+                      env
+                      event-groups-breadcrumbs]
             "attendees" [["Attendees" (routes/event-attendees env)]
                          env
                          event-attendees-breadcrumbs]

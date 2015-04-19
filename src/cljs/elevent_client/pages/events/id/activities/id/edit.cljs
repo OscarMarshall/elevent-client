@@ -19,7 +19,7 @@
 
     [elevent-client.api :as api]
     [elevent-client.routes :as routes]
-    [elevent-client.components.activity-table :as activity-table]
+    [elevent-client.components.activities-table :as activities-table]
     [elevent-client.components.action-button :as action-button]
     [elevent-client.components.input :as input]
     [elevent-client.components.date-selector :as date-selector]
@@ -103,7 +103,7 @@
              [event-details/component event]]
             [:div.ui.vertical.segment
              [:h2.ui.header
-              (if activity-id "Edit" "Add") " an activity"]
+              (if activity-id "Edit" "Add") " an Activity"]
              [:form.ui.form {:on-submit
                              (fn [e]
                                (when (empty? errors)
@@ -209,7 +209,6 @@
             [:div.ui.vertical.segment
              [:h2.ui.header
               "Activities"]
-             [activity-table/component event-id]]]])))))
+             [activities-table/component event-id]]]])))))
 
-(routes/register-page routes/event-activity-add-chan #'page true)
 (routes/register-page routes/event-activity-edit-chan #'page true)

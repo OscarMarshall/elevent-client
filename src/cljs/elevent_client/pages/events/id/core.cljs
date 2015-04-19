@@ -9,7 +9,8 @@
             [elevent-client.routes :as routes]
             [elevent-client.components.event-details :as event-details]
             [elevent-client.components.schedule :as schedule]
-            [elevent-client.components.activity-table :as activity-table]
+            [elevent-client.components.activities-table :as activities-table]
+            [elevent-client.components.groups-table :as groups-table]
             [elevent-client.components.action-button :as action-button]
             [elevent-client.components.logo :as logo]
             [elevent-client.components.qr-code :as qr-code]))
@@ -174,7 +175,11 @@
       [:div.ui.vertical.segment
        [:h2.ui.header
         "Activities"]
-       [activity-table/component (:EventId event)]]
+       [activities-table/component (:EventId event)]]
+      [:div.ui.vertical.segment
+       [:h2.ui.header
+        "Groups"]
+       [groups-table/component (:EventId event)]]
       (when can-check-in
         [:div.ui.vertical.segment
          [:h2.ui.header

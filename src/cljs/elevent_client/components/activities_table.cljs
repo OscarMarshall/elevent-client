@@ -1,4 +1,4 @@
-(ns elevent-client.components.activity-table
+(ns elevent-client.components.activities-table
   (:require [cljs-time.coerce :refer [from-string]]
             [cljs-time.format :refer [unparse]]
             [datascript :as d]

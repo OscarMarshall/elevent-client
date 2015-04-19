@@ -1,4 +1,4 @@
-(ns elevent-client.pages.events.id.activities.core
+(ns elevent-client.pages.events.id.activities.id.core
   (:require [datascript :as d]
 
             [elevent-client.api :as api]
