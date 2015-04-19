@@ -7,16 +7,15 @@
             [elevent-client.components.action-button :as action-button]
             [elevent-client.pages.organizations.core :as organizations]))
 
-;TODO: Display only organizations you own
 (defn page []
   (let [owned-organizations
-        (doall (map (partial d/entity @api/organizations-db)
-                    (d/q '[:find [?organization-id ...]
-                           :in $ ?user-id
-                           :where
-                           [?organization-id :AdminId ?user-id]]
-                         @api/organizations-db
-                         (get-in @state/session [:user :UserId]))))]
+        (doall (map #(into {} (d/entity @api/organizations-db %))
+                    (keys
+                      (into {}
+                            (filter
+                              (fn [[org-id org-permissions]]
+                                (:EditOrganization org-permissions))
+                              (:OrganizationPermissions (:permissions @state/session)))))))]
     [:div.sixteen.wide.column
      [organizations/tabs :owned]
      [:div.ui.bottom.attached.segment
