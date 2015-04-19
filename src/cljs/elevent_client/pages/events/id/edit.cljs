@@ -84,20 +84,18 @@
                                  @api/events-db))))
 
             associated-organizations
-            (doall (map #(let [organization-id (:OrganizationId %)]
-                           [(:Name (d/entity @api/organizations-db
-                                             organization-id))
-                            organization-id])
-                        (filter :AddEvent
-                                (:OrganizationPermissions
-                                  (into {}
-                                        (d/entity @api/permissions-db
-                                                  (get-in @state/session
-                                                          [:user :UserId])))))))
-
-            associated-organizations
-            (cons ["None" 0]
-                  associated-organizations)
+            (->> (-> @state/session
+                     (get-in [:user :UserId]))
+                 (d/entity @api/permissions-db)
+                 (into {})
+                 :OrganizationPermissions
+                 (filter :AddEvent)
+                 (map #(let [organization-id (:OrganizationId %)]
+                         [(:Name (d/entity @api/organizations-db
+                                           organization-id))
+                          organization-id]))
+                 doall
+                 (cons ["None" 0]))
 
             create-event
             (fn [form]
