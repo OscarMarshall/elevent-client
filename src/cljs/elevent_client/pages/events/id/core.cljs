@@ -70,7 +70,8 @@
         [logo/component @event-logo]]])))
 
 (defn details-owner [event activities attendees leave-event
-                     logo-to-upload event-logo image-error get-logo]
+                     logo-to-upload event-logo image-error get-logo
+                     can-edit can-check-in]
   (let [submit-image
         (fn [callback]
           (let [file (-> (js/jQuery "#file")
@@ -124,9 +125,11 @@
       [:div.ui.vertical.segment
        [:h1.ui.dividing.header
         (:Name event)]
-       [:div.ui.right.floated.small.labeled.icon.button
-        [:i.edit.icon]
-        "Edit"]
+       (when can-edit
+         [:a.ui.right.floated.small.labeled.icon.button
+          {:href (routes/event-edit event)}
+          [:i.edit.icon]
+          "Edit"])
        [event-details/component event]]
       (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
                                            :in $ ?event-id ?user-id
@@ -146,61 +149,63 @@
          [qr-code/component
           {:text (routes/event-attendee (into {} (d/entity @api/attendees-db
                                                           attendee-id)))}]])
-      [:div.ui.vertical.segment
-       [:h2 "Event Logo"]
-       (when @event-logo
-         [:img {:style {:height "100px"} :src @event-logo}])
-       [:form.ui.form
-        [:div.two.fields
-         [:div.field
-          [:label "Choose image"]
-          [:input#file {:type "file"
-                        :on-change file-changed}]
-          (when @image-error [:div.ui.red.pointing.prompt.label @image-error])]
-         [:div.field]]
-        [action-button/component
-         {:class (str "primary" (when (or (not @logo-to-upload) @image-error) " disabled"))}
-         "Upload"
-         submit-image]
-        (when @event-logo
+      (when can-edit
+        [:div.ui.vertical.segment
+         [:h2 "Event Logo"]
+         (when @event-logo
+           [:img {:style {:height "100px"} :src @event-logo}])
+         [:form.ui.form
+          [:div.two.fields
+           [:div.field
+            [:label "Choose image"]
+            [:input#file {:type "file"
+                          :on-change file-changed}]
+            (when @image-error [:div.ui.red.pointing.prompt.label @image-error])]
+           [:div.field]]
           [action-button/component
-           {}
-           (list [:i.red.remove.icon] "Remove")
-           delete-image])]]
+           {:class (str "primary" (when (or (not @logo-to-upload) @image-error) " disabled"))}
+           "Upload"
+           submit-image]
+          (when @event-logo
+            [action-button/component
+             {}
+             (list [:i.red.remove.icon] "Remove")
+             delete-image])]])
       [:div.ui.vertical.segment
        [:h2.ui.header
         "Activities"]
        [activity-table/component (:EventId event)]]
-      [:div.ui.vertical.segment
-       [:h2.ui.header
-        "Attendees"
-        [:a.ui.right.floated.small.button
-         {:href (routes/event-attendees event)}
-         "View"]]
-       [:table.ui.table
-        [:thead
-         [:tr
-          [:th "Name"]
-          [:th]]]
-        [:tbody
-         (for [attendee attendees]
-           ^{:key (:AttendeeId attendee)}
+      (when can-check-in
+        [:div.ui.vertical.segment
+         [:h2.ui.header
+          "Attendees"
+          [:a.ui.right.floated.small.button
+           {:href (routes/event-attendees event)}
+           "View"]]
+         [:table.ui.table
+          [:thead
            [:tr
-            [:td (str (:FirstName attendee) " " (:LastName attendee))]
-            [:td [:a.ui.right.floated.small.labeled.button
-                  {:href (routes/event-attendee
-                           {:EventId (:EventId event)
-                            :AttendeeId (:AttendeeId attendee)})
-                   :class (when (:CheckinTime attendee) :green)}
-                  (if (:CheckinTime attendee)
-                    "Checked in"
-                    "Check in")]]])]
-        [:tfoot
-         [:tr
-          [:th {:colSpan "4"}
-           [:div.ui.right.floated.small.labeled.icon.button
-            [:i.edit.icon]
-            "Edit"]]]]]]]]))
+            [:th "Name"]
+            [:th]]]
+          [:tbody
+           (for [attendee attendees]
+             ^{:key (:AttendeeId attendee)}
+             [:tr
+              [:td (str (:FirstName attendee) " " (:LastName attendee))]
+              [:td [:a.ui.right.floated.small.labeled.button
+                    {:href (routes/event-attendee
+                             {:EventId (:EventId event)
+                              :AttendeeId (:AttendeeId attendee)})
+                     :class (when (:CheckinTime attendee) :green)}
+                    (if (:CheckinTime attendee)
+                      "Checked in"
+                      "Check in")]]])]
+          [:tfoot
+           [:tr
+            [:th {:colSpan "4"}
+             [:div.ui.right.floated.small.labeled.icon.button
+              [:i.edit.icon]
+              "Edit"]]]]]])]]))
 
 (defn page [event-id]
   (let [logo-to-upload (atom false)
@@ -243,9 +248,12 @@
                               #(do
                                  (callback)
                                  (js/location.replace (routes/events))))))
-            is-owner
+            can-edit
             (get-in (:EventPermissions (:permissions @state/session))
                     [event-id :EditEvent])
+            can-check-in
+            (get-in (:EventPermissions (:permissions @state/session))
+                    [event-id :EditUser])
             is-attendee
             (not (empty? (d/q '[:find [?attendee-id ...]
                                 :in $ ?event-id ?user-id
@@ -264,9 +272,10 @@
           (when (:HasLogo event)
             (get-logo))
           (cond
-            is-owner
+            (or can-edit can-check-in)
             [details-owner event activities attendees leave-event
-             logo-to-upload event-logo image-error get-logo]
+             logo-to-upload event-logo image-error get-logo
+             can-edit can-check-in]
 
             is-attendee
             [details-attendee event leave-event event-logo]

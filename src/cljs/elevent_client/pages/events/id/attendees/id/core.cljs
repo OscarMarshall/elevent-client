@@ -8,12 +8,13 @@
             [elevent-client.api :as api]
             [elevent-client.routes :as routes]
             [elevent-client.components.action-button :as action-button]
+            [elevent-client.components.event-details :as event-details]
             [elevent-client.state :as state]
             [elevent-client.locale :as locale]
             [elevent-client.config :as config]))
 
 (defn check-in-or-out [op url callback]
-  (op (str config/http-url url)
+  (op (str config/https-url url)
       {:format :json
        :keywords? true
        :headers
@@ -32,7 +33,6 @@
     (check-in-or-out PUT
                      (str "/attendees/" attendee-id "/checkin")
                      (fn []
-                       (prn "Checked in!")
                        (api/attendees-endpoint :read nil callback)))))
 
 (defn check-out [attendee-id]
@@ -40,7 +40,6 @@
     (check-in-or-out DELETE
                      (str "/attendees/" attendee-id "/checkin")
                      (fn []
-                       (prn "Checked out!")
                        (api/attendees-endpoint :read nil callback)))))
 
 (defn activity-check-in [schedule-id checked-in]
@@ -48,7 +47,6 @@
     (check-in-or-out PUT
                      (str "/schedules/" schedule-id "/checkin")
                      (fn []
-                       (prn "Checked in!")
                        (api/schedules-endpoint :read nil callback)))))
 
 (defn activity-check-out [schedule-id checked-in]
@@ -56,7 +54,6 @@
     (check-in-or-out DELETE
                      (str "/schedules/" schedule-id "/checkin")
                      (fn []
-                       (prn "Checked out!")
                        (api/schedules-endpoint :read
                                                nil
                                                callback)))))
@@ -107,22 +104,10 @@
               {:href (routes/event event)}
               (:Name event)]
              [:div.meta
-              [:b "Date: "]
-              (when event
-                (let [start (from-string (:StartDate event))
-                      end   (from-string (:EndDate   event))]
-                  (str (unparse locale/datetime-formatter start)
-                       (when (after? end start)
-                         (str " to "
-                              (unparse locale/datetime-formatter end))))))]
-             [:div.meta
-              [:b "Venue: "]
-              (:Venue event)]
-             [:div.description
-              (:Description event)]
+              [event-details/component event]]
              [:div.extra
               [action-button/component
-               {:class [:right :floated]}
+               {:class "right floated"}
                (if (:CheckinTime attendee)
                  "Check out"
                  "Check in")

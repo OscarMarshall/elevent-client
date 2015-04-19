@@ -13,7 +13,14 @@
                 r/dom-node
                 js/jQuery
                 (.dropdown (clj->js {:onChange #(when % (reset! state
-                                                                (out %)))})))))
+                                                                (out %)))}))))
+          (when (= type :checkbox)
+            (let [this-obj (-> this
+                               r/dom-node
+                               js/jQuery)]
+             (.checkbox this-obj (if @state "check" "uncheck"))
+             (.click this-obj
+                     #(reset! state (.hasClass this-obj "checked"))))))
 
         :component-did-update
         (fn [this]
@@ -22,7 +29,14 @@
                 r/dom-node
                 js/jQuery
                 (.dropdown (clj->js {:onChange #(when % (reset! state
-                                                                (out %)))})))))
+                                                                (out %)))}))))
+          (when (= type :checkbox)
+            (let [this-obj (-> this
+                               r/dom-node
+                               js/jQuery)]
+             (.checkbox this-obj (if @state "check" "uncheck"))
+             (.click this-obj
+                     #(reset! state (.hasClass this-obj "checked"))))))
 
         :reagent-render
         (fn render
@@ -43,6 +57,11 @@
                          (for [[name value] select-options]
                            ^{:key (or value 0)} [:div.item {:data-value value}
                                                  name])]]
+               :checkbox [:div.ui.toggle.checkbox {:style {:margin-top "5px"}}
+                          [:input (assoc (dissoc attributes :label :on-change)
+                                    :type :checkbox
+                                    :value @state)]
+                          [:label (:label attributes)]]
                [:input (assoc attributes :type type)])))
           ([_ options state _ _]
            (render nil options nil state nil nil))

@@ -5,7 +5,8 @@
 
             [elevent-client.api :as api]
             [elevent-client.locale :as locale]
-            [elevent-client.routes :as routes]))
+            [elevent-client.routes :as routes]
+            [elevent-client.state :as state]))
 
 (defn component [event-id]
   (let [activities (doall (map #(into {} (d/entity @api/activities-db %))
@@ -37,18 +38,24 @@
                 (unparse locale/datetime-formatter end))]
          [:td (:Name activity)]
          [:td (:Location activity)]
-         [:td
-          [:a
-           {:href (routes/event-activity-edit activity)}
-           [:i.edit.icon]]
-          [:span
-           {:style {:cursor "pointer"}
-            :on-click #(delete-activity! (:ActivityId activity))}
-           [:i.red.remove.icon]]]])]
-     [:tfoot
-      [:tr
-       [:th {:colSpan "6"}
-        [:a.ui.small.right.floated.labeled.icon.button
-         {:href (routes/event-activity-add {:EventId event-id})}
-         [:i.edit.icon]
-         "Edit"]]]]]))
+         ; Check if user can edit activities
+         (if (get-in (:EventPermissions (:permissions @state/session))
+                     [event-id :EditEvent])
+           [:td
+            [:a
+             {:href (routes/event-activity-edit activity)}
+             [:i.edit.icon]]
+            [:span
+             {:style {:cursor "pointer"}
+              :on-click #(delete-activity! (:ActivityId activity))}
+             [:i.red.remove.icon]]]
+           [:td])])]
+     (when (get-in (:EventPermissions (:permissions @state/session))
+                   [event-id :EditEvent])
+       [:tfoot
+        [:tr
+         [:th {:colSpan "6"}
+          [:a.ui.small.right.floated.labeled.icon.button
+           {:href (routes/event-activity-add {:EventId event-id})}
+           [:i.edit.icon]
+           "Edit"]]]])]))

@@ -40,7 +40,7 @@
 
 (defn sign-out! []
   (set! js/window.location (routes/home))
-  (swap! state/session dissoc :token :user :stripe-token :payment-info)
+  (swap! state/session dissoc :token :user :stripe-token :payment-info :permissions)
   (put! state/api-refresh-chan true)
   (put! state/remove-messages-chan :sign-in-succeeded)
   (put! state/add-messages-chan [:sign-out-succeeded

@@ -16,14 +16,15 @@
     (api/events-endpoint :delete form #(callback))))
 
 (defn page []
-  (let [created-events
+  (let [owned-events
         (doall (map #(into {} (d/entity @api/events-db %))
-                    (d/q '[:find [?event-id ...]
-                           :in $ ?user-id
-                           :where
-                           [?event-id :CreatorId  ?user-id]]
-                         @api/events-db
-                         (get-in @state/session [:user :UserId]))))]
+                    (keys
+                      (into {}
+                            (filter
+                              (fn [[event-id event-permissions]]
+                                (or (:EditEvent event-permissions)
+                                    (:EditUser  event-permissions)))
+                              (:EventPermissions (:permissions @state/session)))))))]
     [:div.sixteen.wide.column
      [events/tabs :owned]
      [:div.ui.bottom.attached.segment
@@ -31,9 +32,9 @@
        [:div.ui.vertical.segment
         [:h1.ui.header "Events You Own"]]
        [:div.ui.vertical.segment
-        (if (seq created-events)
+        (if (seq owned-events)
           [:div.ui.divided.items
-           (for [event created-events]
+           (for [event owned-events]
              ^{:key (:EventId event)}
              [:div.item
               [:div.content
@@ -52,15 +53,17 @@
                 (:Venue event)]
                [:div.description
                 (:Description event)]
-               [:div.extra
-                [:a.ui.right.floated.small.button
-                 {:href (routes/event-edit event)}
-                 "Edit"
-                 [:i.right.chevron.icon]]
-                [action-button/component
-                 {:class "ui right floated small negative"}
-                 "Delete"
-                 (delete-event event)]]]])]
+               (when (get-in (:EventPermissions (:permissions @state/session))
+                             [(:EventId event) :EditEvent])
+                 [:div.extra
+                  [:a.ui.right.floated.small.button
+                   {:href (routes/event-edit event)}
+                   "Edit"
+                   [:i.right.chevron.icon]]
+                  [action-button/component
+                   {:class "ui right floated small negative"}
+                   "Delete"
+                   (delete-event event)]])]])]
           [:p "You don't own any events."])]]
       [:div.ui.dimmer {:class (when (empty? @api/events) :active)}
        [:div.ui.loader]]]]))
