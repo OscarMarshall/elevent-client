@@ -36,13 +36,17 @@
       (if-let [event (seq (d/entity @api/events-db event-id))]
         (reset! form (let [event (into {} event)]
                        (assoc event
-                         :TicketPrice (str (:TicketPrice event)))))
+                         :TicketPrice (if (> (:TicketPrice event) 0)
+                                        (string/format "%.2f" (:TicketPrice event))
+                                        ""))))
         (add-watch api/events-db
                    :event-edit
                    (fn [_ _ _ db]
                      (reset! form (let [event (into {} (d/entity db event-id))]
                                     (assoc event
-                                      :TicketPrice (str (:TicketPrice event)))))
+                                      :TicketPrice (if (> (:TicketPrice event) 0)
+                                                     (string/format "%.2f" (:TicketPrice event))
+                                                     ""))))
                      (remove-watch api/events-db :event-edit)))))
     (add-watch clone-id :clone
                (fn [_ _ _ id]
