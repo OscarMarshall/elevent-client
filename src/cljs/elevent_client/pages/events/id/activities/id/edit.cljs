@@ -95,6 +95,12 @@
                        (callback)
                        (when-not activity-id (reset-form!)))))))]
         (when (seq event)
+          ; Add start/end times to form state
+          (swap! form assoc
+                 :StartTime (or (:StartTime @form)
+                                (:StartDate event))
+                 :EndTime   (or (:EndTime @form)
+                                (:StartDate event)))
           [:div.sixteen.wide.column
            [:div.ui.segment
             [:div.ui.vertical.segment
