@@ -109,14 +109,23 @@
               :yAxis {:title {:text "Number checked in"}}
               :series [{:name "Checked in"}]}
              check-in-data])
-          (when (and (seq activities) (seq schedules))
+          ; Check if there is any data to display
+          (when (reduce #(or %1 %2)
+                        (map
+                          (fn [[activity-name attendance-count]]
+                            (> attendance-count 0))
+                          schedules))
             [chart/component
              {:chart {:type "bar"}
               :title {:text "Activity attendance"}
-              ;:xAxis {:categories (map first schedules)}
               :yAxis {:title {:text "Number of attendees"}
+                      :min 0
+                      :minRange 1
                       :allowDecimals false}
               :series [{:name "Attendee count"}]}
-             schedules])]]))))
+             schedules])
+          (when (and (> @event-id 0)
+                     (not (seq all-attendees)))
+            [:p "There is no data for this event."])]]))))
 
 (routes/register-page routes/statistics-chan #'page true)
