@@ -9,6 +9,7 @@
             [elevent-client.routes :as routes]
             [elevent-client.locale :as locale]
             [elevent-client.components.action-button :as action-button]
+            [elevent-client.components.event-details :as event-details]
             [elevent-client.pages.events.core :as events]))
 
 (defn delete-event [form]
@@ -41,18 +42,7 @@
                [:a.header {:href (routes/event event)}
                 (:Name event)]
                [:div.meta
-                [:strong "Date:"]
-                (let [start (from-string (:StartDate event))
-                      end   (from-string (:EndDate   event))]
-                  (str (unparse locale/datetime-formatter start)
-                       (when (after? end start)
-                         (str " to "
-                              (unparse locale/datetime-formatter end)))))]
-               [:div.meta
-                [:strong "Venue:"]
-                (:Venue event)]
-               [:div.description
-                (:Description event)]
+                [event-details/component event]]
                (when (get-in (:EventPermissions (:permissions @state/session))
                              [(:EventId event) :EditEvent])
                  [:div.extra
