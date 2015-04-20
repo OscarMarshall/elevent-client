@@ -1,5 +1,6 @@
 (ns elevent-client.pages.events.id.activities.id.edit
   (:require
+    [goog.string :as string]
     [reagent.core :as r :refer [atom]]
     [validateur.validation :refer [format-of presence-of validation-set]]
     [datascript :as d]
@@ -34,6 +35,10 @@
                                   (format-of :EnrollmentCap :format #"^\d*$"
                                              :allow-blank true
                                              :allow-nil true)
+                                  (format-of :TicketPrice
+                                             :format      #"^\d*\.\d\d$"
+                                             :allow-nil   true
+                                             :allow-blank true)
                                   (format-of
                                     :StartTime
                                     :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")
@@ -44,7 +49,10 @@
       (if-let [activity (seq (d/entity @api/activities-db activity-id))]
         (reset! form (let [activity (into {} activity)]
                        (assoc activity
-                         :EnrollmentCap (str (:EnrollmentCap activity)))))
+                         :EnrollmentCap (str (:EnrollmentCap activity))
+                         :TicketPrice   (if (> (:TicketPrice activity) 0)
+                                          (string/format "%.2f" (:TicketPrice activity))
+                                          ""))))
         (add-watch api/activities-db
                    :activity-edit
                    (fn [_ _ _ _]
@@ -54,10 +62,14 @@
                                                       activity-id))]
                                (assoc activity
                                  :EnrollmentCap
-                                 (str (:EnrollmentCap activity)))))
+                                 (str (:EnrollmentCap activity))
+                                 :TicketPrice
+                                 (if (> (:TicketPrice activity) 0)
+                                   (string/format "%.2f" (:TicketPrice activity))
+                                   ""))))
                      (remove-watch api/activities-db :activity-edit)))))
     (fn [event-id]
-      (let [{:keys [Name Location EnrollmentCap StartTime EndTime Description]}
+      (let [{:keys [Name Location EnrollmentCap StartTime EndTime TicketPrice Description]}
             @form
 
             errors
@@ -204,6 +216,15 @@
                                                   }
                                   :static-attrs  {:min-date event-start
                                                   :max-date event-end}}]]])
+              [:div.field
+               [:div.four.wide.field {:class (when (and TicketPrice
+                                                        (:TicketPrice errors))
+                                               :error)}
+                [:label "Ticket Price"]
+                [:div.ui.labeled.input
+                 [:div.ui.label "$"]
+                 [input/component :text {}
+                  (r/wrap TicketPrice swap! form assoc :TicketPrice)]]]]
               [:div.field
                [:label "Description"]
                [input/component :textarea {}
