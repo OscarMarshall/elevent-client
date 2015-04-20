@@ -8,18 +8,19 @@
 
 (defn component [event]
   [:div
-   [:div
-    [:b "Date: "]
-    (when (and (:StartDate event)
-               (:EndDate event))
+   (when (and (:StartDate event)
+              (:EndDate event))
+     [:div
+      [:b "Date: "]
       (let [start (from-string (:StartDate event))
             end   (from-string (:EndDate   event))]
         (str (unparse locale/datetime-formatter start)
              (when (after? end start)
                (str " to "
-                    (unparse locale/datetime-formatter end))))))]
-   [:div
-    [:b "Venue: "] (:Venue event)]
+                    (unparse locale/datetime-formatter end)))))])
+   (when (:Venue event)
+     [:div
+      [:b "Venue: "] (:Venue event)])
    (when (> (:TicketPrice event) 0)
      [:div.meta
       [:strong "Ticket Price: "]

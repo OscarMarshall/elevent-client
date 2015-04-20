@@ -14,7 +14,10 @@
 
 (defn delete-event [form]
   (fn [callback]
-    (api/events-endpoint :delete form #(callback))))
+    (api/events-endpoint :delete form #(api/permissions-endpoint ; Update permissions
+                                         :read
+                                         nil
+                                         callback))))
 
 (defn page []
   (let [owned-events
@@ -37,23 +40,24 @@
           [:div.ui.divided.items
            (for [event owned-events]
              ^{:key (:EventId event)}
-             [:div.item
-              [:div.content
-               [:a.header {:href (routes/event event)}
-                (:Name event)]
-               [:div.meta
-                [event-details/component event]]
-               (when (get-in (:EventPermissions (:permissions @state/session))
-                             [(:EventId event) :EditEvent])
-                 [:div.extra
-                  [:a.ui.right.floated.small.button
-                   {:href (routes/event-edit event)}
-                   "Edit"
-                   [:i.right.chevron.icon]]
-                  [action-button/component
-                   {:class "ui right floated small negative"}
-                   "Delete"
-                   (delete-event event)]])]])]
+             (when (:EventId event)
+               [:div.item
+                [:div.content
+                 [:a.header {:href (routes/event event)}
+                  (:Name event)]
+                 [:div.meta
+                  [event-details/component event]]
+                 (when (get-in (:EventPermissions (:permissions @state/session))
+                               [(:EventId event) :EditEvent])
+                   [:div.extra
+                    [:a.ui.right.floated.small.button
+                     {:href (routes/event-edit event)}
+                     "Edit"
+                     [:i.right.chevron.icon]]
+                    [action-button/component
+                     {:class "ui right floated small negative"}
+                     "Delete"
+                     (delete-event event)]])]]))]
           [:p "You don't own any events."])]]
       [:div.ui.dimmer {:class (when (empty? @api/events) :active)}
        [:div.ui.loader]]]]))

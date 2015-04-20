@@ -86,10 +86,20 @@
                                               (assoc form
                                                 :AdminId (get-in @state/session
                                                                  [:user :UserId])))
-                                            #(do
-                                               (callback)
-                                               (js/location.replace
-                                                 (routes/organizations))))))
+                                            (fn []
+                                              (if organization-id
+                                                (do
+                                                  (callback)
+                                                  (js/location.replace
+                                                    (routes/organizations-owned)))
+                                                ; if creating a new organization, update permissions
+                                                (api/permissions-endpoint
+                                                  :read
+                                                  nil
+                                                  #(do
+                                                     (callback)
+                                                     (js/location.replace
+                                                       (routes/organizations-owned)))))))))
             organization-members
             (when organization-id
               (cons ["None" 0]
@@ -192,7 +202,6 @@
                                     :OrganizationPermissionId
                                     (:OrganizationPermissionId current-org-permissions))
                                   #(api/permissions-endpoint :read nil callback))))))]
->>>>>>> Stashed changes
         [:div.sixteen.wide.column
          [organizations/tabs (if organization-id :edit :add)]
          [:div.ui.bottom.attached.segment
@@ -206,7 +215,7 @@
               [:label "Organization Name"]
               [input/component :text {} (r/wrap Name swap! form assoc :Name)]]]
             [action-button/component
-             {:class [:primary (when (seq errors) :disabled)]}
+             {:class (str "primary" (when (seq errors) " disabled"))}
              (if organization-id "Edit" "Add")
              (create-organization @form)]]]
           (when organization-id

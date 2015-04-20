@@ -25,30 +25,34 @@
        [:div.ui.divided.items
         (for [organization owned-organizations]
           ^{:key (:OrganizationId organization)}
-          [:div.item
-           [:div.content
-            [:a.header
-             (:Name organization)]
-            [:div.extra
-             ; TODO: make this work
-             [:a.ui.right.floated.small.button
-              {:href (routes/events-explore
-                       {:query-params (select-keys organization
-                                                   [:OrganizationId])})}
-              "View events"
-              [:i.right.chevron.icon]]
-             [:a.ui.right.floated.small.button
-              {:href (routes/organization-edit organization)}
-              "Edit"
-              [:i.right.chevron.icon]]
-             [action-button/component
-              {:class "ui right floated small negative"}
-              "Delete"
-              (fn [callback]
-                (api/organizations-endpoint
-                  :delete
-                  organization
-                  callback
-                  nil))]]]])]]]]))
+          (when (:OrganizationId organization)
+            [:div.item
+             [:div.content
+              [:a.header
+               (:Name organization)]
+              [:div.extra
+               ; TODO: make this work
+               [:a.ui.right.floated.small.button
+                {:href (routes/events-explore
+                         {:query-params (select-keys organization
+                                                     [:OrganizationId])})}
+                "View events"
+                [:i.right.chevron.icon]]
+               [:a.ui.right.floated.small.button
+                {:href (routes/organization-edit organization)}
+                "Edit"
+                [:i.right.chevron.icon]]
+               [action-button/component
+                {:class "ui right floated small negative"}
+                "Delete"
+                (fn [callback]
+                  (api/organizations-endpoint
+                    :delete
+                    organization
+                    ; Update permissions
+                    #(api/permissions-endpoint
+                       :read
+                       nil
+                       callback)))]]]]))]]]]))
 
 (routes/register-page routes/organizations-owned-chan #'page true)

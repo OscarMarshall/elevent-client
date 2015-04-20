@@ -6,16 +6,17 @@
 
 (defn component [activity]
   [:div
-   [:div.meta [:strong "Location: "] (:Location activity)]
-   [:div.meta [:strong "Time: "]
-    (when activity
+   (when (:Location activity)
+     [:div.meta [:strong "Location: "] (:Location activity)])
+   (when activity
+     [:div.meta [:strong "Time: "]
       (str (unparse locale/datetime-formatter
                     (from-string
                       (:StartTime activity)))
            " - "
            (unparse locale/datetime-formatter
                     (from-string
-                      (:EndTime activity)))))]
+                      (:EndTime activity))))])
    (when (> (:TicketPrice activity) 0)
      [:div.meta
       [:strong "Ticket Price: "]
