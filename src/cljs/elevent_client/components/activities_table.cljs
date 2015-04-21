@@ -15,11 +15,11 @@
                                       :where [?activity-id :EventId ?event-id]]
                                     @api/activities-db
                                     event-id)))
-        delete-activity! (fn [activity-id]
-                           (api/activities-endpoint :delete
-                                                    (d/entity @api/activities-db
-                                                              activity-id)
-                                                    nil))]
+        delete-activity!
+        (fn [activity-id]
+          (api/activities-endpoint :delete
+                                   (d/entity @api/activities-db activity-id)
+                                   nil))]
     [:table.ui.table
      [:thead
       [:tr
@@ -29,27 +29,28 @@
        [:th "Location"]
        [:th "Actions"]]]
      [:tbody
-      (for [activity activities]
-        ^{:key (:ActivityId activity)}
-        [:tr
-         [:td (let [start (from-string (:StartTime activity))]
-                (unparse locale/datetime-formatter start))]
-         [:td (let [end   (from-string (:EndTime   activity))]
-                (unparse locale/datetime-formatter end))]
-         [:td (:Name activity)]
-         [:td (:Location activity)]
-         ; Check if user can edit activities
-         (if (get-in (:EventPermissions (:permissions @state/session))
-                     [event-id :EditEvent])
-           [:td
-            [:a
-             {:href (routes/event-activity-edit activity)}
-             [:i.edit.icon]]
-            [:span
-             {:style {:cursor "pointer"}
-              :on-click #(delete-activity! (:ActivityId activity))}
-             [:i.red.remove.icon]]]
-           [:td])])]
+      (let [event-permissions (:EventPermissions (:permissions @state/session))]
+        (for [activity activities]
+          ^{:key (:ActivityId activity)}
+          [:tr
+           [:td (let [start (from-string (:StartTime activity))]
+                  (unparse locale/datetime-formatter start))]
+           [:td (let [end   (from-string (:EndTime   activity))]
+                  (unparse locale/datetime-formatter end))]
+           [:td (:Name activity)]
+           [:td (:Location activity)]
+           ; Check if user can edit activities
+           (if (get-in event-permissions
+                       [event-id :EditEvent])
+             [:td
+              [:a
+               {:href (routes/event-activity-edit activity)}
+               [:i.edit.icon]]
+              [:span
+               {:style {:cursor "pointer"}
+                :on-click #(delete-activity! (:ActivityId activity))}
+               [:i.red.remove.icon]]]
+             [:td])]))]
      (when (get-in (:EventPermissions (:permissions @state/session))
                    [event-id :EditEvent])
        [:tfoot

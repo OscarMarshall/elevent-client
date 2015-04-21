@@ -33,6 +33,7 @@
             [elevent-client.pages.events.id.attendees.core]
             [elevent-client.pages.events.id.attendees.id.core]
             [elevent-client.pages.events.id.groups.id.edit]
+            [elevent-client.pages.events.id.groups.id.core]
             [elevent-client.pages.organizations.core]
             [elevent-client.pages.organizations.explore]
             [elevent-client.pages.organizations.owned]

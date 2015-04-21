@@ -125,7 +125,7 @@
                 [input/component
                  :select
                  {}
-                 groups
+                 (cons ["None" 0] groups)
                  (r/wrap
                    (:GroupId attendee)
                    (fn [x]

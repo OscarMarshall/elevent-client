@@ -105,22 +105,23 @@
             (fn [form]
               (fn [callback]
                 (when (empty? errors)
-                  (api/events-endpoint (if event-id :update :create)
-                                       form
-                                       ; if creating a new event, read permissions after creating
-                                       (fn []
-                                         (if event-id
-                                           (do
-                                             (callback)
-                                             (js/location.replace
-                                               (routes/events-owned)))
-                                           (api/permissions-endpoint
-                                             :read
-                                             nil
-                                             #(do
-                                                (callback)
-                                                (js/location.replace
-                                                  (routes/events-owned))))))))))]
+                  (api/events-endpoint
+                    (if event-id :update :create)
+                    form
+                    ; if creating a new event, read permissions after creating
+                    (fn []
+                      (if event-id
+                        (do
+                          (callback)
+                          (js/location.replace
+                            (routes/events-owned)))
+                        (api/permissions-endpoint
+                          :read
+                          nil
+                          #(do
+                             (callback)
+                             (js/location.replace
+                               (routes/events-owned))))))))))]))))]
         [:div.sixteen.wide.column
          [events/tabs (if event-id :edit :add)]
          [:div.ui.bottom.attached.segment

@@ -21,12 +21,12 @@
         get-current-event-permissions
         (fn []
           (let [permissions (ffirst (d/q '[:find ?event-permissions
-                                          :in $ ?user-id
-                                          :where
-                                          [?a :UserId ?user-id]
-                                          [?a :EventPermissions ?event-permissions]]
-                                        @api/permissions-db
-                                        @permissions-user))]
+                                           :in $ ?user-id
+                                           :where
+                                           [?a :UserId ?user-id]
+                                           [?a :EventPermissions ?event-permissions]]
+                                         @api/permissions-db
+                                         @permissions-user))]
             (prn permissions)
             ; Filter event permissions to match event id
             (first (filter
@@ -36,12 +36,12 @@
         get-current-org-permissions
         (fn []
           (let [permissions (ffirst (d/q '[:find ?org-permissions
-                                          :in $ ?user-id
-                                          :where
-                                          [?a :UserId ?user-id]
-                                          [?a :OrganizationPermissions ?org-permissions]]
-                                        @api/permissions-db
-                                        @permissions-user))]
+                                           :in $ ?user-id
+                                           :where
+                                           [?a :UserId ?user-id]
+                                           [?a :OrganizationPermissions ?org-permissions]]
+                                         @api/permissions-db
+                                         @permissions-user))]
             (prn permissions)
             ; Filter organization permissions to match org id
             (first (filter

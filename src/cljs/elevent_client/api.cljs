@@ -108,6 +108,7 @@
   [schedules     (str config/https-url "/schedules")     :ScheduleId     true]
   [memberships   (str config/https-url "/memberships")   :MembershipId   true]
   [groups        (str config/https-url "/groups")        :GroupsId       true]
+  [mandates      (str config/https-url "/mandates")      :MandateId      true]
   [permissions   (str config/https-url "/permissions")   :UserId         true])
 
 (go-loop []

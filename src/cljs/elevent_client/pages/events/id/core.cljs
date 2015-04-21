@@ -120,7 +120,18 @@
             (reset! logo-to-upload (not (= (.val (js/jQuery "#file")) "")))
                     (if (> (aget file "size") 1000000) ; image is too large
                       (reset! image-error "Image is too large. Must be under 1 MB.")
-                      (reset! image-error nil))))]
+                      (reset! image-error nil))))
+        scheduled-activities
+        (d/q '[:find ?schedule-id ?activity-id
+               :in $activities $schedules ?event-id ?user-id
+               :where
+               [$activities ?activity-id :EventId ?event-id]
+               [$schedules  ?schedule-id :UserId     ?user-id]
+               [$schedules  ?schedule-id :ActivityId ?activity-id]]
+             @api/activities-db
+             @api/schedules-db
+             (:EventId event)
+             (get-in @state/session [:user :UserId]))]
     [:div.sixteen.wide.column
      [:div.ui.segment
       [:div.ui.vertical.segment
@@ -210,7 +221,19 @@
             [:th {:colSpan "4"}
              [:div.ui.right.floated.small.labeled.icon.button
               [:i.edit.icon]
-              "Edit"]]]]]])]]))
+              "Edit"]]]]]])
+      [:div.ui.vertical.segment
+       [:h2 "Your Schedule"]
+       [schedule/component scheduled-activities
+        (list "Details" [:i.right.chevron.icon])
+        (fn [_ activity-id]
+          (js/location.assign (routes/event-activity
+                                {:EventId (:EventId event)
+                                 :ActivityId activity-id})))
+        [:a.ui.small.right.floated.labeled.icon.button
+         {:href (routes/event-schedule event)}
+         [:i.edit.icon]
+         "Edit"]]]]]))
 
 (defn page [event-id]
   (let [logo-to-upload (atom false)

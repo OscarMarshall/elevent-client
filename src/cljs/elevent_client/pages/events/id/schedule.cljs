@@ -23,10 +23,6 @@
                                :UserId     user-id}
                               nil))
 
-        remove-activity!
-        (fn [schedule _]
-          (api/schedules-endpoint :delete schedule nil))
-
         event-logo (atom nil)]
     (fn [event-id]
       (let
@@ -102,7 +98,11 @@
               [:div.ui.vertical.segment
                [schedule/component scheduled-activities
                 (list [:i.red.remove.icon] "Remove")
-                remove-activity!]]
+                (fn [schedule-id activity-id]
+                  (api/schedules-endpoint :delete
+                                          (d/entity @api/schedules-db
+                                                    schedule-id)
+                                          nil))]]
               [:div.ui.vertical.segment
                [:div.ui.divided.items
                 (doall

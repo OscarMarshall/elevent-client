@@ -1,9 +1,13 @@
 (ns elevent-client.pages.organizations.core
-  (:require [datascript :as d]
+  (:require [reagent.core :refer [atom]]
+            [datascript :as d]
+            [clojure.string :as str]
             [elevent-client.routes :as routes]
             [elevent-client.api :as api]
             [elevent-client.state :as state]
-            [elevent-client.components.action-button :as action-button]))
+            [elevent-client.components.action-button :as action-button]
+            [elevent-client.components.input :as input]
+            [elevent-client.components.paginator :as paginator]))
 
 (defn tabs [page]
   (let [logged-in? (:token @state/session)]
@@ -25,50 +29,68 @@
         "Add"])]))
 
 (defn page []
-  (let [organizations-joined
-        (->> (d/q '[:find ?organization-id ?membership-id
-                    :in $ ?user-id
-                    :where
-                    [?membership-id :UserId ?user-id]
-                    [?membership-id :OrganizationId ?organization-id]]
-                  @api/memberships-db
-                  (get-in @state/session [:user :UserId]))
-             (map (fn [[organization-id membership-id]]
-                    (assoc (into {} (d/entity @api/organizations-db
-                                              organization-id))
-                      :MembershipId membership-id)))
-             doall)]
-    [:div.sixteen.wide.column
-     [tabs :core]
-     [:div.ui.bottom.attached.segment
-      [:div.ui.vertical.segment
-       [:h1.ui.header "Organizations You're a Member of"]]
-      [:div.ui.vertical.segment
-       (if (seq organizations-joined)
-         [:div.ui.divided.items
-          (for [organization organizations-joined]
-            ^{:key (:OrganizationId organization)}
-            [:div.item
-             [:div.content
-              [:a.header
-               (:Name organization)]
-              [:div.extra
-               ; TODO: make this work
-               [:a.ui.right.floated.small.button
-                {:href (routes/events-explore
-                         {:query-params (select-keys organization
-                                                     [:OrganizationId])})}
-                "View events"
-                [:i.right.chevron.icon]]
-               [action-button/component
-                {:class "ui right floated small negative"}
-                "Leave"
-                (fn [callback]
-                  (api/memberships-endpoint
-                    :delete
-                    organization
-                    callback
-                    nil))]]]])]
-         [:p "You aren't a member of any organizations."])]]]))
+  (let [search (atom "")
+        page (atom 0)]
+    (fn []
+      (let [organizations-joined
+            (->> (d/q '[:find ?organization-id ?membership-id
+                        :in $ ?user-id
+                        :where
+                        [?membership-id :UserId ?user-id]
+                        [?membership-id :OrganizationId ?organization-id]]
+                      @api/memberships-db
+                      (get-in @state/session [:user :UserId]))
+                 (map (fn [[organization-id membership-id]]
+                        (assoc (into {} (d/entity @api/organizations-db
+                                                  organization-id))
+                          :MembershipId membership-id)))
+                 (sort-by (comp str/lower-case :Name))
+                 (filter #(when (seq %)
+                            (re-find (re-pattern (str/lower-case @search))
+                                     (str/lower-case (:Name %)))))
+                 (drop (* @page 10))
+                 (take 10)
+                 doall)]
+        [:div.sixteen.wide.column
+         [tabs :core]
+         [:div.ui.bottom.attached.segment
+          [:div.ui.vertical.segment
+           [:h1.ui.header "Organizations You're a Member of"]]
+          [:div.ui.vertical.segment
+           [:div.ui.form
+            [:div.field
+             [:label "Search"]
+             [input/component :text {} search]]]]
+          [:div.ui.vertical.segment
+           (if (seq organizations-joined)
+             [:div.ui.divided.items
+              (for [organization organizations-joined]
+                ^{:key (:OrganizationId organization)}
+                [:div.item
+                 [:div.content
+                  [:a.header
+                   (:Name organization)]
+                  [:div.extra
+                   ; TODO: make this work
+                   [:a.ui.right.floated.small.button
+                    {:href (routes/events-explore
+                             {:query-params (select-keys organization
+                                                         [:OrganizationId])})}
+                    "View events"
+                    [:i.right.chevron.icon]]
+                   [action-button/component
+                    {:class "ui right floated small negative"}
+                    "Leave"
+                    (fn [callback]
+                      (api/memberships-endpoint
+                        :delete
+                        organization
+                        callback
+                        nil))]]]])]
+             [:p "No organizations found"])]
+          [:div.ui.vertical.segment
+           [paginator/component
+            organizations-joined
+            page]]]]))))
 
 (routes/register-page routes/organizations-chan #'page true)

@@ -27,7 +27,10 @@
       (doall (for [group groups]
                ^{:key (:GroupId group)}
                [:tr
-                [:td (:Name group)]
+                [:td
+                 [:a {:href (routes/event-group (assoc group
+                                                  :EventId event-id))}
+                      (:Name group)]]
                 [:td (count (d/q '[:find [?attendee-id ...]
                                    :in $ ?group-id
                                    :where
