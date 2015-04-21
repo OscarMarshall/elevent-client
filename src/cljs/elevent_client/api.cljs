@@ -70,19 +70,44 @@
                     (fn [error]
                       (if error-handler
                         (error-handler error)
-                        (if (= (:status error) 401)
+                        (cond
+                          ; Informative error messages
+                          (= (:status error) 401)
                           (when (:token @state/session)
                             (put! state/add-messages-chan
                                   [:logged-out [:negative "Logged out"]])
                             (auth/sign-out!))
-                          (if (= (:failure error) :timeout)
-                            (put! state/add-messages-chan
-                                  [(keyword "elevent-client.api"
-                                            (str uri "-timed-out"))
-                                   [:negative (str uri " timed out")]])
-                            (put! state/add-messages-chan
-                                  [(keyword "elevent-client.api" (gensym))
-                                   [:negative (str uri (js->clj error))]])))))}]
+
+                          (= (:status error) 403)
+                          (put! state/add-messages-chan
+                                [:forbidden-action
+                                 [:negative "You do not have permission to perform that action"]])
+
+                          (= (:status error) 500)
+                          (put! state/add-messages-chan
+                                [:server-error
+                                 [:negative "An error occured"]])
+
+                          (= (:status error) 404)
+                          (put! state/add-messages-chan
+                                [:not-found
+                                 [:negative "Your request was not found"]])
+
+                          (= (:status error) 400)
+                          (put! state/add-messages-chan
+                                [:bad-request
+                                 [:negative "Bad request"]])
+
+                          (= (:failure error) :timeout)
+                          (put! state/add-messages-chan
+                                [(keyword "elevent-client.api"
+                                          (str uri "-timed-out"))
+                                 [:negative (str uri " timed out")]])
+
+                          :else
+                          (put! state/add-messages-chan
+                                [(keyword "elevent-client.api" (gensym))
+                                 [:negative (str uri (js->clj error))]]))))}]
        (let [check-id (fn [op] (if (contains? params element-id)
                                  (op (str uri "/" (params element-id)) options)
                                  (throw (str "Element doesn't contain key \""
