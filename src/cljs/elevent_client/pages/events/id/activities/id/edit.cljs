@@ -240,7 +240,11 @@
               [action-button/component
                {:class (str "primary" (when (seq errors) " disabled"))}
                (if activity-id "Edit" "Add")
-               (create-activity @form)]]]
+               (create-activity @form)]
+              (when activity-id
+                [:button.ui.button
+                 {:on-click #(js/location.replace (routes/event-activity-add event))}
+                 "Cancel"])]]
             [:div.ui.vertical.segment
              [:h2.ui.header
               "Activities"]
