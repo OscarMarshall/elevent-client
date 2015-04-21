@@ -22,6 +22,7 @@
     [elevent-client.routes :as routes]
     [elevent-client.components.activities-table :as activities-table]
     [elevent-client.components.action-button :as action-button]
+    [elevent-client.components.help-icon :as help-icon]
     [elevent-client.components.input :as input]
     [elevent-client.components.date-selector :as date-selector]
     [elevent-client.components.event-details :as event-details]))
@@ -220,11 +221,18 @@
                [:div.four.wide.field {:class (when (and TicketPrice
                                                         (:TicketPrice errors))
                                                :error)}
-                [:label "Ticket Price"]
+                [:label "Ticket Price "
+                 [help-icon/component (str "To charge for this activity, please associate its event with "
+                                           "an organization that has set up a Stripe payments "
+                                           "account.")]]
                 [:div.ui.labeled.input
                  [:div.ui.label "$"]
-                 [input/component :text {}
-                  (r/wrap TicketPrice swap! form assoc :TicketPrice)]]]]
+                 (let [disabled? (or (not (> (:OrganizationId event) 0))
+                                     (let [org (d/entity @api/organizations-db
+                                                         (:OrganizationId event))]
+                                       (nil? (:PaymentRecipientId org))))]
+                   [input/component :text {:disabled disabled?}
+                    (r/wrap TicketPrice swap! form assoc :TicketPrice)])]]]
               [:div.field
                [:label "Description"]
                [input/component :textarea {}

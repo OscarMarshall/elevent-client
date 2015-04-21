@@ -12,6 +12,7 @@
     [elevent-client.routes :as routes]
     [elevent-client.state :as state]
     [elevent-client.components.action-button :as action-button]
+    [elevent-client.components.help-icon :as help-icon]
     [elevent-client.components.input :as input]
     [elevent-client.components.date-selector :as date-selector]
     [elevent-client.pages.events.core :as events]))
@@ -31,22 +32,26 @@
 
 (defn page [& [event-id]]
   (let [form (atom {})
-        clone-id (atom 0)]
+        clone-id (atom 0)
+        organization-id (atom 0)]
     (when event-id
       (if-let [event (seq (d/entity @api/events-db event-id))]
-        (reset! form (let [event (into {} event)]
-                       (assoc event
+        (let [event (into {} event)]
+          (reset! form (assoc event
                          :TicketPrice (if (> (:TicketPrice event) 0)
                                         (string/format "%.2f" (:TicketPrice event))
-                                        ""))))
+                                        "")))
+          (reset! organization-id (:OrganizationId event)))
         (add-watch api/events-db
                    :event-edit
                    (fn [_ _ _ db]
-                     (reset! form (let [event (into {} (d/entity db event-id))]
-                                    (assoc event
-                                      :TicketPrice (if (> (:TicketPrice event) 0)
-                                                     (string/format "%.2f" (:TicketPrice event))
-                                                     ""))))
+                     (let [event (into {} (d/entity db event-id))]
+                       (reset! form
+                               (assoc event
+                                 :TicketPrice (if (> (:TicketPrice event) 0)
+                                                (string/format "%.2f" (:TicketPrice event))
+                                                "")))
+                       (reset! organization-id (:OrganizationId event)))
                      (remove-watch api/events-db :event-edit)))))
     (add-watch clone-id :clone
                (fn [_ _ _ id]
@@ -65,7 +70,14 @@
                            (if (> (:TicketPrice clone-event) 0)
                              (string/format "%.2f" (:TicketPrice clone-event))
                              ""))
-                         :EventId))))))
+                         :EventId))
+                     (reset! organization-id (:OrganizationId clone-event))))))
+    (add-watch organization-id :clear-ticket-price
+               (fn [_ _ _ _]
+                 (when (> @organization-id 0)
+                   (let [org (d/entity @api/organizations-db @organization-id)]
+                     (when (nil? (:PaymentRecipientId org))
+                       (swap! form dissoc :TicketPrice))))))
     (fn []
       (let [{:keys [Name OrganizationId Venue StartDate EndDate
                     TicketPrice Description]}
@@ -107,7 +119,7 @@
                 (when (empty? errors)
                   (api/events-endpoint
                     (if event-id :update :create)
-                    form
+                    (assoc form :OrganizationId @organization-id)
                     ; if creating a new event, read permissions after creating
                     (fn []
                       (if event-id
@@ -146,7 +158,7 @@
              [:div.required.field
               [:label "Organization"]
               [input/component :select {} associated-organizations
-               (r/wrap OrganizationId swap! form assoc :OrganizationId)]]
+               organization-id]]
              [:div.required.field {:class (when (and Venue (:Venue errors))
                                             :error)}
               [:div.required.field
@@ -190,11 +202,18 @@
              [:div.four.wide.field {:class (when (and TicketPrice
                                                       (:TicketPrice errors))
                                              :error)}
-              [:label "Ticket Price"]
+              [:label "Ticket Price "
+               [help-icon/component (str "To charge for this event, please associate it with "
+                                         "an organization that has set up a Stripe payments "
+                                         "account.")]]
               [:div.ui.labeled.input
                [:div.ui.label "$"]
-               [input/component :text {}
-                (r/wrap TicketPrice swap! form assoc :TicketPrice)]]]]
+               (let [disabled? (or (not (> @organization-id 0))
+                                   (let [org (d/entity @api/organizations-db
+                                                       @organization-id)]
+                                     (nil? (:PaymentRecipientId org))))]
+                 [input/component :text {:disabled disabled?}
+                  (r/wrap TicketPrice swap! form assoc :TicketPrice)])]]]
             [:div.field
              [:label "Description"]
              [input/component :textarea {}

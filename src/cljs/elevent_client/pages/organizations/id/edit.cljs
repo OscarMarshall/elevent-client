@@ -7,6 +7,7 @@
             [elevent-client.routes :as routes]
             [elevent-client.state :as state]
             [elevent-client.components.action-button :as action-button]
+            [elevent-client.components.help-icon :as help-icon]
             [elevent-client.components.input :as input]
             [elevent-client.pages.organizations.core :as organizations]))
 
@@ -75,7 +76,7 @@
                :preset-permissions
                sync-permissions)
     (fn []
-      (let [{:keys [Name]} @form
+      (let [{:keys [Name PaymentRecipientId]} @form
             errors (validator @form)
             create-organization
             (fn [form]
@@ -214,6 +215,13 @@
                                             :error)}
               [:label "Organization Name"]
               [input/component :text {} (r/wrap Name swap! form assoc :Name)]]]
+            [:div.one.field
+             [:div.eight.wide.field
+              [:label "Stripe Recipient ID "
+               [help-icon/component (str "If your organization would like to charge for events, "
+                                         "you must create a Stripe account and input your Recipient "
+                                         "ID here.")]]
+              [input/component :text {} (r/wrap PaymentRecipientId swap! form assoc :PaymentRecipientId)]]]
             [action-button/component
              {:class (str "primary" (when (seq errors) " disabled"))}
              (if organization-id "Edit" "Add")
