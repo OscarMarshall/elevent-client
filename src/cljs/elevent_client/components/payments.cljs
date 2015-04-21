@@ -28,7 +28,6 @@
             response-handler
             (fn [status response]
               (reset! button-loading? false)
-              (prn response)
               (if response.error
                 (do
                   (reset! stripe-error response.error.message))
@@ -49,10 +48,6 @@
                 (let [[month year]
                       (clojure.string/split (:exp-date form) #"/" 2)]
                   (reset! button-loading? true)
-                  (prn (dissoc (assoc form
-                                 :exp-month (int month)
-                                 :exp-year (int year))
-                               :exp-date))
                   (.preventDefault e)
                   (.stopPropagation e)
                   (Stripe.card.createToken

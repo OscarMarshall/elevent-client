@@ -24,7 +24,6 @@
                               "/emails/password-reset"
                               form
                               (fn []
-                                (prn "here")
                                 (callback)
                                 (put! state/add-messages-chan
                                       [:password-reset-request-succeeded

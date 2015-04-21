@@ -57,12 +57,10 @@
 
          add-activity-to-cart!
          (fn [activity-id]
-           (prn activity-id)
            (swap! cart-activities conj [activity-id]))
 
          remove-activity-from-cart!
          (fn [activity-id]
-           (prn activity-id)
            (swap! cart-activities disj [activity-id]))
 
          add-cart-activities!

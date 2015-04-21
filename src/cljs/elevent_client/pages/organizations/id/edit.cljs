@@ -28,7 +28,6 @@
                                            [?a :EventPermissions ?event-permissions]]
                                          @api/permissions-db
                                          @permissions-user))]
-            (prn permissions)
             ; Filter event permissions to match event id
             (first (filter
                      (fn [event-permissions]
@@ -43,7 +42,6 @@
                                            [?a :OrganizationPermissions ?org-permissions]]
                                          @api/permissions-db
                                          @permissions-user))]
-            (prn permissions)
             ; Filter organization permissions to match org id
             (first (filter
                      (fn [org-permissions]

@@ -22,7 +22,7 @@
                            @api/events-db)))
 
             attendees
-            (d/q '[:find [?check-in-time ...]
+            (d/q '[:find ?attendee-id ?check-in-time
                    :in $ ?event-id
                    :where
                    [?attendee-id :EventId ?event-id]
@@ -39,13 +39,15 @@
                  @event-id)
 
             check-in-data
-            (into (sorted-map) (frequencies (map to-long attendees)))
-
-            check-in-data
-            (sort-by first (vec (zipmap (keys check-in-data)
-                                        (reduce #(conj %1 (+ (last %1) %2))
-                                                []
-                                                (vals check-in-data)))))
+            (->> attendees
+                 (map (comp to-long second))
+                 frequencies
+                 (into (sorted-map))
+                 vals
+                 (reduce #(conj %1 (+ (last %1) %2)) [])
+                 (zipmap (keys check-in-data))
+                 vec
+                 (sort-by first))
 
             activities
             (d/q '[:find ?name ?id
@@ -62,7 +64,7 @@
                     (fn [[activity-name activity-id]]
                       [activity-name
                        (count
-                         (d/q '[:find [?check-in-time ...]
+                         (d/q '[:find ?schedule-id ?check-in-time
                                 :in $ ?activity-id
                                 :where
                                 [?schedule-id :ActivityId ?activity-id]
