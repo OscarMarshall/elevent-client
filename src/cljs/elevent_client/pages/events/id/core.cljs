@@ -10,6 +10,7 @@
             [elevent-client.components.event-details :as event-details]
             [elevent-client.components.schedule :as schedule]
             [elevent-client.components.activities-table :as activities-table]
+            [elevent-client.components.activity-details :as activity-details]
             [elevent-client.components.groups-table :as groups-table]
             [elevent-client.components.action-button :as action-button]
             [elevent-client.components.logo :as logo]
@@ -319,7 +320,23 @@
                 [:div.ui.vertical.segment
                  [:h1.ui.dividing.header
                   (:Name event)]
-                 [event-details/component event]]]]
+                 [event-details/component event]
+                 [:div.extra
+                  [:a.ui.right.floated.button
+                   {:href (routes/event-register event)}
+                   "Register"
+                   [:i.right.chevron.icon]]]]
+                (when (seq activities)
+                  [:div.ui.vertical.segment
+                   [:h2.ui.dividing.header "Activities"]
+                   [:div.ui.divided.items
+                    (doall
+                      (for [activity activities]
+                        ^{:key (:ActivityId activity)}
+                        [:div.item
+                         [:div.content
+                          [:div.header (:Name activity)]
+                          [activity-details/component activity]]]))]])]]
               [logo/component @event-logo]]]))))))
 
 (routes/register-page routes/event-chan #'page)

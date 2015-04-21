@@ -72,7 +72,7 @@
                     activities))]
         [:div.sixteen.wide.column
          [:div.ui.segment
-          [:h1.ui.header
+          [:h1.ui.dividing.header
            "Statistics"]
           [:div.ui.form
            [:div.two.fields
@@ -106,7 +106,8 @@
               :title {:text "Check in Times"}
               :xAxis {:type "datetime"
                       :dateTimeLabelFormats {:day "%e %b"}}
-              :yAxis {:title {:text "Number checked in"}}
+              :yAxis {:title {:text "Number checked in"}
+                      :min 0}
               :series [{:name "Checked in"}]}
              check-in-data])
           ; Check if there is any data to display
@@ -118,6 +119,7 @@
             [chart/component
              {:chart {:type "bar"}
               :title {:text "Activity attendance"}
+              :xAxis {:min 0}
               :yAxis {:title {:text "Number of attendees"}
                       :min 0
                       :minRange 1

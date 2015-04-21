@@ -121,7 +121,7 @@
                           #(do
                              (callback)
                              (js/location.replace
-                               (routes/events-owned))))))))))]))))]
+                               (routes/events-owned))))))))))]
         [:div.sixteen.wide.column
          [events/tabs (if event-id :edit :add)]
          [:div.ui.bottom.attached.segment

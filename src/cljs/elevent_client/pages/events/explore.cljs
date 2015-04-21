@@ -75,6 +75,10 @@
                     [:a.ui.right.floated.button
                      {:href (routes/event-register event)}
                      "Register"
+                     [:i.right.chevron.icon]]
+                    [:a.ui.right.floated.small.button
+                     {:href (routes/event event)}
+                     "Details"
                      [:i.right.chevron.icon]]]]])]
               [:p "No events found."])]
            [:div.ui.vertical.segment

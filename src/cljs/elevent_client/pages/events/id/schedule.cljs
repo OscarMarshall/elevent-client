@@ -10,6 +10,7 @@
             [elevent-client.stripe :as stripe]
             [elevent-client.components.payments :as payments]
             [elevent-client.components.activity-details :as activity-details]
+            [elevent-client.components.action-button :as action-button]
             [elevent-client.components.schedule :as schedule]
             [elevent-client.components.logo :as logo]))
 
@@ -65,17 +66,19 @@
            (swap! cart-activities disj [activity-id]))
 
          add-cart-activities!
-         (fn [e user-id cart-activities]
-           (.preventDefault e)
-           (let [activities (into [] (map (fn [[activity-id]]
-                                            activity-id)
-                                          @cart-activities))]
-             (stripe/renew-token!
-               (fn [] (api/schedules-endpoint :bulk
-                                          {:UserId      user-id
-                                           :Token       (:stripe-token @state/session)
-                                           :ActivityIds activities}
-                                          #(reset! cart-activities #{}))))))]
+         (fn [user-id cart-activities]
+           (fn [callback]
+             (let [activities (into [] (map (fn [[activity-id]]
+                                              activity-id)
+                                            @cart-activities))]
+               (stripe/renew-token!
+                 (fn [] (api/schedules-endpoint :bulk
+                                                {:UserId      user-id
+                                                 :Token       (:stripe-token @state/session)
+                                                 :ActivityIds activities}
+                                                #(do
+                                                   (reset! cart-activities #{})
+                                                   (callback))))))))]
         (when (seq event)
           (when (and (:HasLogo event)
                      (not @event-logo))
@@ -153,14 +156,13 @@
                   [:form.ui.form
                    [payments/component]]
                   [:div.ui.divider]
-                  [:button.ui.primary.button
-                   {:type :submit
-                    :class (when (nil? (:payment-info @state/session))
-                             :disabled)
-                    :on-click #(add-cart-activities! % (get-in @state/session
-                                                               [:user :UserId])
-                                                     cart-activities)}
-                   "Confirm Payment and Add Activities"]]]])]
+                  [action-button/component
+                   {:class (str "primary" (when (nil? (:payment-info @state/session))
+                                            " disabled"))}
+                   "Confirm Payment and Add Activities"
+                   (add-cart-activities! (get-in @state/session
+                                                 [:user :UserId])
+                                         cart-activities)]]]])]
             [logo/component @event-logo]]])))))
 
 (routes/register-page routes/event-schedule-chan #'page true)

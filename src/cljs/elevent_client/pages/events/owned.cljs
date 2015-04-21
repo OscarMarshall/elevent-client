@@ -69,6 +69,10 @@
                        {:href (routes/event-edit event)}
                        "Edit"
                        [:i.right.chevron.icon]]
+                      [:a.ui.right.floated.small.button
+                       {:href (routes/event event)}
+                       "Details"
+                       [:i.right.chevron.icon]]
                       [action-button/component
                        {:class "ui right floated small negative"}
                        "Delete"
