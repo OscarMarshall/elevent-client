@@ -66,6 +66,7 @@
     (events/listen
      EventType/NAVIGATE
      (fn [event]
+       (reset! state/messages {})
        (let [token (apply str (or (seq (.-token event)) '("/")))]
          (reset! state/location (str "#" token))
          (routes/dispatch! token))))

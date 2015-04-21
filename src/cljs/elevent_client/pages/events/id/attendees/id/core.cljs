@@ -24,7 +24,7 @@
           (str "Bearer " (:token @state/session))}
          {})
        :handler (do
-                  (put! state/api-refresh-chan true)
+                  (reset! state/messages {})
                   (callback))
        :error-handler
        (fn [error]
