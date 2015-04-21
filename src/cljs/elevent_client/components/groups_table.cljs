@@ -42,9 +42,8 @@
                   {:href (routes/event-group-edit group)}
                   [:i.edit.icon]]
                  [:span
-                  {:style {:cursor "pointer"}
-                   :on-click #(delete-group! (:GroupId group))}
-                  [:i.red.remove.icon]]]]))]
+                  {:on-click #(delete-group! (:GroupId group))}
+                  [:i.red.remove.icon.link]]]]))]
      [:tfoot
       [:tr
        [:th {:colSpan "6"}

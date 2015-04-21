@@ -47,9 +47,8 @@
                {:href (routes/event-activity-edit activity)}
                [:i.edit.icon]]
               [:span
-               {:style {:cursor "pointer"}
-                :on-click #(delete-activity! (:ActivityId activity))}
-               [:i.red.remove.icon]]]
+               {:on-click #(delete-activity! (:ActivityId activity))}
+               [:i.red.remove.icon.link]]]
              [:td])]))]
      (when (get-in (:EventPermissions (:permissions @state/session))
                    [event-id :EditEvent])
