@@ -29,7 +29,8 @@
                                 (put! state/add-messages-chan
                                       [:password-reset-request-succeeded
                                        [:positive "An link to reset your password has been sent to your email"]])
-                                (js/location.replace (routes/sign-in))))))]
+                                (js/location.replace (routes/sign-in)))
+                              callback)))]
         [:div.eight.wide.centered.column
          [:div.ui.segment
           [:h1.ui.dividing.header "Request password reset"]

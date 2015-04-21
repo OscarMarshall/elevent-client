@@ -100,7 +100,8 @@
                                                   #(do
                                                      (callback)
                                                      (js/location.replace
-                                                       (routes/organizations-owned)))))))))
+                                                       (routes/organizations-owned))))))
+                                            callback)))
             organization-members
             (when organization-id
               (cons ["None" 0]

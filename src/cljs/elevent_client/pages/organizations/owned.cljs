@@ -67,7 +67,8 @@
                         #(api/permissions-endpoint
                            :read
                            nil
-                           callback)))]]]])]
+                           callback)
+                        callback))]]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component owned-organizations page]]]]))))

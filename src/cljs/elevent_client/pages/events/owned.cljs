@@ -21,7 +21,8 @@
     (api/events-endpoint :delete form #(api/permissions-endpoint ; Update permissions
                                          :read
                                          nil
-                                         callback))))
+                                         callback)
+                         callback)))
 
 (defn page []
   (let [search (atom "")

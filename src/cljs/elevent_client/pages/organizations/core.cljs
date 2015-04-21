@@ -86,7 +86,7 @@
                         :delete
                         organization
                         callback
-                        nil))]]]])]
+                        callback))]]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component

@@ -72,7 +72,7 @@
                         (select-keys (merge (:user @state/session) organization)
                                      [:UserId :OrganizationId])
                         callback
-                        nil))]]]])]
+                        callback))]]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component

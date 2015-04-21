@@ -110,7 +110,8 @@
                                  (from-string end-time))))
                     (fn [_]
                        (callback)
-                       (when-not activity-id (reset-form!)))))))]
+                       (when-not activity-id (reset-form!)))
+                    callback))))]
         (when (seq event)
           ; Add start/end times to form state
           (swap! form assoc

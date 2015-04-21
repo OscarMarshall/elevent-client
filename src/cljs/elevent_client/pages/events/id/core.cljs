@@ -1,5 +1,6 @@
 (ns elevent-client.pages.events.id.core
   (:require [datascript :as d]
+            [cljs.core.async :as async :refer [put!]]
             [reagent.core :as r :refer [atom]]
             [ajax.core :refer [POST DELETE]]
 
@@ -97,7 +98,12 @@
                               (callback)
                               (api/events-endpoint :read nil nil)
                               #_(get-logo))
-                   :error-handler #(prn "failed...")}))) ; TODO: real error message
+                   :error-handler
+                   (fn [_]
+                     (callback)
+                     (put! state/add-messages-chan
+                           [:logo-upload-failed
+                            [:negative "Upload failed. Please try again."]]))})))
         delete-image
         (fn [callback]
           (DELETE (str config/http-url "/events/" (:EventId event) "/logos")
@@ -111,7 +117,13 @@
                    :handler (fn []
                               (reset! event-logo nil)
                               (callback)
-                              (api/events-endpoint :read nil nil))}))
+                              (api/events-endpoint :read nil nil))
+                   :error-handler
+                   (fn [_]
+                     (callback)
+                     (put! state/add-messages-chan
+                           [:logo-delete-failed
+                            [:negative "Remove failed. Please try again."]]))}))
         file-changed
         (fn []
           (let [file (-> (js/jQuery "#file")
@@ -276,7 +288,8 @@
                               (d/entity @api/attendees-db attendee-id)
                               #(do
                                  (callback)
-                                 (js/location.replace (routes/events))))))
+                                 (js/location.replace (routes/events)))
+                              callback)))
             can-edit
             (get-in (:EventPermissions (:permissions @state/session))
                     [event-id :EditEvent])

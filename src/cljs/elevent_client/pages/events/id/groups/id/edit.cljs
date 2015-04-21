@@ -66,7 +66,8 @@
                     form
                     (fn [_]
                        (callback)
-                       (when-not group-id (reset-form!)))))))]
+                       (when-not group-id (reset-form!)))
+                    callback))))]
         (when (seq event)
           [:div.sixteen.wide.column
            [:div.ui.segment

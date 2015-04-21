@@ -55,14 +55,16 @@
                                #(do
                                   (callback)
                                   (swap! state/session dissoc :stripe-token)
-                                  (js/location.replace (routes/events))))))
+                                  (js/location.replace (routes/events)))))
+                      callback)
                     (api/attendees-endpoint
                       :create
                       {:UserId (get-in @state/session [:user :UserId])
                        :EventId event-id}
                       #(do
                          (callback)
-                         (js/location.replace (routes/events))))))))]
+                         (js/location.replace (routes/events)))
+                      callback)))))]
         (when (seq event)
           (when (and (:HasLogo event)
                      (not @event-logo))

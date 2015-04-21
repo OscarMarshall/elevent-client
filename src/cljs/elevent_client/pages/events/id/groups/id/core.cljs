@@ -84,7 +84,8 @@
                   (api/mandates-endpoint
                     :create
                     (assoc @form :GroupId group-id)
-                    (fn [] (api/schedules-endpoint :read nil #(callback))))))]]]
+                    (fn [] (api/schedules-endpoint :read nil #(callback)))
+                    callback)))]]]
            [:table.ui.table
             [:thead
              [:tr

@@ -1,5 +1,6 @@
 (ns elevent-client.pages.events.id.attendees.id.core
   (:require [datascript :as d]
+            [cljs.core.async :as async :refer [put!]]
             [cljs-time.coerce :refer [from-string]]
             [cljs-time.format :refer [unparse]]
             [cljs-time.core :refer [after?]]
@@ -22,11 +23,18 @@
          {:Authentication
           (str "Bearer " (:token @state/session))}
          {})
-       :handler callback
+       :handler (do
+                  (put! state/api-refresh-chan true)
+                  (callback))
        :error-handler
-       (fn [] (swap! state/messages conj
-                     [:error
-                      "Check in failed. Please try again."]))}))
+       (fn [error]
+         (if (:status error 409)
+           (put! state/add-messages-chan
+                 [:conflict
+                  [:negative "User is already checked in. Please try reloading."]])
+           (put! state/add-messages-chan
+                 [:check-in-failed
+                  [:negative "Check in failed. Please try again."]])))}))
 
 (defn check-in [attendee-id]
   (fn [callback]

@@ -78,7 +78,8 @@
                                                  :ActivityIds activities}
                                                 #(do
                                                    (reset! cart-activities #{})
-                                                   (callback))))))))]
+                                                   (callback))
+                                                callback))))))]
         (when (seq event)
           (when (and (:HasLogo event)
                      (not @event-logo))
