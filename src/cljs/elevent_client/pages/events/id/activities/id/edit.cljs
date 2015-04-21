@@ -50,7 +50,9 @@
       (if-let [activity (seq (d/entity @api/activities-db activity-id))]
         (reset! form (let [activity (into {} activity)]
                        (assoc activity
-                         :EnrollmentCap (str (:EnrollmentCap activity))
+                         :EnrollmentCap (if (> (:EnrollmentCap activity) 0)
+                                          (str (:EnrollmentCap activity))
+                                          "")
                          :TicketPrice   (if (> (:TicketPrice activity) 0)
                                           (string/format "%.2f" (:TicketPrice activity))
                                           ""))))
@@ -63,7 +65,9 @@
                                                       activity-id))]
                                (assoc activity
                                  :EnrollmentCap
-                                 (str (:EnrollmentCap activity))
+                                 (if (> (:EnrollmentCap activity) 0)
+                                   (str (:EnrollmentCap activity))
+                                   "")
                                  :TicketPrice
                                  (if (> (:TicketPrice activity) 0)
                                    (string/format "%.2f" (:TicketPrice activity))
@@ -242,7 +246,7 @@
                (if activity-id "Edit" "Add")
                (create-activity @form)]
               (when activity-id
-                [:button.ui.button
+                [:div.ui.button
                  {:on-click #(js/location.replace (routes/event-activity-add event))}
                  "Cancel"])]]
             [:div.ui.vertical.segment
