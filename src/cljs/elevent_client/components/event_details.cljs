@@ -1,13 +1,19 @@
 (ns elevent-client.components.event-details
   (:require [goog.string :as string]
+            [datascript :as d]
             [cljs-time.core :refer [after?]]
             [cljs-time.coerce :refer [from-string]]
             [cljs-time.format :refer [unparse]]
 
+            [elevent-client.api :as api]
             [elevent-client.locale :as locale]))
 
 (defn component [event]
   [:div
+   (when (> (:OrganizationId event) 0)
+     (when-let [org (into {} (d/entity @api/organizations-db (:OrganizationId event)))]
+       [:div
+        [:b "Organization: "] (:Name org)]))
    (when (and (:StartDate event)
               (:EndDate event))
      [:div

@@ -12,6 +12,7 @@
             [elevent-client.routes :as routes]
             [elevent-client.api :as api]
             [elevent-client.components.input :as input]
+            [elevent-client.components.event-details :as event-details]
             [elevent-client.components.paginator :as paginator]
             [elevent-client.pages.events.core :as events]))
 
@@ -60,17 +61,7 @@
                    [:a.header {:href (routes/event event)}
                     (:Name event)]
                    [:div.meta
-                    [:strong "Date:"]
-                    (let [start (from-string (:StartDate event))
-                          end   (from-string (:EndDate   event))]
-                      (str (unparse locale/datetime-formatter start)
-                           (when (after? end start)
-                             (str " to " (unparse locale/datetime-formatter end)))))]
-                   [:div.meta
-                    [:strong "Venue:"]
-                    (:Venue event)]
-                   [:div.description
-                    (:Description event)]
+                    [event-details/component event]]
                    [:div.extra
                     [:a.ui.right.floated.button
                      {:href (routes/event-register event)}
