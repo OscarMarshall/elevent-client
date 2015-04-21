@@ -63,7 +63,7 @@
                    [:div.meta
                     [event-details/component event]]
                    [:div.extra
-                    [:a.ui.right.floated.button
+                    [:a.ui.right.floated.small.button
                      {:href (routes/event-register event)}
                      "Register"
                      [:i.right.chevron.icon]]
