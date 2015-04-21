@@ -53,12 +53,9 @@
                                         :pretty-print  true}}
                        :prod {:source-paths ["env/prod/cljs"]
                               :compiler
-                              {:output-to "resources/public/js/app.js"
+                              {:output-to     "resources/public/js/app.js"
                                :optimizations :whitespace
-                               :elide-asserts true
-                               :pretty-print false
-                               :language-in :ecmascript5
-                               :language-out :ecmascript5}}}}
+                               :pretty-print  false}}}}
 
   :profiles {:dev {:repl-options {:init-ns elevent-client.dev
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
