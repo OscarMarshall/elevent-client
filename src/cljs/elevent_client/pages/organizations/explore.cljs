@@ -71,7 +71,9 @@
                         :create
                         (select-keys (merge (:user @state/session) organization)
                                      [:UserId :OrganizationId])
-                        callback
+                        #(do
+                           (callback)
+                           (js/location.assign (routes/organizations)))
                         callback))]]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
