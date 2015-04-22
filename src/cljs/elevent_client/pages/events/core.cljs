@@ -1,6 +1,8 @@
 (ns elevent-client.pages.events.core
   (:require [clojure.string :as str]
             [reagent.core :refer [atom]]
+            [cljs-time.core :refer [after? now minus hours]]
+            [cljs-time.coerce :refer [from-string]]
 
             [datascript :as d]
 
@@ -51,7 +53,13 @@
                                      (str/lower-case (:Name %)))))
                  (drop (* @page 10))
                  (take 10)
-                 doall)]
+                 doall)
+            attending-events-past
+            (doall (filter #(after? (minus (now) (hours 6)) (from-string (:EndDate %)))
+                           attending-events))
+            attending-events-future
+            (doall (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6)))
+                           attending-events))]
         [:div.sixteen.wide.column
          [tabs :core]
          [:div.ui.bottom.attached.segment
@@ -63,27 +71,52 @@
              [:div.field
               [:label "Search"]
               [input/component :text {} search]]]]
-           [:div.ui.vertical.segment
-            (if (seq attending-events)
-              [:div.ui.divided.items
-               (for [event attending-events]
-                 ^{:key (:EventId event)}
-                 [:div.item
-                  [:div.content
-                   [:a.header {:href (routes/event event)}
-                    (:Name event)]
-                   [:div.meta
-                    [event-details/component event]
-                    [:div.extra
-                     [:a.ui.right.floated.small.button
-                      {:href (routes/event-schedule event)}
-                      "Your activities"
-                      [:i.right.chevron.icon]]
-                     [:a.ui.right.floated.small.button
-                      {:href (routes/event event)}
-                      "Details"
-                      [:i.right.chevron.icon]]]]]])]
-              [:p "No events found."])]
+           (if (seq attending-events)
+             [:div.ui.vertical.segment
+              (when (seq attending-events-future)
+                [:div.ui.vertical.segment
+                 [:h2.ui.dividing.header "Upcoming"]
+                 [:div.ui.divided.items
+                  (for [event attending-events-future]
+                    ^{:key (:EventId event)}
+                    [:div.item
+                     [:div.content
+                      [:a.header {:href (routes/event event)}
+                       (:Name event)]
+                      [:div.meta
+                       [event-details/component event]
+                       [:div.extra
+                        [:a.ui.right.floated.small.button
+                         {:href (routes/event-schedule event)}
+                         "Your activities"
+                         [:i.right.chevron.icon]]
+                        [:a.ui.right.floated.small.button
+                         {:href (routes/event event)}
+                         "Details"
+                         [:i.right.chevron.icon]]]]]])]])
+              (when (seq attending-events-past)
+                [:div.ui.vertical.segment
+                 [:h2.ui.dividing.header "Past"]
+                 [:div.ui.divided.items
+                  (for [event attending-events-past]
+                    ^{:key (:EventId event)}
+                    [:div.item
+                     [:div.content
+                      [:a.header {:href (routes/event event)}
+                       (:Name event)]
+                      [:div.meta
+                       [event-details/component event]
+                       [:div.extra
+                        [:a.ui.right.floated.small.button
+                         {:href (routes/event-schedule event)}
+                         "Your activities"
+                         [:i.right.chevron.icon]]
+                        [:a.ui.right.floated.small.button
+                         {:href (routes/event event)}
+                         "Details"
+                         [:i.right.chevron.icon]]]]]])]])]
+              [:div.ui.vertical.segment
+               [:p "No events found."]])
            [:div.ui.vertical.segment
             [paginator/component attending-events page]]]
           [:div.ui.dimmer {:class (when (empty? @api/events) "active")}

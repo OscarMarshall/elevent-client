@@ -3,7 +3,7 @@
             [reagent.core :refer [atom]]
             [datascript :as d]
             [cljs-time.coerce :refer [from-string]]
-            [cljs-time.core :refer [after?]]
+            [cljs-time.core :refer [after? now minus hours]]
             [cljs-time.format :refer [unparse]]
 
             [elevent-client.api :as api]
@@ -40,7 +40,13 @@
                                      (str/lower-case (:Name %)))))
                  (drop (* @page 10))
                  (take 10)
-                 doall)]
+                 doall)
+            owned-events-past
+            (doall (filter #(after? (minus (now) (hours 6)) (from-string (:EndDate %)))
+                           owned-events))
+            owned-events-future
+            (doall (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6)))
+                           owned-events))]
         [:div.sixteen.wide.column
          [events/tabs :owned]
          [:div.ui.bottom.attached.segment
@@ -52,33 +58,64 @@
              [:div.field
               [:label "Search"]
               [input/component :text {} search]]]]
-           [:div.ui.vertical.segment
-            (if (seq owned-events)
-              [:div.ui.divided.items
-               (for [event owned-events]
-                 ^{:key (:EventId event)}
-                 [:div.item
-                  [:div.content
-                   [:a.header {:href (routes/event event)}
-                    (:Name event)]
-                   [:div.meta
-                    [event-details/component event]]
-                   (when (get-in (:EventPermissions (:permissions @state/session))
-                                 [(:EventId event) :EditEvent])
-                     [:div.extra
-                      [:a.ui.right.floated.small.button
-                       {:href (routes/event-edit event)}
-                       "Edit"
-                       [:i.right.chevron.icon]]
-                      [:a.ui.right.floated.small.button
-                       {:href (routes/event event)}
-                       "Details"
-                       [:i.right.chevron.icon]]
-                      [action-button/component
-                       {:class "ui right floated small negative"}
-                       "Delete"
-                       (delete-event event)]])]])]
-              [:p "No events found."])]
+           (if (seq owned-events)
+             [:div.ui.vertical.segment
+              (when (seq owned-events-future)
+                [:div.ui.vertical.segment
+                 [:h2.ui.dividing.header "Upcoming"]
+                 [:div.ui.divided.items
+                  (for [event owned-events-future]
+                    ^{:key (:EventId event)}
+                    [:div.item
+                     [:div.content
+                      [:a.header {:href (routes/event event)}
+                       (:Name event)]
+                      [:div.meta
+                       [event-details/component event]]
+                      (when (get-in (:EventPermissions (:permissions @state/session))
+                                    [(:EventId event) :EditEvent])
+                        [:div.extra
+                         [:a.ui.right.floated.small.button
+                          {:href (routes/event-edit event)}
+                          "Edit"
+                          [:i.right.chevron.icon]]
+                         [:a.ui.right.floated.small.button
+                          {:href (routes/event event)}
+                          "Details"
+                          [:i.right.chevron.icon]]
+                         [action-button/component
+                          {:class "ui right floated small negative"}
+                          "Delete"
+                          (delete-event event)]])]])]])
+              (when (seq owned-events-past)
+                [:div.ui.vertical.segment
+                 [:h2.ui.dividing.header "Past"]
+                 [:div.ui.divided.items
+                  (for [event owned-events-past]
+                    ^{:key (:EventId event)}
+                    [:div.item
+                     [:div.content
+                      [:a.header {:href (routes/event event)}
+                       (:Name event)]
+                      [:div.meta
+                       [event-details/component event]]
+                      (when (get-in (:EventPermissions (:permissions @state/session))
+                                    [(:EventId event) :EditEvent])
+                        [:div.extra
+                         [:a.ui.right.floated.small.button
+                          {:href (routes/event-edit event)}
+                          "Edit"
+                          [:i.right.chevron.icon]]
+                         [:a.ui.right.floated.small.button
+                          {:href (routes/event event)}
+                          "Details"
+                          [:i.right.chevron.icon]]
+                         [action-button/component
+                          {:class "ui right floated small negative"}
+                          "Delete"
+                          (delete-event event)]])]])]])]
+             [:div.ui.vertical.segment
+              [:p "No events found."]])
            [:div.ui.vertical.segment
             [paginator/component owned-events page]]]
           [:div.ui.dimmer {:class (when (empty? @api/events) :active)}

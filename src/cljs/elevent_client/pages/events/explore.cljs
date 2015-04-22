@@ -4,7 +4,7 @@
             [reagent.core :refer [atom]]
             [datascript :as d]
             [cljs-time.coerce :refer [from-string]]
-            [cljs-time.core :refer [after?]]
+            [cljs-time.core :refer [after? now minus hours]]
             [cljs-time.format :refer [formatters unparse parse]]
 
             [elevent-client.state :as state]
@@ -34,6 +34,7 @@
                                                 @api/events-db)))
                  (map (partial d/entity @api/events-db))
                  (sort-by :StartDate)
+                 (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6))))
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
                                      (str/lower-case (:Name %)))))
