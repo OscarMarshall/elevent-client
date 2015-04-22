@@ -210,10 +210,7 @@
       (when can-check-in
         [:div.ui.vertical.segment
          [:h2.ui.header
-          "Attendees"
-          [:a.ui.right.floated.small.button
-           {:href (routes/event-attendees event)}
-           "View"]]
+          "Attendees"]
          [:table.ui.table
           [:thead
            [:tr
@@ -241,9 +238,9 @@
           [:tfoot
            [:tr
             [:th {:colSpan "4"}
-             [:div.ui.right.floated.small.labeled.icon.button
-              [:i.edit.icon]
-              "Edit"]]]]]])
+             [:a.ui.right.floated.small.button
+              {:href (routes/event-attendees event)}
+              "View all"]]]]]])
       [:div.ui.vertical.segment
        [:h2 "Your Schedule"]
        [schedule/component scheduled-activities
