@@ -55,7 +55,7 @@
                                #(do
                                   (callback)
                                   (swap! state/session dissoc :stripe-token)
-                                  (js/location.assign (routes/event-schedule event)))
+                                  (js/location.replace (routes/event-schedule event)))
                                callback))
                       callback)
                     (api/attendees-endpoint
@@ -64,7 +64,7 @@
                        :EventId event-id}
                       #(do
                          (callback)
-                         (js/location.assign (routes/event-schedule event)))
+                         (js/location.replace (routes/event-schedule event)))
                       callback)))))]
         (when (seq event)
           (when (and (:HasLogo event)
