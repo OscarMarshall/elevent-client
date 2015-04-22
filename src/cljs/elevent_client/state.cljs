@@ -5,6 +5,14 @@
     [alandipert.storage-atom :refer [local-storage]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
+;; Online
+;; =============================================================================
+
+(def online? (atom js/window.navigator.online))
+(js/window.addEventListener "online" #(reset! online? true))
+(js/window.addEventListener "offline" #(reset! online? false))
+
+
 ;; Location
 ;; =============================================================================
 

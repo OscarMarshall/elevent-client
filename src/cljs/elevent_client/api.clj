@@ -6,14 +6,24 @@
               (let [endpoint-symbol (symbol (str collection "-endpoint"))
                     db-symbol       (symbol (str collection "-db"))]
                 `(do
-                   (def ~collection (reagent.core/atom []))
+                   (def ~collection (alandipert.storage-atom/local-storage
+                                      (reagent.core/atom [])
+                                      ~(keyword collection)))
                    (def ~endpoint-symbol
                      (elevent-client.api/endpoint ~url
                                                   ~element-id
                                                   ~(symbol
                                                      "elevent-client.api"
                                                      (str collection))))
-                   (def ~db-symbol (reagent.core/atom (datascript/empty-db)))
+                   (def ~db-symbol
+                     (reagent.core/atom
+                       (datascript/db-with (datascript/empty-db)
+                                           (map #(assoc
+                                                   (->> %
+                                                        (remove (comp nil? second))
+                                                        (into {}))
+                                                   :db/id (~element-id %))
+                                                ~'elements))))
                    (add-watch ~(symbol "elevent-client.api" (str collection))
                               ~(keyword (gensym))
                               (fn [~'_ ~'_ ~'_ ~'elements]

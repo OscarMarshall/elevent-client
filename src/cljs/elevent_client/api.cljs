@@ -123,13 +123,14 @@
                                              (prn-str element-id)
                                              "\": "
                                              (prn-str params)))))]
-         (case operation
-           :create (POST uri options)
-           :read   (GET  uri options)
-           :update (PUT uri options)
-           :delete (check-id DELETE)
-           :create-no-read (POST uri options)
-           (POST (str uri "/" (name operation)) options)))))
+         (when @state/online
+           (case operation
+             :create (POST uri options)
+             :read   (GET  uri options)
+             :update (PUT uri options)
+             :delete (check-id DELETE)
+             :create-no-read (POST uri options)
+             (POST (str uri "/" (name operation)) options))))))
     ([operation params handler]
      (dispatch! operation params handler nil))))
 
