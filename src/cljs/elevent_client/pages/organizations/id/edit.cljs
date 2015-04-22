@@ -1,5 +1,6 @@
 (ns elevent-client.pages.organizations.id.edit
   (:require [reagent.core :as r :refer [atom]]
+            [cljs.core.async :as async :refer [put!]]
             [datascript :as d]
             [validateur.validation :refer [validation-set presence-of]]
 
@@ -19,6 +20,7 @@
         event-edit-permissions (atom nil)
         check-in-permissions (atom nil)
         org-permissions (atom nil)
+        org-event-permissions (atom nil)
         get-current-event-permissions
         (fn []
           (let [permissions (ffirst (d/q '[:find ?event-permissions
@@ -47,16 +49,22 @@
                      (fn [org-permissions]
                        (= (:OrganizationId org-permissions) organization-id))
                      permissions))))
-        sync-permissions
+        sync-event-permissions
         (fn [_ _ _ _]
           (when (and (= @permissions-user 0)
                      (> @permissions-event 0))
             (reset! permissions-event 0))
-          (let [current-event-permissions (get-current-event-permissions)
-                current-org-permissions   (get-current-org-permissions)]
+          (let [current-event-permissions (get-current-event-permissions)]
             (reset! event-edit-permissions (:EditEvent current-event-permissions))
-            (reset! check-in-permissions (:EditUser current-event-permissions))
-            (reset! org-permissions (:EditEvent current-org-permissions))))]
+            (reset! check-in-permissions (:EditUser current-event-permissions))))
+        sync-org-permissions
+        (fn [_ _ _ _]
+          (when (and (= @permissions-user 0)
+                     (> @permissions-event 0))
+            (reset! permissions-event 0))
+          (let [current-org-permissions   (get-current-org-permissions)]
+            (reset! org-permissions (:EditOrganization current-org-permissions))
+            (reset! org-event-permissions (:EditEvent current-org-permissions))))]
     (when organization-id
       (if-let [organization (seq (d/entity @api/organizations-db
                                            organization-id))]
@@ -68,11 +76,11 @@
                                                      organization-id)))
                      (remove-watch api/organizations-db :organization-edit)))))
     (add-watch permissions-user
-               :preset-permissions
-               sync-permissions)
+               :preset-org-permissions
+               sync-org-permissions)
     (add-watch permissions-event
-               :preset-permissions
-               sync-permissions)
+               :preset-event-permissions
+               sync-event-permissions)
     (fn []
       (let [{:keys [Name PaymentRecipientId]} @form
             errors (validator @form)
@@ -91,35 +99,36 @@
                                                   (callback)
                                                   (js/location.replace
                                                     (routes/organizations-owned)))
-                                                ; if creating a new organization, update permissions
-                                                (api/permissions-endpoint
+                                                ; if creating a new organization, update permissions and memberships
+                                                (api/memberships-endpoint
                                                   :read
                                                   nil
-                                                  #(do
-                                                     (callback)
-                                                     (js/location.replace
-                                                       (routes/organizations-owned))))))
+                                                  (fn []
+                                                    (api/permissions-endpoint
+                                                      :read
+                                                      nil
+                                                      #(do
+                                                         (callback)
+                                                         (js/location.replace
+                                                           (routes/organizations-owned))))))))
                                             callback)))
+            delete-member
+            (fn [member-id]
+              (api/memberships-endpoint :delete {:MembershipId member-id} nil))
             organization-members
             (when organization-id
-              (cons ["None" 0]
-                    (doall
-                      (map
-                        (fn [[user-id first-name last-name email]]
-                          [(str first-name " " last-name " (" email ")")
-                           user-id])
-                        (d/q '[:find ?user-id ?first-name ?last-name ?email
-                               :in $members $users ?organization-id
-                               :where
-                               [$members ?a :OrganizationId ?organization-id]
-                               [$members ?a :UserId         ?user-id]
-                               [$users   ?b :UserId         ?user-id]
-                               [$users   ?b :FirstName      ?first-name]
-                               [$users   ?b :LastName       ?last-name]
-                               [$users   ?b :Email          ?email]]
-                             @api/memberships-db
-                             @api/users-db
-                             organization-id)))))
+              (d/q '[:find ?a ?user-id ?first-name ?last-name ?email
+                     :in $members $users ?organization-id
+                     :where
+                     [$members ?a :OrganizationId ?organization-id]
+                     [$members ?a :UserId         ?user-id]
+                     [$users   ?b :UserId         ?user-id]
+                     [$users   ?b :FirstName      ?first-name]
+                     [$users   ?b :LastName       ?last-name]
+                     [$users   ?b :Email          ?email]]
+                   @api/memberships-db
+                   @api/users-db
+                   organization-id))
             organization-events
             (when organization-id
               (cons ["None" 0]
@@ -161,47 +170,62 @@
                      :ReadOrganization   @org-permissions
                      :EditOrganization   @org-permissions
                      :DeleteOrganization @org-permissions
-                     :AddEvent           @org-permissions
-                     :ReadEvent          @org-permissions
-                     :EditEvent          @org-permissions
-                     :DeleteEvent        @org-permissions
-                     :AddActivity        @org-permissions
-                     :ReadActivity       @org-permissions
-                     :EditActivity       @org-permissions
-                     :DeleteActivity     @org-permissions
-                     :AddUser            @org-permissions
-                     :ReadUser           @org-permissions
-                     :EditUser           @org-permissions
-                     :DeleteUser         @org-permissions
+                     :AddEvent           @org-event-permissions
+                     :ReadEvent          @org-event-permissions
+                     :EditEvent          @org-event-permissions
+                     :DeleteEvent        @org-event-permissions
+                     :AddActivity        @org-event-permissions
+                     :ReadActivity       @org-event-permissions
+                     :EditActivity       @org-event-permissions
+                     :DeleteActivity     @org-event-permissions
+                     :AddUser            @org-event-permissions
+                     :ReadUser           @org-event-permissions
+                     :EditUser           @org-event-permissions
+                     :DeleteUser         @org-event-permissions
                      :SendEmail          @org-permissions
                      :GrantPermission    @org-permissions}]
                 (let [current-event-permissions (get-current-event-permissions)
-                      current-org-permissions   (get-current-org-permissions)]
+                      current-org-permissions   (get-current-org-permissions)
+                      error-callback
+                      (fn [callback]
+                        (fn [error]
+                          (callback)
+                          (if (= (:status error) 403)
+                            (put! state/add-messages-chan
+                                  [:forbidden-action
+                                   [:negative "You do not have permission to perform that action"]])
+                            (put! state/add-messages-chan
+                                  [:server-error
+                                   [:negative "An error occurred."]]))))]
                   ; Create/update event permissions
                   (when (> @permissions-event 0)
                     (if (nil? current-event-permissions)
                       (api/api-call :create
                                     "/eventpermission"
                                     event-permissions-to-set
-                                    #(api/permissions-endpoint :read nil callback))
+                                    #(api/permissions-endpoint :read nil callback)
+                                    (error-callback callback))
                       (api/api-call :update
                                     "/eventpermissions"
                                     (assoc event-permissions-to-set
                                       :EventPermissionId
                                       (:EventPermissionId current-event-permissions))
-                                    #(api/permissions-endpoint :read nil callback))))
+                                    #(api/permissions-endpoint :read nil callback)
+                                    (error-callback callback))))
                   ; Create/update org permissions
                   (if (nil? current-org-permissions)
                     (api/api-call :create
                                   "/organizationpermission"
                                   org-permissions-to-set
-                                  #(api/permissions-endpoint :read nil callback))
+                                  #(api/permissions-endpoint :read nil callback)
+                                  (error-callback callback))
                     (api/api-call :update
                                   "/organizationpermissions"
                                   (assoc org-permissions-to-set
                                     :OrganizationPermissionId
                                     (:OrganizationPermissionId current-org-permissions))
-                                  #(api/permissions-endpoint :read nil callback))))))]
+                                  #(api/permissions-endpoint :read nil callback)
+                                  (error-callback callback))))))]
         [:div.sixteen.wide.column
          [organizations/tabs (if organization-id :edit :add)]
          [:div.ui.bottom.attached.segment
@@ -228,17 +252,47 @@
              (create-organization @form)]]]
           (when organization-id
             [:div.ui.vertical.segment
+             [:div.ui.dividing.header
+              "Edit Members"]
+             [:table.ui.table
+              [:thead
+               [:th "Name"]
+               [:th "Email"]
+               [:th "Actions"]]
+              [:tbody
+               (for [[member-id user-id first-name last-name email] organization-members]
+                 ^{:key user-id}
+                 [:tr
+                  [:td (str first-name " " last-name)]
+                  [:td email]
+                  [:td [:i.red.remove.icon.link
+                        {:on-click #(delete-member member-id)}]]])]]])
+          (when organization-id
+            [:div.ui.vertical.segment
              [:h2.ui.dividing.header
               "Edit Member Permissions"]
              [:form.ui.form
               [:div.two.fields
                [:div.field
                 [:label "Choose user"]
-                [input/component :select {} organization-members permissions-user]]
+                [input/component :select {}
+                 (cons ["None" 0]
+                       (doall
+                         (map
+                           (fn [[member-id user-id first-name last-name email]]
+                             [(str first-name " " last-name " (" email ")")
+                              user-id])
+                           organization-members)))
+                 permissions-user]]
                (if (> @permissions-user 0)
                  [:div.field
-                  [:label "Organization Permissions"]
-                  [input/component :checkbox {:label "Add/edit/delete events"} org-permissions]]
+                  [:div.fields
+                   [:div.eight.wide.field
+                    [:label "Organization Permissions"]
+                    [input/component :checkbox {:label "Edit/delete organization"} org-permissions]]
+                   [:div.eight.wide.field
+                    [:label "Organization Event Permissions"]
+                    [input/component :checkbox {:label "Add/edit/delete events"} org-event-permissions]]]]
                  [:div.field])]
               [:div.fields
                (when (> @permissions-user 0)

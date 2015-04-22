@@ -3,7 +3,8 @@
 
             [elevent-client.api :as api]
             [elevent-client.locale :as locale]
-            [elevent-client.routes :as routes]))
+            [elevent-client.routes :as routes]
+            [elevent-client.state :as state]))
 
 (defn component [event-id]
   (let [groups (doall (map #(into {} (d/entity @api/groups-db %))
@@ -24,30 +25,37 @@
        [:th "Members"]
        [:th "Actions"]]]
      [:tbody
-      (doall (for [group groups]
-               ^{:key (:GroupId group)}
-               [:tr
-                [:td
-                 [:a {:href (routes/event-group (assoc group
-                                                  :EventId event-id))}
-                      (:Name group)]]
-                [:td (count (d/q '[:find [?attendee-id ...]
-                                   :in $ ?group-id
-                                   :where
-                                   [?attendee-id :GroupId ?group-id]]
-                                 @api/attendees-db
-                                 (:GroupId group)))]
-                [:td
-                 [:a
-                  {:href (routes/event-group-edit group)}
-                  [:i.edit.icon]]
-                 [:span
-                  {:on-click #(delete-group! (:GroupId group))}
-                  [:i.red.remove.icon.link]]]]))]
-     [:tfoot
-      [:tr
-       [:th {:colSpan "6"}
-        [:a.ui.small.right.floated.labeled.icon.button
-         {:href (routes/event-group-add {:EventId event-id})}
-         [:i.edit.icon]
-         "Edit"]]]]]))
+      (let [event-permissions (:EventPermissions (:permissions @state/session))]
+        (doall (for [group groups]
+                 ^{:key (:GroupId group)}
+                 [:tr
+                  [:td
+                   [:a {:href (routes/event-group (assoc group
+                                                    :EventId event-id))}
+                    (:Name group)]]
+                  [:td (count (d/q '[:find [?attendee-id ...]
+                                     :in $ ?group-id
+                                     :where
+                                     [?attendee-id :GroupId ?group-id]]
+                                   @api/attendees-db
+                                   (:GroupId group)))]
+                  (if (get-in event-permissions
+                              [event-id :EditEvent])
+                    [:td
+                     [:a
+                      {:href (routes/event-group-edit group)}
+                      [:i.edit.icon]]
+                     [:span
+                      {:on-click #(delete-group! (:GroupId group))}
+                      [:i.red.remove.icon.link]]]
+                    [:td])])))]
+     ; Check if user can edit groups
+     (when (get-in (:EventPermissions (:permissions @state/session))
+                   [event-id :EditEvent])
+       [:tfoot
+        [:tr
+         [:th {:colSpan "6"}
+          [:a.ui.small.right.floated.labeled.icon.button
+           {:href (routes/event-group-add {:EventId event-id})}
+           [:i.edit.icon]
+           "Edit"]]]])]))
