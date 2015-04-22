@@ -114,6 +114,7 @@
         :reagent-render
         (fn [input-attrs]
           [:input (assoc input-attrs
+                    :read-only true
                     :on-change #(reset! date-atom (-> %
                                                       .-target
                                                       .-value
