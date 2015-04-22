@@ -44,7 +44,10 @@
              [:div.ui.icon.input
               [input/component :password {}
                (r/wrap Password swap! form assoc :Password)]
-              [:i.lock.icon]]]
+              [:i.lock.icon]]
+             (when (and Password (:Password errors))
+               [:div.ui.red.pointing.prompt.label
+                "Password must be 8 characters"])]
             [:div.required.field {:class (when (and PasswordConfirm
                                                     (:PasswordConfirm errors))
                                            :error)}

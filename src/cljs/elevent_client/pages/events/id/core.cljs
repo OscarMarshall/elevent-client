@@ -76,7 +76,7 @@
 
 (defn details-owner [event activities attendees leave-event
                      logo-to-upload event-logo image-error get-logo
-                     can-edit can-check-in]
+                     can-edit can-check-in is-attendee]
   (let [submit-image
         (fn [callback]
           (let [file (-> (js/jQuery "#file")
@@ -241,18 +241,19 @@
              [:a.ui.right.floated.small.button
               {:href (routes/event-attendees event)}
               "View all"]]]]]])
-      [:div.ui.vertical.segment
-       [:h2 "Your Schedule"]
-       [schedule/component scheduled-activities
-        (list "Details" [:i.right.chevron.icon])
-        (fn [_ activity-id]
-          (js/location.assign (routes/event-activity
-                                {:EventId (:EventId event)
-                                 :ActivityId activity-id})))
-        [:a.ui.small.right.floated.labeled.icon.button
-         {:href (routes/event-schedule event)}
-         [:i.edit.icon]
-         "Edit"]]]]]))
+      (when is-attendee
+        [:div.ui.vertical.segment
+         [:h2 "Your Schedule"]
+         [schedule/component scheduled-activities
+          (list "Details" [:i.right.chevron.icon])
+          (fn [_ activity-id]
+            (js/location.assign (routes/event-activity
+                                  {:EventId (:EventId event)
+                                   :ActivityId activity-id})))
+          [:a.ui.small.right.floated.labeled.icon.button
+           {:href (routes/event-schedule event)}
+           [:i.edit.icon]
+           "Edit"]]])]]))
 
 (defn page [event-id]
   (let [logo-to-upload (atom false)
@@ -323,7 +324,7 @@
             (or can-edit can-check-in)
             [details-owner event activities attendees leave-event
              logo-to-upload event-logo image-error get-logo
-             can-edit can-check-in]
+             can-edit can-check-in is-attendee]
 
             is-attendee
             [details-attendee event leave-event event-logo]
