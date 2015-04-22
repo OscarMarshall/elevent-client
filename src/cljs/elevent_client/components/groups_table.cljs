@@ -15,8 +15,7 @@
                                     event-id)))
         delete-group! (fn [group-id]
                         (api/groups-endpoint :delete
-                                             (d/entity @api/groups-db
-                                                       group-id)
+                                             {:GroupsId group-id}
                                              nil))]
     [:table.ui.table
      [:thead
