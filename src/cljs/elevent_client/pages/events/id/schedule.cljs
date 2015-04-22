@@ -106,30 +106,32 @@
                                                     schedule-id)
                                           nil))]]
               [:div.ui.vertical.segment
-               [:div.ui.divided.items
-                (doall
-                  (for [[activity-id] unscheduled-activities]
-                    ^{:key activity-id}
-                    (let [activity
-                          (when activity-id
-                            (d/entity @api/activities-db activity-id))]
-                      [:div.item
-                       [:div.content
-                        [:div.header (:Name activity)]
-                        [activity-details/component activity]
-                        [:div.extra
-                         (if (> (:TicketPrice activity) 0)
-                           [:div.ui.right.floated.button
-                            {:on-click #(add-activity-to-cart!
-                                          (:ActivityId activity))}
-                            "Add to cart"
-                            [:i.right.chevron.icon]]
-                           [:div.ui.right.floated.primary.button
-                            {:on-click #(add-activity! (get-in @state/session
-                                                               [:user :UserId])
-                                                       (:ActivityId activity))}
-                            "Add"
-                            [:i.right.chevron.icon]])]]])))]]]
+               (if (seq event-activities)
+                 [:div.ui.divided.items
+                  (doall
+                    (for [[activity-id] unscheduled-activities]
+                      ^{:key activity-id}
+                      (let [activity
+                            (when activity-id
+                              (d/entity @api/activities-db activity-id))]
+                        [:div.item
+                         [:div.content
+                          [:div.header (:Name activity)]
+                          [activity-details/component activity]
+                          [:div.extra
+                           (if (> (:TicketPrice activity) 0)
+                             [:div.ui.right.floated.button
+                              {:on-click #(add-activity-to-cart!
+                                            (:ActivityId activity))}
+                              "Add to cart"
+                              [:i.right.chevron.icon]]
+                             [:div.ui.right.floated.primary.button
+                              {:on-click #(add-activity! (get-in @state/session
+                                                                 [:user :UserId])
+                                                         (:ActivityId activity))}
+                              "Add"
+                              [:i.right.chevron.icon]])]]])))]
+                 [:p "There are no activities for this event"])]]
              (when (seq @cart-activities)
                [:div.ui.segment
                 [:div.ui.vertical.segment

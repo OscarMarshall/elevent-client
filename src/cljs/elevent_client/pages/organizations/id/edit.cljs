@@ -222,7 +222,8 @@
                                          "ID here.")]]
               [input/component :text {} (r/wrap PaymentRecipientId swap! form assoc :PaymentRecipientId)]]]
             [action-button/component
-             {:class (str "primary" (when (seq errors) " disabled"))}
+             {:class (str "primary" (when (seq errors) " disabled"))
+              :type  :submit}
              (if organization-id "Save" "Add")
              (create-organization @form)]]]
           (when organization-id

@@ -6,13 +6,12 @@
   (let [loading-text [:i.spinner.loading.icon]
         button-text  (atom text)]
     (fn [options text action & [alt-text alt-action]]
-      [:div.ui.button
+      [:button.ui.button
        (assoc options
          :on-click (fn [e]
                      (.preventDefault e)
                      (reset! button-text loading-text)
                      (if alt-text
                        (action #(reset! button-text alt-text))
-                       (action #(reset! button-text text))))
-         :type :button)
+                       (action #(reset! button-text text)))))
        @button-text])))

@@ -110,7 +110,8 @@
                                  (from-string end-time))))
                     (fn [_]
                        (callback)
-                       (when-not activity-id (reset-form!)))
+                       (when-not activity-id (reset-form!))
+                       (js/location.replace (routes/event-activity-add event)))
                     callback))))]
         (when (seq event)
           ; Add start/end times to form state
