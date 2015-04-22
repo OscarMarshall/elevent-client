@@ -8,7 +8,7 @@
 ;; Online
 ;; =============================================================================
 
-(def online? (atom js/window.navigator.online))
+(def online? (atom js/window.navigator.onLine))
 (js/window.addEventListener "online" #(reset! online? true))
 (js/window.addEventListener "offline" #(reset! online? false))
 
