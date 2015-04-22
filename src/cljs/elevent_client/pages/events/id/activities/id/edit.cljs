@@ -244,7 +244,7 @@
                 (r/wrap Description swap! form assoc :Description)]]
               [action-button/component
                {:class (str "primary" (when (seq errors) " disabled"))}
-               (if activity-id "Edit" "Add")
+               (if activity-id "Save" "Add")
                (create-activity @form)]
               (when activity-id
                 [:div.ui.button

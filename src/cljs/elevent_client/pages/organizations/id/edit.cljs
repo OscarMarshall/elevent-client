@@ -223,7 +223,7 @@
               [input/component :text {} (r/wrap PaymentRecipientId swap! form assoc :PaymentRecipientId)]]]
             [action-button/component
              {:class (str "primary" (when (seq errors) " disabled"))}
-             (if organization-id "Edit" "Add")
+             (if organization-id "Save" "Add")
              (create-organization @form)]]]
           (when organization-id
             [:div.ui.vertical.segment

@@ -96,7 +96,7 @@
                 (r/wrap Name swap! form assoc :Name)]]
               [action-button/component
                {:class (str "primary" (when (seq errors) " disabled"))}
-               (if group-id "Edit" "Add")
+               (if group-id "Save" "Add")
                (create-group @form)]]]
             [:div.ui.vertical.segment
              [:h2.ui.header

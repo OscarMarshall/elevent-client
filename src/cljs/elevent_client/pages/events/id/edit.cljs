@@ -221,7 +221,7 @@
               (r/wrap Description swap! form assoc :Description)]]
             [action-button/component
              {:class (str "primary" (when (seq errors) " disabled"))}
-             (if event-id "Edit" "Add")
+             (if event-id "Save" "Add")
              (create-event @form)]]]]]))))
 
 (routes/register-page routes/event-edit-chan #'page true)
