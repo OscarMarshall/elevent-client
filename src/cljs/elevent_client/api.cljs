@@ -123,7 +123,7 @@
                                              (prn-str element-id)
                                              "\": "
                                              (prn-str params)))))]
-         (when @state/online
+         (when @state/online?
            (case operation
              :create (POST uri options)
              :read   (GET  uri options)

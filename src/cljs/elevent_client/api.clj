@@ -23,7 +23,7 @@
                                                         (remove (comp nil? second))
                                                         (into {}))
                                                    :db/id (~element-id %))
-                                                ~'elements))))
+                                                ~collection))))
                    (add-watch ~(symbol "elevent-client.api" (str collection))
                               ~(keyword (gensym))
                               (fn [~'_ ~'_ ~'_ ~'elements]

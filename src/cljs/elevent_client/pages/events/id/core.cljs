@@ -180,7 +180,7 @@
       (when can-edit
         [:div.ui.vertical.segment
          [:h2 "Event Logo"]
-         (when (and @state/online @event-logo)
+         (when (and @state/online? @event-logo)
            [:img {:style {:height "100px"} :src @event-logo}])
          [:form.ui.form
           [:div.two.fields
