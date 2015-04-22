@@ -43,7 +43,7 @@
                 ^{:key (:OrganizationId organization)}
                 [:div.item
                  [:div.content
-                  [:a.header
+                  [:div.header
                    (:Name organization)]
                   [:div.extra
                    ; TODO: make this work
