@@ -10,7 +10,9 @@
             [elevent-client.state :as state]
             [elevent-client.authentication :as auth]
             [elevent-client.config :as config]
-            [elevent-client.components.input :as input]))
+            [elevent-client.components.input :as input]
+            [elevent-client.components.action-button :as action-button]
+            [elevent-client.pages.events.id.attendees.id.core :refer [check-in]]))
 
 (defn page [event-id]
   (let [form (atom {})]
@@ -83,6 +85,7 @@
              [:th "Last Name"]
              [:th "First Name"]
              [:th "Group"]
+             [:th]
              [:th]]]
            [:tbody
             [:tr.ui.form
@@ -163,15 +166,23 @@
                                       [(keyword "elevent-client.api" (gensym))
                                        [:negative
                                         (str uri (js->clj error))]]))))}))))]]
-               [:td {:noWrap true}
+               [:td {:noWrap true
+                     :style {:width "130px"}}
+                (if (:CheckinTime attendee)
+                 [:button.ui.small.button.green
+                  {:width "100%"}
+                  "Checked in"]
+                 [action-button/component
+                  {:class "small"
+                   :style {:width "100%"}}
+                  "Check in"
+                  (check-in (:AttendeeId attendee))])]
+               [:td
                 [:a.ui.right.floated.small.labeled.button
-                 {:class (when (:CheckinTime attendee) :green)
-                  :style {:width "100%"}
-                  :href (routes/event-attendee
-                          {:EventId event-id
+                 {:href (routes/event-attendee
+                          {:EventId (:EventId event)
                            :AttendeeId (:AttendeeId attendee)})}
-                 (if (:CheckinTime attendee)
-                   "Checked in"
-                   "Check in")]]])]]]]))))
+                 "Details"
+                 [:i.right.chevron.icon]]]])]]]]))))
 
 (routes/register-page routes/event-attendees-chan #'page true)

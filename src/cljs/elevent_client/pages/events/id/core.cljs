@@ -15,7 +15,8 @@
             [elevent-client.components.groups-table :as groups-table]
             [elevent-client.components.action-button :as action-button]
             [elevent-client.components.logo :as logo]
-            [elevent-client.components.qr-code :as qr-code]))
+            [elevent-client.components.qr-code :as qr-code]
+            [elevent-client.pages.events.id.attendees.id.core :refer [check-in]]))
 
 (defn details-attendee [event leave-event event-logo]
   (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
@@ -223,14 +224,20 @@
              ^{:key (:AttendeeId attendee)}
              [:tr
               [:td (str (:FirstName attendee) " " (:LastName attendee))]
-              [:td [:a.ui.right.floated.small.labeled.button
-                    {:href (routes/event-attendee
-                             {:EventId (:EventId event)
-                              :AttendeeId (:AttendeeId attendee)})
-                     :class (when (:CheckinTime attendee) :green)}
-                    (if (:CheckinTime attendee)
-                      "Checked in"
-                      "Check in")]]])]
+              [:td
+               (if (:CheckinTime attendee)
+                 [:button.ui.small.right.floated.button.green
+                  "Checked in"]
+                 [action-button/component
+                  {:class "small right floated"}
+                  "Check in"
+                  (check-in (:AttendeeId attendee))])
+               [:a.ui.right.floated.small.labeled.button
+                {:href (routes/event-attendee
+                         {:EventId (:EventId event)
+                          :AttendeeId (:AttendeeId attendee)})}
+                "Details"
+                [:i.right.chevron.icon]]]])]
           [:tfoot
            [:tr
             [:th {:colSpan "4"}

@@ -23,9 +23,9 @@
          {:Authentication
           (str "Bearer " (:token @state/session))}
          {})
-       :handler (do
-                  (reset! state/messages {})
-                  (callback))
+       :handler #(do
+                   (reset! state/messages {})
+                   (callback))
        :error-handler
        (fn [error]
          (if (:status error 409)
