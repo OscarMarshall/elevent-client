@@ -56,8 +56,9 @@
           [:div.ui.vertical.segment
            [:h2 "QR-Code"]
            [qr-code/component
-            {:text (routes/event-attendee (into {} (d/entity @api/attendees-db
-                                                             attendee-id)))}]]
+            {:text (str config/site-url
+                        (routes/event-attendee (into {} (d/entity @api/attendees-db
+                                                                  attendee-id))))}]]
           [:div.ui.vertical.segment
            [:h2 "Your Schedule"]
            [schedule/component scheduled-activities
@@ -172,8 +173,9 @@
            "Leave event"]
           (leave-event attendee-id)]
          [qr-code/component
-          {:text (routes/event-attendee (into {} (d/entity @api/attendees-db
-                                                          attendee-id)))}]])
+          {:text (str config/site-url
+                      (routes/event-attendee (into {} (d/entity @api/attendees-db
+                                                                attendee-id))))}]])
       (when can-edit
         [:div.ui.vertical.segment
          [:h2 "Event Logo"]
