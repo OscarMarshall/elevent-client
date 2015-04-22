@@ -238,7 +238,10 @@
                                                          (:OrganizationId event))]
                                        (nil? (:PaymentRecipientId org))))]
                    [input/component :text {:disabled disabled?}
-                    (r/wrap TicketPrice swap! form assoc :TicketPrice)])]]]
+                    (r/wrap TicketPrice swap! form assoc :TicketPrice)])]
+                (when (and TicketPrice (:TicketPrice errors))
+                  [:div.ui.red.pointing.prompt.label
+                   "Please enter a dollar amount"])]]
               [:div.field
                [:label "Description"]
                [input/component :textarea {}
