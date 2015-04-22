@@ -55,8 +55,9 @@
                                #(do
                                   (callback)
                                   (swap! state/session dissoc :stripe-token)
-                                  (js/location.assign (routes/event-schedule event))))
-                        callback))
+                                  (js/location.assign (routes/event-schedule event)))
+                               callback))
+                      callback)
                     (api/attendees-endpoint
                       :create
                       {:UserId (get-in @state/session [:user :UserId])
