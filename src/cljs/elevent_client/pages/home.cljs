@@ -1,21 +1,35 @@
 (ns elevent-client.pages.home
-  (:require [elevent-client.routes :as routes]))
+  (:require [elevent-client.routes :as routes]
+            [elevent-client.state :as state]))
+
+(defn module [text icon destination]
+  [:div.four.wide.column
+   [:div.ui.segment {:style {:padding "0"
+                             :height "200px"}}
+    [:button.ui.blue.basic.fluid.button {:style {:height "100%"}
+                                         :on-click #(js/location.assign destination)}
+     [:h1.ui.header text]
+     [:h1.ui.header [:i.icon.centered
+                     {:class icon}]]]]])
 
 (defn page []
   [:div.sixteen.wide.column
-   [:div.ui.segment
-    [:h2.ui.dividing.header "Welcome to Elevent Solutions"]
-    [:p
-     "Elevent is a large-event management application that provides a smooth "
-     "experience for all stages of the event lifecycle. From planning "
-     "activities for your next corporate convention, to handling check-in at "
-     "your academic conference, Elevent has you covered. Using our "
-     "application, event organizers can easily plan their event and set up "
-     "smaller activities that occur during the event. Organizers can also "
-     "invite others, manage the permissions of those attending, and view "
-     "statistics about their events. Attendees are able to use Elevent to "
-     "register and pay for events, and plan out the activities they will "
-     "attend. Elevent Solutions provides the best possible experience for "
-     "event organizers, attendees, and everyone in between."]]])
+   (let [logged-in? (:token @state/session)]
+     [:div.ui.sixteen.column.grid
+      [:div.sixteen.wide.column
+       [:div.ui.segment
+        [:h1.ui.dividing.header "Welcome to Elevent Solutions"]
+        [:h3.ui.header "What would you like to do?"]]]
+      [:div.two.wide.column]
+      (when-not logged-in?
+        [module "Log in" "sign in" (routes/sign-in)])
+      (when-not logged-in?
+        [module "Sign up" "add user" (routes/sign-up)])
+      [module "Browse events" "search" (routes/events-explore)]
+      (when logged-in?
+        [module "View my events" "ticket" (routes/events)])
+      (when logged-in?
+        [module "Manage my organizations" "building" (routes/organizations-owned)])
+      [:div.two.wide.column]])])
 
 (routes/register-page routes/home-chan #'page)
