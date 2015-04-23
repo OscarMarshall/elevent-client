@@ -77,11 +77,24 @@
       (let [{:keys [Name Location EnrollmentCap StartTime EndTime TicketPrice Description]}
             @form
 
-            errors
-            (validator @form)
-
             event
             (into {} (d/entity @api/events-db event-id))
+
+            StartTime
+            (or (:StartTime @form)
+                (:StartDate event))
+
+            EndTime
+            (or (:EndTime @form)
+                (:StartDate event))
+
+            errors
+            (do
+              ; Add start/end times to form state
+              (swap! form assoc
+                     :StartTime StartTime
+                     :EndTime   EndTime)
+             (validator @form))
 
             activities
             (doall (map #(d/entity @api/activities-db %)
