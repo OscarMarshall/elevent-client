@@ -49,6 +49,7 @@
 ;; =============================================================================
 
 (defn app-frame []
+  ^{:key @state/current-page}
   [:div
    [style/stylesheet]
    [navbar/component]
