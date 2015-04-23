@@ -1,5 +1,6 @@
 (ns elevent-client.components.event-details
   (:require [goog.string :as string]
+            [clojure.string :refer [split-lines]]
             [datascript :as d]
             [cljs-time.core :refer [after?]]
             [cljs-time.coerce :refer [from-string]]
@@ -31,4 +32,7 @@
      [:div.meta
       [:strong "Ticket Price: "]
       (string/format "$%.2f" (:TicketPrice event))])
-   [:p (:Description event)]])
+   (when (:Description event)
+     (for [line (split-lines (:Description event))]
+       ^{:key line}
+       [:p line]))])
