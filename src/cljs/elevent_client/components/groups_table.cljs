@@ -13,9 +13,9 @@
                                   :where [?group-id :EventId ?event-id]]
                                 @api/groups-db
                                     event-id)))
-        delete-group! (fn [group-id]
+        delete-group! (fn [group]
                         (api/groups-endpoint :delete
-                                             {:GroupsId group-id}
+                                             group
                                              nil))]
     [:table.ui.table
      [:thead
@@ -48,7 +48,7 @@
                       {:href (routes/event-group-edit group)}
                       [:i.edit.icon]]
                      [:span
-                      {:on-click #(delete-group! (:GroupId group))}
+                      {:on-click #(delete-group! group)}
                       [:i.red.remove.icon.link]]]
                     [:td])])))]
      ; Check if user can edit groups

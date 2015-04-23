@@ -26,8 +26,8 @@
     [elevent-client.components.event-details :as event-details]))
 
 (defn page [event-id & [group-id]]
-  (let [form (atom {:EventId event-id :EnrollmentCap ""})
-        reset-form! #(reset! form {:EventId event-id :EnrollmentCap ""})
+  (let [form (atom {:EventId event-id})
+        reset-form! #(reset! form {:EventId event-id})
         validator (validation-set (presence-of :Name))]
     (when group-id
       (if-let [group (seq (d/entity @api/groups-db group-id))]
