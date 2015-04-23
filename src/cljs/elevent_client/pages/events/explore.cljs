@@ -34,10 +34,13 @@
                                                 @api/events-db)))
                  (map (partial d/entity @api/events-db))
                  (sort-by :StartDate)
-                 (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6))))
+                 (filter #(after? (from-string (:EndDate %))
+                                  (minus (now) (hours 6))))
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %)))))
+                                     (str/lower-case (:Name %))))))
+            paged-events
+            (->> unattending-events
                  (drop (* @page 10))
                  (take 10)
                  doall)]
@@ -55,7 +58,7 @@
            [:div.ui.vertical.segment
             (if (seq unattending-events)
               [:div.ui.divided.items
-               (for [event (sort-by :StartDate unattending-events)]
+               (for [event paged-events]
                  ^{:key (:EventId event)}
                  [:div.item
                   [:div.content

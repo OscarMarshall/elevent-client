@@ -50,16 +50,18 @@
                  (sort-by :StartDate)
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %)))))
+                                     (str/lower-case (:Name %))))))
+            paged-events
+            (->> attending-events
                  (drop (* @page 10))
-                 (take 10)
-                 doall)
+                 (take 10))
             attending-events-past
-            (doall (filter #(after? (minus (now) (hours 6)) (from-string (:EndDate %)))
-                           attending-events))
+            (doall (filter #(after? (minus (now) (hours 6))
+                                    (from-string (:EndDate %)))
+                           paged-events))
             attending-events-future
             (doall (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6)))
-                           attending-events))]
+                           paged-events))]
         [:div.sixteen.wide.column
          [tabs :core]
          [:div.ui.bottom.attached.segment

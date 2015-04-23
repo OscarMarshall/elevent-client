@@ -10,6 +10,8 @@ CACHE:
 /bower_components/jquery/dist/jquery.min.js
 /bower_components/jquery-qrcode/dist/jquery.qrcode.min.js
 /bower_components/moment/min/moment.min.js
+/bower_components/pikaday-time/css/pikaday.css
+/bower_components/pikaday-time/pikaday.js
 /bower_components/semantic-ui/dist/semantic.min.css
 /bower_components/semantic-ui/dist/semantic.min.js
 /bower_components/semantic-ui/dist/themes/default/assets/fonts/icons.woff2

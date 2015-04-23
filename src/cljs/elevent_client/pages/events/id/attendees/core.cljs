@@ -12,31 +12,19 @@
             [elevent-client.config :as config]
             [elevent-client.components.input :as input]
             [elevent-client.components.action-button :as action-button]
-            [elevent-client.pages.events.id.attendees.id.core :refer [check-in]]))
+            [elevent-client.components.paginator :as paginator]
+            [elevent-client.pages.events.id.attendees.id.core
+             :refer [check-in]]))
 
 (defn page [event-id]
-  (let [form (atom {})]
+  (let [form (atom {})
+        page (atom 0)]
     (fn [event-id]
       (let
         [{:keys [email-filter last-name-filter first-name-filter group-filter]}
          @form
 
          event (into {} (d/entity @api/events-db event-id))
-
-         attendees
-         (sort-by (juxt :LastName :FirstName)
-                  (map (fn [[user-id attendee-id]]
-                         (merge (into {} (d/entity @api/users-db
-                                                   user-id))
-                                (into {} (d/entity @api/attendees-db
-                                                   attendee-id))))
-                       (d/q '[:find ?e ?a
-                              :in $ ?event-id
-                              :where
-                              [?a :EventId ?event-id]
-                              [?a :UserId ?e]]
-                            @api/attendees-db
-                            event-id)))
 
          groups
          (seq (d/q '[:find ?name ?group-id
@@ -73,7 +61,29 @@
                            [[email-filter       :Email]
                             [last-name-filter   :LastName]
                             [first-name-filter  :FirstName]]))]
-           #(every? identity (filters %)))]
+           #(every? identity (filters %)))
+
+         attendees
+         (->> (d/q '[:find ?e ?a
+                     :in $ ?event-id
+                     :where
+                     [?a :EventId ?event-id]
+                     [?a :UserId ?e]]
+                   @api/attendees-db
+                   event-id)
+              (map (fn [[user-id attendee-id]]
+                     (merge (into {} (d/entity @api/users-db
+                                               user-id))
+                            (into {} (d/entity @api/attendees-db
+                                               attendee-id)))))
+              (filter passes-filters?)
+              (sort-by (juxt :LastName :FirstName)))
+
+         paged-attendees
+         (->> attendees
+              (drop (* @page 10))
+              (take 10)
+              doall)]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:h2.ui.header
@@ -117,10 +127,9 @@
                            attendees)
                    "/"
                    (count attendees))]]
-            (for [attendee attendees]
+            (for [attendee paged-attendees]
               ^{:key (:AttendeeId attendee)}
-              [:tr {:style {:display (when-not (passes-filters? attendee)
-                                       :none)}}
+              [:tr
                [:td (:Email      attendee)]
                [:td (:LastName   attendee)]
                [:td (:FirstName  attendee)]
@@ -183,6 +192,7 @@
                           {:EventId (:EventId event)
                            :AttendeeId (:AttendeeId attendee)})}
                  "Details"
-                 [:i.right.chevron.icon]]]])]]]]))))
+                 [:i.right.chevron.icon]]]])]]
+          [paginator/component attendees page]]]))))
 
 (routes/register-page routes/event-attendees-chan #'page true)

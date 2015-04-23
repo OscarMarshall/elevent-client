@@ -19,7 +19,7 @@
     (fn []
       (let [organization
             (d/entity @api/organizations-db organization-id)
-            
+
             organization-events
             (->> (d/q '[:find [?event-id ...]
                         :in $ ?organization-id
@@ -28,29 +28,35 @@
                       @api/events-db
                       organization-id)
                  (map #(into {} (d/entity @api/events-db %)))
-                 (map #(assoc % :AttendeeId (first (d/q '[:find [?attendee-id ...]
-                                                          :in $ ?user-id ?event-id
-                                                          :where
-                                                          [?attendee-id :UserId ?user-id]
-                                                          [?attendee-id :EventId ?event-id]]
-                                                        @api/attendees-db
-                                                        (get-in @state/session [:user :UserId])
-                                                        (:EventId %)))))
+                 (map #(assoc %
+                         :AttendeeId (-> '[:find [?attendee-id ...]
+                                           :in $ ?user-id ?event-id
+                                           :where
+                                           [?attendee-id :UserId ?user-id]
+                                           [?attendee-id :EventId ?event-id]]
+                                         (d/q @api/attendees-db
+                                              (get-in @state/session
+                                                      [:user :UserId])
+                                              (:EventId %))
+                                         first)))
                  (sort-by :StartDate)
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %)))))
+                                     (str/lower-case (:Name %))))))
+
+            paged-events
+            (->> organization-events
                  (drop (* @page 10))
-                 (take 10)
-                 doall)
-            
+                 (take 10))
+
             organization-events-past
-            (doall (filter #(after? (minus (now) (hours 6)) (from-string (:EndDate %)))
-                           organization-events))
-            
+            (doall (filter #(after? (minus (now) (hours 6))
+                                    (from-string (:EndDate %)))
+                           paged-events))
+
             organization-events-future
             (doall (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6)))
-                           organization-events))]
+                           paged-events))]
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:div

@@ -37,16 +37,20 @@
                  (sort-by :StartDate)
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %)))))
+                                     (str/lower-case (:Name %))))))
+            paged-events
+            (->> owned-events
                  (drop (* @page 10))
-                 (take 10)
-                 doall)
+                 (take 10))
             owned-events-past
             (doall (filter #(after? (minus (now) (hours 6)) (from-string (:EndDate %)))
-                           owned-events))
+                           paged-events))
             owned-events-future
             (doall (filter #(after? (from-string (:EndDate %)) (minus (now) (hours 6)))
-                           owned-events))]
+                           paged-events))
+
+            event-permissions
+            (:EventPermissions (:permissions @state/session))]
         [:div.sixteen.wide.column
          [events/tabs :owned]
          [:div.ui.bottom.attached.segment
@@ -73,7 +77,7 @@
                       [:div.meta
                        [event-details/component event]]
                       [:div.extra
-                       (when (get-in (:EventPermissions (:permissions @state/session))
+                       (when (get-in event-permissions
                                      [(:EventId event) :EditEvent])
                          [:a.ui.right.floated.small.button
                           {:href (routes/event-edit event)}
@@ -101,7 +105,7 @@
                        (:Name event)]
                       [:div.meta
                        [event-details/component event]]
-                      (when (get-in (:EventPermissions (:permissions @state/session))
+                      (when (get-in event-permissions
                                     [(:EventId event) :EditEvent])
                         [:div.extra
                          [:a.ui.right.floated.small.button
