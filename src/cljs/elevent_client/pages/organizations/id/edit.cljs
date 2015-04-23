@@ -50,7 +50,7 @@
                        (= (:OrganizationId org-permissions) organization-id))
                      permissions))))
         sync-event-permissions
-        (fn [_ _ _ _]
+        (fn []
           (when (and (= @permissions-user 0)
                      (> @permissions-event 0))
             (reset! permissions-event 0))
@@ -58,7 +58,7 @@
             (reset! event-edit-permissions (:EditEvent current-event-permissions))
             (reset! check-in-permissions (:EditUser current-event-permissions))))
         sync-org-permissions
-        (fn [_ _ _ _]
+        (fn []
           (when (and (= @permissions-user 0)
                      (> @permissions-event 0))
             (reset! permissions-event 0))
@@ -77,10 +77,13 @@
                      (remove-watch api/organizations-db :organization-edit)))))
     (add-watch permissions-user
                :preset-org-permissions
-               sync-org-permissions)
+               (fn [_ _ _ _]
+                 (sync-event-permissions)
+                 (sync-org-permissions)))
     (add-watch permissions-event
                :preset-event-permissions
-               sync-event-permissions)
+               (fn [_ _ _ _]
+                 (sync-event-permissions)))
     (fn []
       (let [{:keys [Name PaymentRecipientId]} @form
             errors (validator @form)
@@ -178,10 +181,10 @@
                      :ReadActivity       @org-event-permissions
                      :EditActivity       @org-event-permissions
                      :DeleteActivity     @org-event-permissions
-                     :AddUser            @org-event-permissions
-                     :ReadUser           @org-event-permissions
-                     :EditUser           @org-event-permissions
-                     :DeleteUser         @org-event-permissions
+                     :AddUser            @org-permissions
+                     :ReadUser           @org-permissions
+                     :EditUser           @org-permissions
+                     :DeleteUser         @org-permissions
                      :SendEmail          @org-permissions
                      :GrantPermission    @org-permissions}]
                 (let [current-event-permissions (get-current-event-permissions)
