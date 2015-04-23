@@ -30,10 +30,10 @@
                                   @api/memberships-db
                                   (get-in @state/session [:user :UserId]))))
                  (map (partial d/entity @api/organizations-db))
-                 (sort-by (comp str/lower-case :Name))
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %))))))
+                                     (str/lower-case (:Name %)))))
+                 (sort-by (comp str/lower-case :Name)))
             paged-organizations
             (->> unjoined-organizations
                  (drop (* @page 10))

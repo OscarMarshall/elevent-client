@@ -18,11 +18,13 @@
 
 (defn delete-event [form]
   (fn [callback]
-    (api/events-endpoint :delete form #(api/permissions-endpoint ; Update permissions
-                                         :read
-                                         nil
-                                         callback)
-                         callback)))
+    (if (js/window.confirm "Are you sure?")
+      (api/events-endpoint :delete form #(api/permissions-endpoint ; Update permissions
+                                                                   :read
+                                                                   nil
+                                                                   callback)
+                           callback)
+      (callback))))
 
 (defn page []
   (let [search (atom "")
@@ -34,10 +36,10 @@
                            (or (:EditEvent event-permissions)
                                (:EditUser  event-permissions))))
                  (map #(into {} (d/entity @api/events-db (first %))))
-                 (sort-by :StartDate)
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %))))))
+                                     (str/lower-case (:Name %)))))
+                 (sort-by :StartDate))
             paged-events
             (->> owned-events
                  (drop (* @page 10))

@@ -33,12 +33,12 @@
                                                   :where [?event-id]]
                                                 @api/events-db)))
                  (map (partial d/entity @api/events-db))
-                 (sort-by :StartDate)
-                 (filter #(after? (from-string (:EndDate %))
-                                  (minus (now) (hours 6))))
                  (filter #(when (seq %)
-                            (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %))))))
+                            (and (re-find (re-pattern (str/lower-case @search))
+                                          (str/lower-case (:Name %)))
+                                 (after? (from-string (:EndDate %))
+                                         (minus (now) (hours 6))))))
+                 (sort-by :StartDate))
             paged-events
             (->> unattending-events
                  (drop (* @page 10))

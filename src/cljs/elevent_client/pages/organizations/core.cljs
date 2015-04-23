@@ -44,10 +44,10 @@
                         (assoc (into {} (d/entity @api/organizations-db
                                                   organization-id))
                           :MembershipId membership-id)))
-                 (sort-by (comp str/lower-case :Name))
-                 (filter #(when (seq %)
+                 (filter #(when (:Name %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %))))))
+                                     (str/lower-case (:Name %)))))
+                 (sort-by (comp str/lower-case :Name)))
             paged-organizations
             (->> organizations-joined
                  (drop (* @page 10))

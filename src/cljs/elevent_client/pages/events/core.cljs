@@ -48,7 +48,7 @@
                         (assoc (into {} (d/entity @api/events-db event-id))
                           :AttendeeId attendee-id)))
                  (sort-by :StartDate)
-                 (filter #(when (seq %)
+                 (filter #(when (:Name %)
                             (re-find (re-pattern (str/lower-case @search))
                                      (str/lower-case (:Name %))))))
             paged-events

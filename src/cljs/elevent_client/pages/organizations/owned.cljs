@@ -19,10 +19,10 @@
             (->> (get-in @state/session [:permissions :OrganizationPermissions])
                  (filter (fn [[_ permissions]] (:EditOrganization permissions)))
                  (map #(into {} (d/entity @api/organizations-db (first %))))
-                 (sort-by (comp str/lower-case :Name))
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %))))))
+                                     (str/lower-case (:Name %)))))
+                 (sort-by (comp str/lower-case :Name)))
             paged-organizations
             (->> owned-organizations
                  (drop (* @page 10))
@@ -56,14 +56,16 @@
                     {:class "ui right floated small negative"}
                     "Delete"
                     (fn [callback]
-                      (api/organizations-endpoint
-                        :delete
-                        organization
-                        #(api/permissions-endpoint
-                           :read
-                           nil
-                           callback)
-                        callback))]]]])]
+                      (if (js/window.confirm "Are you sure?")
+                        (api/organizations-endpoint
+                          :delete
+                          organization
+                          #(api/permissions-endpoint
+                             :read
+                             nil
+                             callback)
+                          callback)
+                        (callback)))]]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component owned-organizations page]]]]))))
