@@ -39,12 +39,12 @@
                                    [:negative "Sign in failed"]])})))
 
 (defn sign-out! []
-  (set! js/window.location (routes/home))
   (swap! state/session dissoc :token :user :stripe-token :payment-info :permissions)
   (put! state/api-refresh-chan true)
   (put! state/remove-messages-chan :sign-in-succeeded)
   (put! state/add-messages-chan [:sign-out-succeeded
-                                 [:positive "Sign out succeeded"]]))
+                                 [:positive "Sign out succeeded"]])
+  (set! js/window.location (routes/home)))
 
 (defn sign-up! [form]
   (put! state/auth-sign-up-chan form))
