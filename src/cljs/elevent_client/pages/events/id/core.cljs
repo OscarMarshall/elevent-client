@@ -224,9 +224,11 @@
               [:td
                (if (:CheckinTime attendee)
                  [:button.ui.small.right.floated.button.green
+                  {:style {:width "105px"}}
                   "Checked in"]
                  [action-button/component
-                  {:class "small right floated"}
+                  {:class "small right floated"
+                   :style {:width "105px"}}
                   "Check in"
                   (check-in (:AttendeeId attendee))])
                [:a.ui.right.floated.small.labeled.button

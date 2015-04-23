@@ -72,21 +72,23 @@
                        (:Name event)]
                       [:div.meta
                        [event-details/component event]]
-                      (when (get-in (:EventPermissions (:permissions @state/session))
-                                    [(:EventId event) :EditEvent])
-                        [:div.extra
+                      [:div.extra
+                       (when (get-in (:EventPermissions (:permissions @state/session))
+                                     [(:EventId event) :EditEvent])
                          [:a.ui.right.floated.small.button
                           {:href (routes/event-edit event)}
                           "Edit"
-                          [:i.right.chevron.icon]]
-                         [:a.ui.right.floated.small.button
-                          {:href (routes/event event)}
-                          "Details"
-                          [:i.right.chevron.icon]]
+                          [:i.right.chevron.icon]])
+                       [:a.ui.right.floated.small.button
+                        {:href (routes/event event)}
+                        "Details"
+                        [:i.right.chevron.icon]]
+                       (when (get-in (:EventPermissions (:permissions @state/session))
+                                     [(:EventId event) :EditEvent])
                          [action-button/component
                           {:class "ui right floated small negative"}
                           "Delete"
-                          (delete-event event)]])]])]])
+                          (delete-event event)])]]])]])
               (when (seq owned-events-past)
                 [:div.ui.vertical.segment
                  [:h2.ui.dividing.header "Past"]

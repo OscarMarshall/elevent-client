@@ -29,9 +29,12 @@
                  ^{:key (:GroupId group)}
                  [:tr
                   [:td
-                   [:a {:href (routes/event-group (assoc group
-                                                    :EventId event-id))}
-                    (:Name group)]]
+                   (if (get-in event-permissions
+                               [event-id :EditEvent])
+                     [:a {:href (routes/event-group (assoc group
+                                                      :EventId event-id))}
+                      (:Name group)]
+                     (:Name group))]
                   [:td (count (d/q '[:find [?attendee-id ...]
                                      :in $ ?group-id
                                      :where

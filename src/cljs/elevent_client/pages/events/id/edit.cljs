@@ -126,7 +126,7 @@
                         (do
                           (callback)
                           (js/location.replace
-                            (routes/event (:EventId event-id))))
+                            (routes/event {:EventId event-id})))
                         (let [new-event-id (get json "EventId")]
                           (api/permissions-endpoint
                             :read
