@@ -127,12 +127,6 @@
                        (js/location.replace (routes/event-activity-add event)))
                     callback))))]
         (when (seq event)
-          ; Add start/end times to form state
-          (swap! form assoc
-                 :StartTime (or (:StartTime @form)
-                                (:StartDate event))
-                 :EndTime   (or (:EndTime @form)
-                                (:StartDate event)))
           [:div.sixteen.wide.column
            [:div.ui.segment
             [:div.ui.vertical.segment

@@ -141,7 +141,12 @@
          [:div.ui.bottom.attached.segment
           [:form.ui.form
            [:div.ui.vertical.segment
-            [:h2.ui.dividing.header (if event-id "Edit" "Add") " an Event"]
+            [:h2.ui.dividing.header (if event-id "Edit" "Add") " an Event"
+             (when event-id
+              [:a.ui.right.floated.small.button
+               {:href (routes/event {:EventId event-id})}
+               "Details"
+               [:i.right.chevron.icon]])]
             (let [name-field [:div.required.field
                               {:class (when (and Name (:Name errors)) :error)}
                               [:label "Name"]
