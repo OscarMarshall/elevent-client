@@ -37,6 +37,7 @@
             [elevent-client.pages.organizations.core]
             [elevent-client.pages.organizations.explore]
             [elevent-client.pages.organizations.owned]
+            [elevent-client.pages.organizations.id.core]
             [elevent-client.pages.organizations.id.edit])
   (:import goog.History))
 

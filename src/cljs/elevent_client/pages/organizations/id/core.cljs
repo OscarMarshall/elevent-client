@@ -18,16 +18,24 @@
         page (atom 0)]
     (fn []
       (let [organization
-            (d/entity @api/organizations organization-id)
+            (d/entity @api/organizations-db organization-id)
             
             organization-events
-            (->> (d/q '[:find ?event-id
+            (->> (d/q '[:find [?event-id ...]
                         :in $ ?organization-id
                         :where
-                        [?event-id :Organization-id ?organization-id]]
+                        [?event-id :OrganizationId ?organization-id]]
                       @api/events-db
                       organization-id)
-                 (map (partial d/entity @api/events-db))
+                 (map #(into {} (d/entity @api/events-db %)))
+                 (map #(assoc % :AttendeeId (first (d/q '[:find [?attendee-id ...]
+                                                          :in $ ?user-id ?event-id
+                                                          :where
+                                                          [?attendee-id :UserId ?user-id]
+                                                          [?attendee-id :EventId ?event-id]]
+                                                        @api/attendees-db
+                                                        (get-in @state/session [:user :UserId])
+                                                        (:EventId %)))))
                  (sort-by :StartDate)
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
@@ -68,10 +76,15 @@
                       [:div.meta
                        [event-details/component event]
                        [:div.extra
-                        [:a.ui.right.floated.small.button
-                         {:href (routes/event-schedule event)}
-                         "Your activities"
-                         [:i.right.chevron.icon]]
+                        (if (:AttendeeId event)
+                          [:a.ui.right.floated.small.button
+                           {:href (routes/event-schedule event)}
+                           "Your activities"
+                           [:i.right.chevron.icon]]
+                          [:a.ui.right.floated.small.button
+                           {:href (routes/event-register event)}
+                           "Register"
+                           [:i.right.chevron.icon]])
                         [:a.ui.right.floated.small.button
                          {:href (routes/event event)}
                          "Details"
@@ -89,10 +102,11 @@
                       [:div.meta
                        [event-details/component event]
                        [:div.extra
-                        [:a.ui.right.floated.small.button
-                         {:href (routes/event-schedule event)}
-                         "Your activities"
-                         [:i.right.chevron.icon]]
+                        (when (:AttendeeId event)
+                          [:a.ui.right.floated.small.button
+                           {:href (routes/event-schedule event)}
+                           "Your activities"
+                           [:i.right.chevron.icon]])
                         [:a.ui.right.floated.small.button
                          {:href (routes/event event)}
                          "Details"

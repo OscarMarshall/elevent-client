@@ -77,15 +77,17 @@
               {}
               activities
               (r/wrap (:ActivityId @form) swap! form assoc :ActivityId)]
-             [action-button/component {}
+             [action-button/component
+              {:class (when-not (:ActivityId @form) :disabled)}
               "Add"
               (fn [callback]
-                (when (:ActivityId @form)
+                (if (:ActivityId @form)
                   (api/mandates-endpoint
                     :create
                     (assoc @form :GroupId group-id)
                     (fn [] (api/schedules-endpoint :read nil #(callback)))
-                    callback)))]]]
+                    callback)
+                  (callback)))]]]
            [:table.ui.table
             [:thead
              [:tr

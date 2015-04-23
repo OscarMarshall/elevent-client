@@ -33,7 +33,9 @@
                  (sort-by (comp str/lower-case :Name))
                  (filter #(when (seq %)
                             (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %)))))
+                                     (str/lower-case (:Name %))))))
+            paged-organizations
+            (->> unjoined-organizations
                  (drop (* @page 10))
                  (take 10)
                  doall)]
@@ -50,19 +52,13 @@
           [:div.ui.vertical.segment
            (if (seq unjoined-organizations)
              [:div.ui.divided.items
-              (for [organization unjoined-organizations]
+              (for [organization paged-organizations]
                 ^{:key (:OrganizationId organization)}
                 [:div.item
                  [:div.content
-                  [:div.header
+                  [:a.header {:href (routes/organization organization)}
                    (:Name organization)]
                   [:div.extra
-                   [:a.ui.right.floated.small.button
-                    {:href (routes/events-explore
-                             {:query-params (select-keys organization
-                                                         [:OrganizationId])})} ; TODO: make this work
-                    "View events"
-                    [:i.right.chevron.icon]]
                    [action-button/component
                     {:class "ui right floated small"}
                     "Join"

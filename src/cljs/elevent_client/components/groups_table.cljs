@@ -57,4 +57,4 @@
           [:a.ui.small.right.floated.labeled.icon.button
            {:href (routes/event-group-add {:EventId event-id})}
            [:i.edit.icon]
-           "Edit"]]]])]))
+           "Add"]]]])]))

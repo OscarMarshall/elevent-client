@@ -38,7 +38,7 @@
                      (reset! form (into {} (d/entity db group-id)))
                      (remove-watch api/groups-db :group-edit)))))
     (fn [event-id]
-      (let [{:keys [Name Location EnrollmentCap StartTime EndTime Description]}
+      (let [{:keys [Name]}
             @form
 
             errors

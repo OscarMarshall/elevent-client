@@ -58,4 +58,4 @@
           [:a.ui.small.right.floated.labeled.icon.button
            {:href (routes/event-activity-add {:EventId event-id})}
            [:i.edit.icon]
-           "Edit"]]]])]))
+           "Add"]]]])]))
