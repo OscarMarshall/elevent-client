@@ -121,19 +121,20 @@
                     (if event-id :update :create)
                     (assoc form :OrganizationId @organization-id)
                     ; if creating a new event, read permissions after creating
-                    (fn []
+                    (fn [json]
                       (if event-id
                         (do
                           (callback)
                           (js/location.replace
-                            (routes/events-owned)))
-                        (api/permissions-endpoint
-                          :read
-                          nil
-                          #(do
-                             (callback)
-                             (js/location.replace
-                               (routes/events-owned))))))
+                            (routes/event (:EventId event-id))))
+                        (let [new-event-id (get json "EventId")]
+                          (api/permissions-endpoint
+                            :read
+                            nil
+                            #(do
+                               (callback)
+                               (js/location.replace
+                                 (routes/event {:EventId new-event-id})))))))
                     callback))))]
         [:div.sixteen.wide.column
          [events/tabs (if event-id :edit :add)]
