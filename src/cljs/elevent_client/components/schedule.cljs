@@ -3,11 +3,12 @@
             [cljs-time.format :refer [unparse]]
             [datascript :as d]
 
+            [elevent-client.components.help-icon :as help-icon]
             [elevent-client.locale :as locale]
             [elevent-client.api :as api]))
 
 (defn component
-  [scheduled-activities & [button-text button-action footer-button]]
+  [scheduled-activities & [button-text button-action footer-button disabled-condition]]
   [:table.ui.table
    [:thead
     [:tr
@@ -36,9 +37,13 @@
            [:td (:Location activity)]
            [:td.right.aligned {:noWrap true}
             (when button-text
-              [:div.ui.small.button
-               {:on-click #(button-action schedule-id activity-id)}
-               button-text])]])))]
+              [:div
+               (when (and disabled-condition (disabled-condition activity-id))
+                 [help-icon/component "This is a required activity"])
+               [:div.ui.small.button
+                {:class (when (and disabled-condition (disabled-condition activity-id)) "disabled")
+                 :on-click #(button-action schedule-id activity-id)}
+                button-text]])]])))]
    (when footer-button
      [:tfoot
       [:tr

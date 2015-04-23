@@ -41,6 +41,19 @@
               event-id
               (get-in @state/session [:user :UserId]))
 
+         mandatory-activities
+         (into #{}
+               (d/q '[:find [?activity-id ...]
+                      :in $attendees $mandates ?event-id ?user-id
+                      :where
+                      [$attendees ?attendee-id :UserId     ?user-id]
+                      [$attendees ?attendee-id :GroupId    ?group-id]
+                      [$mandates  ?mandate-id  :GroupId    ?group-id]
+                      [$mandates  ?mandate-id  :ActivityId ?activity-id]]
+                    @api/attendees-db
+                    @api/mandates-db
+                    (get-in @state/session [:user :UserId])))
+
          event-activities
          (d/q '[:find ?activity-id
                 :in $ ?event-id
@@ -105,7 +118,10 @@
                   (api/schedules-endpoint :delete
                                           (d/entity @api/schedules-db
                                                     schedule-id)
-                                          nil))]]
+                                          nil))
+                nil
+                (fn [activity-id]
+                  (contains? mandatory-activities activity-id))]]
               [:div.ui.vertical.segment
                (if (seq event-activities)
                  [:div.ui.divided.items
