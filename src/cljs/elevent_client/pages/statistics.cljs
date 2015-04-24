@@ -81,7 +81,7 @@
               [:label "Choose event:"]
               [input/component :select {} events event-id identity int]]]]]
           [:div.ui.vertical.segment
-           (when (seq all-attendees)
+           (when (seq attendees)
              [chart/component
               {:chart
                {:type "pie"}
@@ -129,7 +129,7 @@
                :series [{:name "Attendee count"}]}
               schedules])
            (when (and (> @event-id 0)
-                      (not (seq all-attendees)))
+                      (not (seq attendees)))
              [:p "There is no data for this event."])]]]))))
 
 (routes/register-page routes/statistics-chan #'page true)
