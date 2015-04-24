@@ -17,6 +17,13 @@
              :refer [check-in]]))
 
 (defn page [event-id]
+  ; If you don't have user edit permissions for this event, don't show page.
+  (if (and event-id
+           (not (get-in (:EventPermissions (:permissions @state/session))
+                        [event-id :EditUser])))
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:p "You do not have permission to view attendees for this event."]]]
   (let [form (atom {})
         page (atom 0)]
     (fn [event-id]
@@ -194,6 +201,6 @@
                            :AttendeeId (:AttendeeId attendee)})}
                  "Details"
                  [:i.right.chevron.icon]]]])]]
-          [paginator/component attendees page]]]))))
+          [paginator/component attendees page]]])))))
 
 (routes/register-page routes/event-attendees-chan #'page true)

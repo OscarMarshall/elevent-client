@@ -28,13 +28,20 @@
                    (callback))
        :error-handler
        (fn [error]
-         (if (:status error 409)
+         (callback)
+         (cond
+           (= (:status error) 409)
            (put! state/add-messages-chan
                  [:conflict
                   [:negative "User is already checked in. Please try reloading."]])
+           (= (:status error) 403)
            (put! state/add-messages-chan
                  [:check-in-failed
-                  [:negative "Check in failed. Please try again."]])))}))
+                  [:negative "You do not have permission to check in. Please try reloading."]])
+           :else
+           (put! state/add-messages-chan
+                 [:check-in-failed
+                  [:negative "Check in failed. Please try reloading."]])))}))
 
 (defn check-in [attendee-id]
   (fn [callback]
@@ -67,6 +74,13 @@
                                                callback)))))
 
 (defn page [event-id attendee-id]
+  ; If you don't have user edit permissions for this event, don't show page.
+  (if (and event-id
+           (not (get-in (:EventPermissions (:permissions @state/session))
+                        [event-id :EditUser])))
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:p "You do not have permission to view attendees for this event."]]]
   (let [event (into {} (d/entity @api/events-db event-id))
 
         attendee
@@ -178,6 +192,6 @@
                      (if @checked-in
                        "Check in"
                        "Check out")]]])))]]]]]]
-      [:div "Loading..."])))
+      [:div "Loading..."]))))
 
 (routes/register-page routes/event-attendee-chan #'page true)

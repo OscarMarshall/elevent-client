@@ -167,10 +167,10 @@
                      :ReadActivity    @event-edit-permissions
                      :EditActivity    @event-edit-permissions
                      :DeleteActivity  @event-edit-permissions
-                     :AddUser         @check-in-permissions
-                     :ReadUser        @check-in-permissions
-                     :EditUser        @check-in-permissions
-                     :DeleteUser      @check-in-permissions
+                     :AddUser         (or @event-edit-permissions @check-in-permissions)
+                     :ReadUser        (or @event-edit-permissions @check-in-permissions)
+                     :EditUser        (or @event-edit-permissions @check-in-permissions)
+                     :DeleteUser      (or @event-edit-permissions @check-in-permissions)
                      :SendEmail       @event-edit-permissions
                      :GrantPermission @event-edit-permissions}
                     org-permissions-to-set
