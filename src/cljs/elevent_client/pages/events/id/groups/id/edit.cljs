@@ -109,7 +109,11 @@
                  "Cancel"])]]
             [:div.ui.vertical.segment
              [:h2.ui.header
-              "Groups"]
+              "Groups"
+              [:a.ui.right.floated.small.button
+               {:href (routes/event-attendees {:EventId event-id})}
+               "Assign Attendees"
+               [:i.right.chevron.icon]]]
              [groups-table/component event-id]]]])))))
 
 (routes/register-page routes/event-group-edit-chan #'page true)

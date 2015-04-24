@@ -95,8 +95,8 @@
              [:th "Last Name"]
              [:th "First Name"]
              [:th "Group"]
-             [:th]
-             [:th]]]
+             [:th {:style {:width "130px"}}]
+             [:th {:style {:width "125px"}}]]]
            [:tbody
             [:tr.ui.form
              [:td
@@ -136,7 +136,9 @@
                [:td
                 [input/component
                  :select
-                 {}
+                 {:class (when-not (get-in (:EventPermissions (:permissions @state/session))
+                                           [event-id :EditEvent])
+                              "disabled")}
                  (cons ["None" 0] groups)
                  (r/wrap
                    (:GroupId attendee)
@@ -175,8 +177,7 @@
                                       [(keyword "elevent-client.api" (gensym))
                                        [:negative
                                         (str uri (js->clj error))]]))))}))))]]
-               [:td {:noWrap true
-                     :style {:width "130px"}}
+               [:td {:noWrap true}
                 (if (:CheckinTime attendee)
                  [:button.ui.small.button.green
                   {:width "100%"}

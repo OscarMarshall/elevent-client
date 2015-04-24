@@ -49,7 +49,7 @@
                               #(reset! state (out (.-value (.-target %)))))]
              (case type
                :textarea [:textarea attributes]
-               :select [:div.ui.dropdown.selection
+               :select [:div.ui.dropdown.selection attributes
                         [:input (assoc attributes :type :hidden)]
                         [:div.text "None"]
                         [:i.dropdown.icon]
