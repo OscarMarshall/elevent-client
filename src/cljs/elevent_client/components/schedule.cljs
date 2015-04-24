@@ -20,10 +20,10 @@
    [:tbody
     (doall
       (for [[schedule-id activity-id] scheduled-activities]
-        ^{:key schedule-id}
         (let [activity
               (when activity-id
                 (d/entity @api/activities-db activity-id))]
+          ^{:key schedule-id}
           [:tr
            [:td {:noWrap true}
             (when activity

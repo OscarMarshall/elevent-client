@@ -53,7 +53,7 @@
            mandatory-activities
            (into #{}
                  (d/q '[:find [?activity-id ...]
-                        :in $attendees $mandates ?event-id ?user-id
+                        :in $attendees $mandates ?user-id
                         :where
                         [$attendees ?attendee-id :UserId     ?user-id]
                         [$attendees ?attendee-id :GroupId    ?group-id]
@@ -122,24 +122,23 @@
                        (:Name event))]]
                 [:div.ui.vertical.segment
                  [schedule/component scheduled-activities
-                  (list [:i.red.remove.icon] "Remove")
+                  [:span [:i.red.remove.icon] "Remove"]
                   (fn [schedule-id activity-id]
                     (api/schedules-endpoint :delete
                                             (d/entity @api/schedules-db
                                                       schedule-id)
                                             nil))
                   nil
-                  (fn [activity-id]
-                    (contains? mandatory-activities activity-id))]]
+                  mandatory-activities]]
                 [:div.ui.vertical.segment
                  (if (seq event-activities)
                    [:div.ui.divided.items
                     (doall
                       (for [[activity-id] unscheduled-activities]
-                        ^{:key activity-id}
                         (let [activity
                               (when activity-id
                                 (d/entity @api/activities-db activity-id))]
+                          ^{:key activity-id}
                           [:div.item
                            [:div.content
                             [:div.header (:Name activity)]
