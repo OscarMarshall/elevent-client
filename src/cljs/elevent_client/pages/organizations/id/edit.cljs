@@ -13,6 +13,13 @@
             [elevent-client.pages.organizations.core :as organizations]))
 
 (defn page [& [organization-id]]
+  ; If editing, but you don't have edit permissions, don't display page.
+  (if (and organization-id
+           (not (get-in (:OrganizationPermissions (:permissions @state/session))
+                        [organization-id :EditOrganization])))
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:p "You do not have permission to edit this organization."]]]
   (let [form (atom {})
         validator (validation-set (presence-of :Name))
         permissions-user (atom nil)
@@ -316,6 +323,6 @@
               [action-button/component
                {:class "primary"}
                "Save"
-               save-permissions]]])]]))))
+               save-permissions]]])]])))))
 
 (routes/register-page routes/organization-edit-chan #'page)

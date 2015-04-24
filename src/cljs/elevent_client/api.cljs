@@ -85,22 +85,22 @@
                                  [:negative "Your card failed to be charged. Please try another."]])
                           (put! state/add-messages-chan
                                 [:forbidden-action
-                                 [:negative "You do not have permission to perform that action"]]))
+                                 [:negative "You do not have permission to perform that action. Please reload the page."]]))
 
                         (= (:status error) 500)
                         (put! state/add-messages-chan
                               [:server-error
-                               [:negative "An error occurred"]])
+                               [:negative "An error occurred. Please reload the page."]])
 
                         (= (:status error) 404)
                         (put! state/add-messages-chan
                               [:not-found
-                               [:negative "Your request was not found"]])
+                               [:negative "Your request was not found."]])
 
                         (= (:status error) 409)
                         (put! state/add-messages-chan
                               [:not-found
-                               [:negative "A conflict has occurred"]])
+                               [:negative "A conflict has occurred. Please reload the page."]])
 
                         (= (:status error) 400)
                         (put! state/add-messages-chan

@@ -20,6 +20,7 @@
 
     [elevent-client.api :as api]
     [elevent-client.routes :as routes]
+    [elevent-client.state :as state]
     [elevent-client.components.activities-table :as activities-table]
     [elevent-client.components.action-button :as action-button]
     [elevent-client.components.help-icon :as help-icon]
@@ -28,6 +29,13 @@
     [elevent-client.components.event-details :as event-details]))
 
 (defn page [event-id & [activity-id]]
+  ; If editing, but you don't have edit permissions, don't display page.
+  (if (and event-id
+           (not (get-in (:EventPermissions (:permissions @state/session))
+                        [event-id :EditEvent])))
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:p "You do not have permission to edit activities for this event."]]]
   (let [form (atom {:EventId event-id :EnrollmentCap ""})
         reset-form! #(reset! form {:EventId event-id :EnrollmentCap ""})
         validator (validation-set (presence-of :Name)
@@ -264,6 +272,6 @@
             [:div.ui.vertical.segment
              [:h2.ui.header
               "Activities"]
-             [activities-table/component event-id]]]])))))
+             [activities-table/component event-id]]]]))))))
 
 (routes/register-page routes/event-activity-edit-chan #'page true)

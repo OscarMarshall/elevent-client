@@ -31,6 +31,13 @@
     (format-of :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")))
 
 (defn page [& [event-id]]
+  ; If editing, but you don't have edit permissions, don't display page.
+  (if (and event-id
+           (not (get-in (:EventPermissions (:permissions @state/session))
+                        [event-id :EditEvent])))
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:p "You do not have permission to edit this event."]]]
   (let [form (atom {})
         clone-id (atom 0)
         organization-id (atom 0)]
@@ -231,6 +238,6 @@
             [action-button/component
              {:class (str "primary" (when (seq errors) " disabled"))}
              (if event-id "Save" "Add")
-             (create-event @form)]]]]]))))
+             (create-event @form)]]]]])))))
 
 (routes/register-page routes/event-edit-chan #'page true)

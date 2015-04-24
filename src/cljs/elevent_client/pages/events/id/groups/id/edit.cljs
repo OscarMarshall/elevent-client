@@ -19,6 +19,7 @@
 
     [elevent-client.api :as api]
     [elevent-client.routes :as routes]
+    [elevent-client.state :as state]
     [elevent-client.components.groups-table :as groups-table]
     [elevent-client.components.action-button :as action-button]
     [elevent-client.components.input :as input]
@@ -26,6 +27,13 @@
     [elevent-client.components.event-details :as event-details]))
 
 (defn page [event-id & [group-id]]
+  ; If editing, but you don't have edit permissions, don't display page.
+  (if (and event-id
+           (not (get-in (:EventPermissions (:permissions @state/session))
+                        [event-id :EditEvent])))
+    [:div.sixteen.wide.column
+     [:div.ui.segment
+      [:p "You do not have permission to edit groups for this event."]]]
   (let [form (atom {:EventId event-id})
         reset-form! #(reset! form {:EventId event-id})
         validator (validation-set (presence-of :Name))]
@@ -114,6 +122,6 @@
                {:href (routes/event-attendees {:EventId event-id})}
                "Assign Attendees"
                [:i.right.chevron.icon]]]
-             [groups-table/component event-id]]]])))))
+             [groups-table/component event-id]]]]))))))
 
 (routes/register-page routes/event-group-edit-chan #'page true)
