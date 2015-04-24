@@ -57,9 +57,8 @@
                 [:div.item
                  [:div.content
                   [:a.header {:href (routes/organization organization)}
-                   (:Name organization)]
-                  (when (:token @state/session)
-                    [:div.extra
+                   (:Name organization)
+                   (when (:token @state/session)
                      [action-button/component
                       {:class "ui right floated small"}
                       "Join"
@@ -71,7 +70,7 @@
                           #(do
                              (callback)
                              (js/location.assign (routes/organizations)))
-                          callback))]])]])]
+                          callback))])]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component

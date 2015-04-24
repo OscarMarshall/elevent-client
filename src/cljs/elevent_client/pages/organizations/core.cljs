@@ -71,8 +71,7 @@
                 [:div.item
                  [:div.content
                   [:a.header {:href (routes/organization organization)}
-                   (:Name organization)]
-                  [:div.extra
+                   (:Name organization)
                    [action-button/component
                     {:class "ui right floated small negative"}
                     "Leave"

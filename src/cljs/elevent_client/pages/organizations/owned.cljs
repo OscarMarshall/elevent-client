@@ -47,25 +47,24 @@
                  [:div.content
                   [:a.header {:href (routes/organization organization)}
                    (:Name organization)]
-                  [:div.extra
-                   [:a.ui.right.floated.small.button
-                    {:href (routes/organization-edit organization)}
-                    "Edit"
-                    [:i.right.chevron.icon]]
-                   [action-button/component
-                    {:class "ui right floated small negative"}
-                    "Delete"
-                    (fn [callback]
-                      (if (js/window.confirm "Are you sure?")
-                        (api/organizations-endpoint
-                          :delete
-                          organization
-                          #(api/permissions-endpoint
-                             :read
-                             nil
-                             callback)
-                          callback)
-                        (callback)))]]]])]
+                  [:a.ui.right.floated.small.button
+                   {:href (routes/organization-edit organization)}
+                   "Edit"
+                   [:i.right.chevron.icon]]
+                  [action-button/component
+                   {:class "ui right floated small negative"}
+                   "Delete"
+                   (fn [callback]
+                     (if (js/window.confirm "Are you sure?")
+                       (api/organizations-endpoint
+                         :delete
+                         organization
+                         #(api/permissions-endpoint
+                            :read
+                            nil
+                            callback)
+                         callback)
+                       (callback)))]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component owned-organizations page]]]]))))
