@@ -24,7 +24,7 @@ The compiled files will be in `./resources/public/`
 ## Platforms
 
 The build system runs on anything that has a JRE.
-Our web app will run in most browsers, but we only tests in Chrome.
+Our web app will run in most browsers, but we only tested in Chrome.
 
 ## Authors
 
