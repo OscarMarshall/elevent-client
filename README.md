@@ -4,8 +4,8 @@ The web front-end for Elevent Solutions, an all-around event software solution.
 
 ## Dependencies
 
-* [Leiningen](http://leiningen.org/)
-* [Bower](http://bower.io/)
+* [Leiningen](http://leiningen.org/) - download script from website and follow directions to install.
+* [Bower](http://bower.io/) - install with `$ npm install -g bower`.
 
 ## Usage
 
@@ -17,5 +17,15 @@ The web front-end for Elevent Solutions, an all-around event software solution.
 
 ## Production
 
-    $ lein cljsbuild clean
-    $ lein ring uberjar
+	$ lein clean
+	$ lein cljsbuild once prod
+The compiled files will be in `./resources/public/`
+
+## Platforms
+
+The build system runs on anything that has a JRE.
+Our web app will run in most browsers, but we only tests in Chrome.
+
+## Authors
+
+Oscar Marshall and Leslie Baker
