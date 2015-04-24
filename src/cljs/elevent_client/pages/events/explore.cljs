@@ -67,10 +67,11 @@
                    [:div.meta
                     [event-details/component event]]
                    [:div.extra
-                    [:a.ui.right.floated.small.button
-                     {:href (routes/event-register event)}
-                     "Register"
-                     [:i.right.chevron.icon]]
+                    (when (:token @state/session)
+                      [:a.ui.right.floated.small.button
+                       {:href (routes/event-register event)}
+                       "Register"
+                       [:i.right.chevron.icon]])
                     [:a.ui.right.floated.small.button
                      {:href (routes/event event)}
                      "Details"

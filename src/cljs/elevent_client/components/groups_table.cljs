@@ -1,6 +1,7 @@
 (ns elevent-client.components.groups-table
   (:require [datascript :as d]
 
+            [elevent-client.components.help-icon :as help-icon]
             [elevent-client.api :as api]
             [elevent-client.locale :as locale]
             [elevent-client.routes :as routes]
@@ -44,6 +45,10 @@
                   (if (get-in event-permissions
                               [event-id :EditEvent])
                     [:td
+                     [:a
+                      {:href (routes/event-group {:EventId event-id
+                                                  :GroupId (:GroupId group)})}
+                      [help-icon/component "Add required activities" :i.plus.icon]]
                      [:a
                       {:href (routes/event-group-edit group)}
                       [:i.edit.icon]]

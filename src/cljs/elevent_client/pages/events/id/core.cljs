@@ -297,6 +297,7 @@
                               (d/entity @api/attendees-db attendee-id)
                               #(do
                                  (callback)
+                                 (api/schedules-endpoint :read nil nil)
                                  (js/location.replace (routes/events)))
                               callback)))
             can-edit
@@ -343,11 +344,12 @@
                  [:h1.ui.dividing.header
                   (:Name event)]
                  [event-details/component event]
-                 [:div.extra
-                  [:a.ui.right.floated.button
-                   {:href (routes/event-register event)}
-                   "Register"
-                   [:i.right.chevron.icon]]]]
+                 (when (:token @state/session)
+                   [:div.extra
+                    [:a.ui.right.floated.button
+                     {:href (routes/event-register event)}
+                     "Register"
+                     [:i.right.chevron.icon]]])]
                 (when (seq activities)
                   [:div.ui.vertical.segment
                    [:h2.ui.dividing.header "Activities"]

@@ -58,19 +58,20 @@
                  [:div.content
                   [:a.header {:href (routes/organization organization)}
                    (:Name organization)]
-                  [:div.extra
-                   [action-button/component
-                    {:class "ui right floated small"}
-                    "Join"
-                    (fn [callback]
-                      (api/memberships-endpoint
-                        :create
-                        (select-keys (merge (:user @state/session) organization)
-                                     [:UserId :OrganizationId])
-                        #(do
-                           (callback)
-                           (js/location.assign (routes/organizations)))
-                        callback))]]]])]
+                  (when (:token @state/session)
+                    [:div.extra
+                     [action-button/component
+                      {:class "ui right floated small"}
+                      "Join"
+                      (fn [callback]
+                        (api/memberships-endpoint
+                          :create
+                          (select-keys (merge (:user @state/session) organization)
+                                       [:UserId :OrganizationId])
+                          #(do
+                             (callback)
+                             (js/location.assign (routes/organizations)))
+                          callback))]])]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component

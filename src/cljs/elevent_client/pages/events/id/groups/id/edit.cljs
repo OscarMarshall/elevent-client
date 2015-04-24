@@ -77,7 +77,12 @@
              [event-details/component event]]
             [:div.ui.vertical.segment
              [:h2.ui.header
-              (if group-id "Edit" "Add") " a Group"]
+              (if group-id "Edit" "Add") " a Group"
+              (when group-id
+                [:a.ui.small.right.floated.button
+                 {:href (routes/event-group {:EventId event-id :GroupId group-id})}
+                 "Add Required Activities"
+                 [:i.right.chevron.icon]])]
              [:form.ui.form {:on-submit
                              (fn [e]
                                (when (empty? errors)
@@ -97,7 +102,11 @@
               [action-button/component
                {:class (str "primary" (when (seq errors) " disabled"))}
                (if group-id "Save" "Add")
-               (create-group @form)]]]
+               (create-group @form)]
+              (when group-id
+                [:div.ui.button
+                 {:on-click #(js/location.replace (routes/event-group-add event))}
+                 "Cancel"])]]
             [:div.ui.vertical.segment
              [:h2.ui.header
               "Groups"]

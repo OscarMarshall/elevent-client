@@ -1,7 +1,7 @@
 (ns elevent-client.components.help-icon
   (:require [reagent.core :as r]))
 
-(defn component [text]
+(defn component [text & [icon]]
   (r/create-class
     {:component-did-mount
      #(-> %
@@ -10,5 +10,7 @@
           (.popup))
      :reagent-render
      (fn []
-       [:i.help.circle.icon.link {:data-content text
-                                  :data-variation "inverted"}])}))
+       (if icon
+         [icon {:data-content text}]
+         [:i.help.circle.icon.link {:data-content text
+                                    :data-variation "inverted"}]))}))

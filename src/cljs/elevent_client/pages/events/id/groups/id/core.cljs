@@ -67,9 +67,13 @@
         [:div.sixteen.wide.column
          [:div.ui.segment
           [:div.ui.vertical.segment
-           [:h1.ui.header (:Name group)]]
+           [:h1.ui.header (:Name group)
+            [:a.ui.small.right.floated.button
+             {:href (routes/event-attendees {:EventId event-id})}
+             "Add Attendees"
+             [:i.right.chevron.icon]]]]
           [:div.ui.vertical.segment
-           [:h2.ui.header "Mandates"]
+           [:h2.ui.header "Required Activities"]
            [:div.ui.form
             [:div.inline.field
              [input/component

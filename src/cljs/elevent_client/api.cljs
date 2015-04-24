@@ -79,7 +79,7 @@
                           (auth/sign-out!))
 
                         (= (:status error) 403)
-                        (if (= (:status-text "Unable to charge credit card"))
+                        (if (= (:status-text error) "Unable to charge credit card")
                           (put! state/add-messages-chan
                                 [:bad-credit-card
                                  [:negative "Your card failed to be charged. Please try another."]])
