@@ -108,24 +108,27 @@
                             [:negative "Upload failed. Please try again."]]))})))
         delete-image
         (fn [callback]
-          (DELETE (str config/http-url "/events/" (:EventId event) "/logos")
-                  {:keywords?       true
-                   :timeout         8000
-                   :headers
-                   (if (:token @state/session)
-                     {:Authentication
-                      (str "Bearer " (:token @state/session))}
-                     {})
-                   :handler (fn []
-                              (reset! event-logo nil)
-                              (callback)
-                              (api/events-endpoint :read nil nil))
-                   :error-handler
-                   (fn [_]
-                     (callback)
-                     (put! state/add-messages-chan
-                           [:logo-delete-failed
-                            [:negative "Remove failed. Please try again."]]))}))
+          (if (js/window.confirm
+                "Are you sure you want to remove the event logo?")
+            (DELETE (str config/http-url "/events/" (:EventId event) "/logos")
+                    {:keywords?       true
+                     :timeout         8000
+                     :headers
+                     (if (:token @state/session)
+                       {:Authentication
+                        (str "Bearer " (:token @state/session))}
+                       {})
+                     :handler (fn []
+                                (reset! event-logo nil)
+                                (callback)
+                                (api/events-endpoint :read nil nil))
+                     :error-handler
+                     (fn [_]
+                       (callback)
+                       (put! state/add-messages-chan
+                             [:logo-delete-failed
+                              [:negative "Remove failed. Please try again."]]))})
+            (callback)))
         file-changed
         (fn []
           (let [file (-> (js/jQuery "#file")
@@ -292,14 +295,19 @@
                                              event-id))))
             leave-event (fn [attendee-id]
                           (fn [callback]
-                            (api/attendees-endpoint
-                              :delete
-                              (d/entity @api/attendees-db attendee-id)
-                              #(do
-                                 (callback)
-                                 (api/schedules-endpoint :read nil nil)
-                                 (js/location.replace (routes/events)))
-                              callback)))
+                            (if (js/window.confirm
+                                  (str "Are you sure you want to leave "
+                                       (:Name event)
+                                       "?"))
+                              (api/attendees-endpoint
+                                :delete
+                                (d/entity @api/attendees-db attendee-id)
+                                #(do
+                                   (callback)
+                                   (api/schedules-endpoint :read nil nil)
+                                   (js/location.replace (routes/events)))
+                                callback)
+                              (callback))))
             can-edit
             (get-in (:EventPermissions (:permissions @state/session))
                     [event-id :EditEvent])

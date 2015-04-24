@@ -17,9 +17,13 @@
                                     event-id)))
         delete-activity!
         (fn [activity-id]
-          (api/activities-endpoint :delete
-                                   (d/entity @api/activities-db activity-id)
-                                   nil))]
+          (let [activity (d/entity @api/activities-db activity-id)]
+            (when (js/window.confirm (str "Are you sure you want to delete "
+                                          (:Name activity)
+                                          "?"))
+              (api/activities-endpoint :delete
+                                       activity
+                                       nil))))]
     [:table.ui.table
      [:thead
       [:tr

@@ -18,7 +18,9 @@
 
 (defn delete-event [form]
   (fn [callback]
-    (if (js/window.confirm "Are you sure?")
+    (if (js/window.confirm (str "Are you sure you want to delete "
+                                (:Name form)
+                                "?"))
       (api/events-endpoint :delete form #(api/permissions-endpoint ; Update permissions
                                                                    :read
                                                                    nil
@@ -70,31 +72,32 @@
                 [:div.ui.vertical.segment
                  [:h2.ui.dividing.header "Upcoming"]
                  [:div.ui.divided.items
-                  (for [event owned-events-future]
-                    ^{:key (:EventId event)}
-                    [:div.item
-                     [:div.content
-                      [:a.header {:href (routes/event event)}
-                       (:Name event)]
-                      [:div.meta
-                       [event-details/component event]]
-                      [:div.extra
-                       (when (get-in event-permissions
-                                     [(:EventId event) :EditEvent])
+                  (doall
+                    (for [event owned-events-future]
+                      ^{:key (:EventId event)}
+                      [:div.item
+                       [:div.content
+                        [:a.header {:href (routes/event event)}
+                         (:Name event)]
+                        [:div.meta
+                         [event-details/component event]]
+                        [:div.extra
+                         (when (get-in event-permissions
+                                       [(:EventId event) :EditEvent])
+                           [:a.ui.right.floated.small.button
+                            {:href (routes/event-edit event)}
+                            "Edit"
+                            [:i.right.chevron.icon]])
                          [:a.ui.right.floated.small.button
-                          {:href (routes/event-edit event)}
-                          "Edit"
-                          [:i.right.chevron.icon]])
-                       [:a.ui.right.floated.small.button
-                        {:href (routes/event event)}
-                        "Details"
-                        [:i.right.chevron.icon]]
-                       (when (get-in (:EventPermissions (:permissions @state/session))
-                                     [(:EventId event) :EditEvent])
-                         [action-button/component
-                          {:class "ui right floated small negative"}
-                          "Delete"
-                          (delete-event event)])]]])]])
+                          {:href (routes/event event)}
+                          "Details"
+                          [:i.right.chevron.icon]]
+                         (when (get-in (:EventPermissions (:permissions @state/session))
+                                       [(:EventId event) :EditEvent])
+                           [action-button/component
+                            {:class "ui right floated small negative"}
+                            "Delete"
+                            (delete-event event)])]]]))]])
               (when (seq owned-events-past)
                 [:div.ui.vertical.segment
                  [:h2.ui.dividing.header "Past"]

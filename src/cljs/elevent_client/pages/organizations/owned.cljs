@@ -55,7 +55,10 @@
                    {:class "ui right floated small negative"}
                    "Delete"
                    (fn [callback]
-                     (if (js/window.confirm "Are you sure?")
+                     (if (js/window.confirm
+                           (str "Are you sure you want to delete "
+                                (:Name organization)
+                                "?"))
                        (api/organizations-endpoint
                          :delete
                          organization

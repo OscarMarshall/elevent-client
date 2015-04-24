@@ -58,24 +58,25 @@
            [:div.ui.vertical.segment
             (if (seq unattending-events)
               [:div.ui.divided.items
-               (for [event paged-events]
-                 ^{:key (:EventId event)}
-                 [:div.item
-                  [:div.content
-                   [:a.header {:href (routes/event event)}
-                    (:Name event)]
-                   [:div.meta
-                    [event-details/component event]]
-                   [:div.extra
-                    (when (:token @state/session)
+               (doall
+                 (for [event paged-events]
+                   ^{:key (:EventId event)}
+                   [:div.item
+                    [:div.content
+                     [:a.header {:href (routes/event event)}
+                      (:Name event)]
+                     [:div.meta
+                      [event-details/component event]]
+                     [:div.extra
+                      (when (:token @state/session)
+                        [:a.ui.right.floated.small.button
+                         {:href (routes/event-register event)}
+                         "Register"
+                         [:i.right.chevron.icon]])
                       [:a.ui.right.floated.small.button
-                       {:href (routes/event-register event)}
-                       "Register"
-                       [:i.right.chevron.icon]])
-                    [:a.ui.right.floated.small.button
-                     {:href (routes/event event)}
-                     "Details"
-                     [:i.right.chevron.icon]]]]])]
+                       {:href (routes/event event)}
+                       "Details"
+                       [:i.right.chevron.icon]]]]]))]
               [:p "No events found."])]
            [:div.ui.vertical.segment
             [paginator/component unattending-events page]]]

@@ -52,25 +52,27 @@
           [:div.ui.vertical.segment
            (if (seq unjoined-organizations)
              [:div.ui.divided.items
-              (for [organization paged-organizations]
-                ^{:key (:OrganizationId organization)}
-                [:div.item
-                 [:div.content
-                  [:a.header {:href (routes/organization organization)}
-                   (:Name organization)
-                   (when (:token @state/session)
-                     [action-button/component
-                      {:class "ui right floated small"}
-                      "Join"
-                      (fn [callback]
-                        (api/memberships-endpoint
-                          :create
-                          (select-keys (merge (:user @state/session) organization)
-                                       [:UserId :OrganizationId])
-                          #(do
-                             (callback)
-                             (js/location.assign (routes/organizations)))
-                          callback))])]]])]
+              (doall
+                (for [organization paged-organizations]
+                  ^{:key (:OrganizationId organization)}
+                  [:div.item
+                   [:div.content
+                    [:a.header {:href (routes/organization organization)}
+                     (:Name organization)
+                     (when (:token @state/session)
+                       [action-button/component
+                        {:class "ui right floated small"}
+                        "Join"
+                        (fn [callback]
+                          (api/memberships-endpoint
+                            :create
+                            (select-keys (merge (:user @state/session)
+                                                organization)
+                                         [:UserId :OrganizationId])
+                            #(do
+                               (callback)
+                               (js/location.assign (routes/organizations)))
+                            callback))])]]]))]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component

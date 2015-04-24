@@ -76,11 +76,14 @@
                     {:class "ui right floated small negative"}
                     "Leave"
                     (fn [callback]
-                      (api/memberships-endpoint
-                        :delete
-                        organization
-                        callback
-                        callback))]]]])]
+                      (if (js/window.confirm (str "Are you sure you want to leave "
+                                                  (:Name organization)
+                                                  "?"))
+                        (api/memberships-endpoint :delete
+                                                  organization
+                                                  callback
+                                                  callback)
+                        (callback)))]]]])]
              [:p "No organizations found"])]
           [:div.ui.vertical.segment
            [paginator/component

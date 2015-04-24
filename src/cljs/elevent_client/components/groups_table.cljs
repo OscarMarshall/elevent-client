@@ -14,10 +14,14 @@
                                   :where [?group-id :EventId ?event-id]]
                                 @api/groups-db
                                     event-id)))
-        delete-group! (fn [group]
-                        (api/groups-endpoint :delete
-                                             group
-                                             nil))]
+        delete-group!
+        (fn [group]
+          (when (js/window.confirm (str "Are you sure you want to delete "
+                                        (:Name group)
+                                        "?"))
+            (api/groups-endpoint :delete
+                                 group
+                                               nil)))]
     [:table.ui.table
      [:thead
       [:tr

@@ -13,7 +13,15 @@
             [elevent-client.components.action-button :as action-button]))
 
 (defn delete-mandate! [mandate-id]
-  (api/mandates-endpoint :delete (d/entity @api/mandates-db mandate-id) nil))
+  (let [mandate (d/entity @api/mandates-db mandate-id)
+        group (d/entity @api/groups-db (:GroupId mandate))
+        activity (d/entity @api/activities-db (:ActivityId mandate))]
+    (when (js/window.confirm (str "Are you sure that you want to delete the "
+                                  (:Name activity)
+                                  " mandate for "
+                                  (:Name group)
+                                  "?"))
+    (api/mandates-endpoint :delete mandate nil))))
 
 (defn page [event-id group-id]
   (let [form (atom {})]
