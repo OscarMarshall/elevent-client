@@ -123,8 +123,11 @@
                                                            (routes/organizations-owned))))))))
                                             callback)))
             delete-member
-            (fn [member-id]
-              (api/memberships-endpoint :delete {:MembershipId member-id} nil))
+            (fn [member-id first-name last-name]
+              (when (js/window.confirm (str "Are you sure you want to remove "
+                                          (str first-name " " last-name)
+                                          " from this organization?"))
+                (api/memberships-endpoint :delete {:MembershipId member-id} nil)))
             organization-members
             (when organization-id
               (d/q '[:find ?a ?user-id ?first-name ?last-name ?email
@@ -276,7 +279,7 @@
                   [:td (str first-name " " last-name)]
                   [:td email]
                   [:td [:i.red.remove.icon.link
-                        {:on-click #(delete-member member-id)}]]])]]])
+                        {:on-click #(delete-member member-id first-name last-name)}]]])]]])
           (when organization-id
             [:div.ui.vertical.segment
              [:h2.ui.dividing.header
