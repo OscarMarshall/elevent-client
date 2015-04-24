@@ -14,6 +14,7 @@
             [elevent-client.components.paginator :as paginator]))
 
 (defn tabs [page]
+  "Tabs on the events page"
   (let [logged-in? (:token @state/session)]
     [:div.ui.top.attached.tabular.menu
      (when logged-in?
@@ -33,6 +34,7 @@
         "Add"])]))
 
 (defn page []
+  "Page for events the user is registered for"
   (let [search (atom "")
         page (atom 0)]
     (fn []
@@ -51,10 +53,12 @@
                  (filter #(when (:Name %)
                             (re-find (re-pattern (str/lower-case @search))
                                      (str/lower-case (:Name %))))))
+            ; Split events into pages
             paged-events
             (->> attending-events
                  (drop (* @page 10))
                  (take 10))
+            ; Split events by past and future
             attending-events-past
             (doall (filter #(after? (minus (now) (hours 6))
                                     (from-string (:EndDate %)))

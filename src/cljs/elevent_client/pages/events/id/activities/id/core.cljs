@@ -6,6 +6,7 @@
             [elevent-client.components.activity-details :as activity-details]))
 
 (defn page [event-id activity-id]
+  "Activity details page"
   (let [activity (d/entity @api/activities-db activity-id)]
     (when (seq activity)
       [:div.sixteen.wide.column

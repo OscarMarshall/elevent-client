@@ -18,6 +18,7 @@
     [elevent-client.pages.events.core :as events]))
 
 (def validator
+  "Form validator"
   (validation-set
     (presence-of :Name)
     (presence-of :Venue)
@@ -31,6 +32,7 @@
     (format-of :EndDate   :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d")))
 
 (defn page [& [event-id]]
+  "Edit add or event page"
   ; If editing, but you don't have edit permissions, don't display page.
   (if (and event-id
            (not (get-in (:EventPermissions (:permissions @state/session))
@@ -41,6 +43,7 @@
   (let [form (atom {})
         clone-id (atom 0)
         organization-id (atom 0)]
+    ; If event-id exists, we are editing. Prepopulate form.
     (when event-id
       (if-let [event (seq (d/entity @api/events-db event-id))]
         (let [event (into {} event)]
@@ -93,6 +96,7 @@
             errors
             (validator @form)
 
+            ; Clonable events are events the user may edit
             clonable-events
             (cons ["None" 0]
                   (doall
@@ -106,6 +110,7 @@
                                    :where [?id :Name ?name]]
                                  @api/events-db))))
 
+            ; Organizations the user has permission to add events to
             associated-organizations
             (some->> (-> @state/session
                          (get-in [:user :UserId]))

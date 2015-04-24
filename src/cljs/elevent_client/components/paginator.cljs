@@ -2,6 +2,7 @@
   (:require [reagent.core :refer [atom]]))
 
 (defn component [coll state]
+  "Paginate long lists of events and orgs"
   (let [pages (js/Math.ceil (/ (count coll) 10))]
     [:div.ui.pagination.menu
      [:a.icon.item {:on-click (fn [] (swap! state #(max (dec %) 0)))

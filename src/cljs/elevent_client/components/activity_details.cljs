@@ -6,6 +6,7 @@
             [elevent-client.locale :as locale]))
 
 (defn component [activity]
+  "The details that display beneath activities"
   [:div
    (when (:Location activity)
      [:div.meta [:strong "Location: "] (:Location activity)])

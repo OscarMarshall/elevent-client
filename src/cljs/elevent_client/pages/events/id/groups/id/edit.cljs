@@ -27,6 +27,7 @@
     [elevent-client.components.event-details :as event-details]))
 
 (defn page [event-id & [group-id]]
+  "Group add or edit page"
   ; If editing, but you don't have edit permissions, don't display page.
   (if (and event-id
            (not (get-in (:EventPermissions (:permissions @state/session))

@@ -15,6 +15,7 @@
             [elevent-client.components.logo :as logo]))
 
 (defn page [event-id]
+  "Add/remove activities to your schedule for an event"
   ; Verify that this user is attending this event
   (if (seq (d/q '[:find ?a
                   :in $ ?event-id ?user-id
@@ -24,7 +25,7 @@
                 @api/attendees-db
                 event-id
                 (get-in @state/session [:user :UserId])))
-    (let [cart-activities (atom #{})
+    (let [cart-activities (atom #{}) ; store paid activities in cart
 
           add-activity!
           (fn [user-id activity-id]
@@ -38,6 +39,7 @@
         (let
           [event (into {} (d/entity @api/events-db event-id))
 
+           ; Activities in the user's schedule
            scheduled-activities
            (d/q '[:find ?schedule-id ?activity-id
                   :in $activities $schedules ?event-id ?user-id
@@ -50,6 +52,7 @@
                 event-id
                 (get-in @state/session [:user :UserId]))
 
+           ; Required activities for the user
            mandatory-activities
            (into #{}
                  (d/q '[:find [?activity-id ...]
@@ -63,6 +66,7 @@
                       @api/mandates-db
                       (get-in @state/session [:user :UserId])))
 
+           ; All event activities
            event-activities
            (d/q '[:find ?activity-id
                   :in $ ?event-id
@@ -71,6 +75,7 @@
                 @api/activities-db
                 event-id)
 
+           ; Activities not in the user's schedule
            unscheduled-activities
            (set/difference event-activities
                            (into #{} (map #(vector (second %))
@@ -85,12 +90,14 @@
            (fn [activity-id]
              (swap! cart-activities disj [activity-id]))
 
+           ; Add cart activities to schedule
            add-cart-activities!
            (fn [user-id cart-activities]
              (fn [callback]
                (let [activities (into [] (map (fn [[activity-id]]
                                                 activity-id)
                                               @cart-activities))]
+                 ; Add activity and get a new token from Stripe
                  (stripe/renew-token!
                    (fn [] (api/schedules-endpoint :bulk
                                                   {:UserId      user-id
@@ -104,6 +111,7 @@
           (when (seq event)
             (when (and (:HasLogo event)
                        (not @event-logo))
+              ; Get event logo
               (api/api-call :read
                             (str "/events/" event-id "/logos")
                             {}

@@ -22,6 +22,7 @@
             [elevent-client.stripe :as stripe]))
 
 (defn page [event-id]
+  "Event register page"
   ; Verify that this user is not yet signed up for this event
   (if-not (seq (d/q '[:find ?a
                       :in $ ?event-id ?user-id
@@ -31,6 +32,7 @@
                     @api/attendees-db
                     event-id
                     (get-in @state/session [:user :UserId])))
+    ; Prefill form data with user info
     (let [form (atom {:Email (get-in @state/session [:user :Email])
                       :FirstName (get-in @state/session [:user :FirstName])
                       :LastName (get-in @state/session [:user :LastName])})
@@ -78,6 +80,7 @@
           (when (seq event)
             (when (and (:HasLogo event)
                        (not @event-logo))
+              ; Get event logo
               (api/api-call :read
                             (str "/events/" event-id "/logos")
                             {}

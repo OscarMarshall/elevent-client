@@ -13,6 +13,7 @@
             [elevent-client.components.action-button :as action-button]))
 
 (defn delete-mandate! [mandate-id]
+  "Delete a required activity from a group"
   (let [mandate (d/entity @api/mandates-db mandate-id)
         group (d/entity @api/groups-db (:GroupId mandate))
         activity (d/entity @api/activities-db (:ActivityId mandate))]
@@ -24,11 +25,13 @@
     (api/mandates-endpoint :delete mandate nil))))
 
 (defn page [event-id group-id]
+  "Page for adding required activities to a group"
   (let [form (atom {})]
     (fn [event-id group-id]
       (let [group
             (d/entity @api/groups-db group-id)
 
+            ; Get current mandates
             mandates
             (doall (map #(let [mandate (d/entity @api/mandates-db %)]
                            (merge (into {} (d/entity @api/activities-db
@@ -92,6 +95,7 @@
              [action-button/component
               {:class (when-not (:ActivityId @form) :disabled)}
               "Add"
+              ; Add new mandate
               (fn [callback]
                 (if (:ActivityId @form)
                   (api/mandates-endpoint
@@ -142,6 +146,7 @@
                                      (:AttendeeId attendee)
                                      "/groups/"
                                      x)]
+                        ; Handle API call for updating an attendee's group
                         (PUT
                           uri
                           {:timeout

@@ -17,6 +17,7 @@
             [elevent-client.pages.events.core :as events]))
 
 (defn delete-event [form]
+  "Delete an event"
   (fn [callback]
     (if (js/window.confirm (str "Are you sure you want to delete "
                                 (:Name form)
@@ -29,6 +30,7 @@
       (callback))))
 
 (defn page []
+  "Events the user has edit permissions on"
   (let [search (atom "")
         page (atom 0)]
     (fn []
@@ -46,6 +48,7 @@
             (->> owned-events
                  (drop (* @page 10))
                  (take 10))
+            ; Split by past and future events
             owned-events-past
             (doall (filter #(after? (minus (now) (hours 6)) (from-string (:EndDate %)))
                            paged-events))

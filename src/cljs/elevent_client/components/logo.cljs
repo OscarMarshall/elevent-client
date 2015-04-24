@@ -7,6 +7,7 @@
             [elevent-client.routes :as routes]))
 
 (defn component [event-logo]
+  "Logo column"
   (when (and @state/online? event-logo)
     [:div.three.wide.column
      [:div.ui.segment

@@ -2,6 +2,7 @@
   (:require [reagent.core :as r :refer [atom]]))
 
 (defn component [options]
+  "Initialize jquery QR code"
   (let [options (atom {})]
     (r/create-class
       {:component-did-mount #(.qrcode (js/jQuery (r/dom-node %))

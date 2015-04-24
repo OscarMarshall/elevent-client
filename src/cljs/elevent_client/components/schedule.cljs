@@ -8,6 +8,9 @@
             [elevent-client.api :as api]))
 
 (defn component
+  "Reusable table for attendee schedule
+   Must provide the scheduled activities for the user
+   Optional fields are for the action button and footer button"
   [scheduled-activities & [button-text button-action footer-button disabled-condition]]
   [:table.ui.table
    [:thead
@@ -46,16 +49,16 @@
            [:td.right.aligned {:noWrap true}
             (when button-text
               [:div
+               ; Button shows help icon if required activity
                (when (and disabled-condition (disabled-condition activity-id))
                  [help-icon/component "This is a required activity"])
                [:div.ui.small.button
                 {:class (when (and disabled-condition (disabled-condition activity-id)) "disabled")
                  :on-click #(button-action schedule-id activity-id)}
                 button-text]])]])))]
+   ; Footer button exists when user has permissions to edit schedule
    (when footer-button
      [:tfoot
       [:tr
        [:th {:colSpan "6"}
-        footer-button
-        #_[:div.ui.small.labeled.icon.button
-         [:i.print.icon] "Print"]]]])])
+        footer-button]]])])

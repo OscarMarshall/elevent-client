@@ -8,7 +8,9 @@
     [elevent-client.components.input :as input]))
 
 (defn component []
+  "Component for payments form"
   (let [form (atom {})
+        ; State validator
         validator
         (validation-set
           (presence-of :number)
@@ -25,6 +27,7 @@
       (let [{:keys [number cvc exp-date]} @form
             errors (validator @form)
 
+            ; handler for response from Stripe
             response-handler
             (fn [status response]
               (reset! button-loading? false)
@@ -42,6 +45,7 @@
                                                  :exp-year (int year))
                                                :exp-date)))))
 
+            ; On form submit, make Stripe request
             create-token
             (fn [e form]
               (when (empty? errors)
@@ -56,18 +60,7 @@
                                        :exp-year (int year))
                                      :exp-date))
                     response-handler))))]
-        #_(when (:payment-info @state/session)
-          (swap! form assoc
-                 :number   (str "************"
-                                (subs (get-in @state/session
-                                              [:payment-info :number])
-                                      12))
-                 :cvc      (get-in @state/session [:payment-info :cvc])
-                 :exp-date (str (get-in @state/session
-                                        [:payment-info :exp-month])
-                                "/"
-                                (get-in @state/session
-                                        [:payment-info :exp-year]))))
+        ; If payment info does not exist, show form. Otherwise, show card last-four
         (if (or (nil? (:payment-info @state/session))
                 @editing?)
           [:div.ui.vertical.segment
@@ -115,6 +108,7 @@
             (str "Charging card ending in "
                  (subs (get-in @state/session [:payment-info :number]) 12)
                  ".")]
+           ; when "charge different card" is clicked, remove current payment info
            [:a.field {:on-click #(swap! state/session dissoc :payment-info)
                       :style {:cursor "pointer"}}
             "Charge different card"
