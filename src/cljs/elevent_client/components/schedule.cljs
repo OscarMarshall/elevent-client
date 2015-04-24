@@ -27,12 +27,20 @@
           [:tr
            [:td {:noWrap true}
             (when activity
-              (unparse locale/datetime-formatter
-                       (from-string (:StartTime activity))))]
+              [:p
+               (unparse locale/time-formatter
+                        (from-string (:StartTime activity)))
+               [:br]
+               (unparse locale/date-formatter
+                        (from-string (:StartTime activity)))])]
            [:td {:noWrap true}
             (when activity
-              (unparse locale/datetime-formatter
-                       (from-string (:EndTime activity))))]
+              [:p
+               (unparse locale/time-formatter
+                        (from-string (:EndTime activity)))
+               [:br]
+               (unparse locale/date-formatter
+                        (from-string (:EndTime activity)))])]
            [:td (:Name activity)]
            [:td (:Location activity)]
            [:td.right.aligned {:noWrap true}

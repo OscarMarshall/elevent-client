@@ -193,6 +193,6 @@
               [logo/component @event-logo]]]))))
     [:div.sixteen.wide.column
      [:div.ui.segment
-      [:p "You are not registered for this event"]]]))
+      [:p "You are not registered for this event."]]]))
 
 (routes/register-page routes/event-schedule-chan #'page true)
