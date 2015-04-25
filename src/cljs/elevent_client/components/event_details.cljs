@@ -10,7 +10,9 @@
             [elevent-client.locale :as locale]))
 
 (defn component [event]
+  "The details that display beneath events"
   [:div
+   ; Show organization if available
    (when (> (:OrganizationId event) 0)
      (when-let [org (into {} (d/entity @api/organizations-db (:OrganizationId event)))]
        [:div

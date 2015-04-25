@@ -19,6 +19,7 @@
   input-attrs: a map of options to be used as <input> tag attributes."
   [{:keys [date-atom max-date-atom min-date-atom pikaday-attrs input-attrs
            static-attrs]}]
+  ; Helper methods to format data correctly
   (let [in
         #(if (from-string %)
            (unparse locale/input-date-time-formatter (from-string %))
@@ -37,13 +38,19 @@
              %))
         normalize ; because of GMT
         #(to-date (plus (from-string %) (hours 6)))
+        ; These attributes are to make sure activity times stay within the event times
         min-date (when (:min-date static-attrs) (:min-date static-attrs))
         max-date (when (:max-date static-attrs) (:max-date static-attrs))
+        ; Callback when date is updated
         set-date! (fn [new-date]
                     (when (and date-atom new-date)
+                      ; If min-date and max-date are set, verify the bounds
+                      ; Otherwise, just reset date
                       (if (and min-date max-date)
+                        ; Check upper bound
                         (if (after? (from-date new-date) max-date)
                           (reset! date-atom (out (to-string max-date)))
+                          ; Check lower bound
                           (if (after? min-date (from-date new-date))
                             (reset! date-atom (out (to-string min-date)))
                             (reset! date-atom
@@ -70,7 +77,7 @@
                     js/jQuery
                     (.val (in (to-string (minus (from-date (:defaultDate opts))
                                                 (hours 6))))))))
-            ; This code could probably be neater
+            ; Add watches to atoms
             (when date-atom
               (add-watch date-atom :update-instance
                 (fn [key ref old new]
@@ -101,6 +108,7 @@
                     (if (> @date-atom new)
                       (reset! date-atom new))))))))
         :component-did-update
+        ; Update input format on date change
         (fn [this]
           (let [value (-> this
                           r/dom-node
@@ -113,6 +121,7 @@
                   (.val (in @date-atom))))))
         :reagent-render
         (fn [input-attrs]
+          ; initialize input
           [:input (assoc input-attrs
                     :read-only true
                     :on-change #(reset! date-atom (-> %

@@ -15,6 +15,8 @@
             [elevent-client.config :as config]))
 
 (defn check-in-or-out [op url callback]
+  "Handles API call to either PUT or DELETE check-in for an event or activity
+   Callback reloads state"
   (op (str config/https-url url)
       {:format :json
        :keywords? true
@@ -43,6 +45,7 @@
                  [:check-in-failed
                   [:negative "Check in failed. Please try reloading."]])))}))
 
+; Event check in
 (defn check-in [attendee-id]
   (fn [callback]
     (check-in-or-out PUT
@@ -50,6 +53,7 @@
                      (fn []
                        (api/attendees-endpoint :read nil callback)))))
 
+; Event check out
 (defn check-out [attendee-id]
   (fn [callback]
     (check-in-or-out DELETE
@@ -57,6 +61,7 @@
                      (fn []
                        (api/attendees-endpoint :read nil callback)))))
 
+; Activity check in
 (defn activity-check-in [schedule-id checked-in]
   (fn [callback]
     (check-in-or-out PUT
@@ -64,6 +69,7 @@
                      (fn []
                        (api/schedules-endpoint :read nil callback)))))
 
+; Activity check out
 (defn activity-check-out [schedule-id checked-in]
   (fn [callback]
     (check-in-or-out DELETE
@@ -73,6 +79,7 @@
                                                nil
                                                callback)))))
 
+; Attendee details page
 (defn page [event-id attendee-id]
   ; If you don't have user edit permissions for this event, don't show page.
   (if (and event-id
@@ -159,6 +166,7 @@
              [:th "Location"]
              [:th]]]
            [:tbody
+            ; Get schedule items
             (for [[schedule-id activity-id] attendee-activities]
               ^{:key schedule-id}
               (let [activity

@@ -17,6 +17,7 @@
              :refer [check-in]]))
 
 (defn page [event-id]
+  "Attendees page"
   ; If you don't have user edit permissions for this event, don't show page.
   (if (and event-id
            (not (get-in (:EventPermissions (:permissions @state/session))
@@ -42,12 +43,14 @@
                    @api/groups-db
                    event-id))
 
+         ; Create filter function with given keyword and which attribute to search
          create-filter (fn [[keywords attribute]]
                          #(or (empty? keywords)
                               (re-find
                                 (re-pattern (str/lower-case keywords))
                                 (str/lower-case (or (% attribute) "")))))
 
+         ; Limits attendees by search filters
          passes-filters?
          (let [filters
                (apply juxt
@@ -86,6 +89,7 @@
               (filter passes-filters?)
               (sort-by (juxt :LastName :FirstName)))
 
+         ; Limit attendees to 10 per page
          paged-attendees
          (->> attendees
               (drop (* @page 10))
@@ -106,6 +110,7 @@
              [:th {:style {:width "125px"}}]]]
            [:tbody
             [:tr.ui.form
+             ; Filters
              [:td
               [input/component
                :text
@@ -126,6 +131,7 @@
                :text
                {}
                (r/wrap group-filter swap! form assoc :group-filter)]]
+             ; Get checked in count
              [:td {:style {:text-align :center}}
               (str (reduce #(if (:CheckinTime %2)
                               (inc %1)
@@ -143,12 +149,14 @@
                [:td
                 [input/component
                  :select
+                 ; Don't allow editing groups if user does not have edit permissions
                  {:class (when-not (get-in (:EventPermissions (:permissions @state/session))
                                            [event-id :EditEvent])
                               "disabled")}
                  (cons ["None" 0] groups)
                  (r/wrap
                    (:GroupId attendee)
+                   ; API call to add an attendee to group
                    (fn [x]
                      (let [uri (str config/https-url
                                     "/attendees/"

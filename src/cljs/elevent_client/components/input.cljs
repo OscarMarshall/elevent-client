@@ -2,10 +2,18 @@
   (:require [reagent.core :as r]))
 
 (defn component
+  "Form input component
+   type can be text, textarea, select, or checkbox
+   options are HTML options
+   Input must be given a state, which is updated when the input
+   changes and is stored in the form
+   in and out are ways to display the data differently in the
+input than is stored in the state"
   ([type options select-options state in out]
    (let [in  (or in  identity)
          out (or out identity)]
      (r/create-class
+       ; Initialize and update dropdowns and checkboxes with jQuery
        {:component-did-mount
         (fn [this]
           (when (= type :select)
@@ -47,6 +55,7 @@
 
                               :on-change
                               #(reset! state (out (.-value (.-target %)))))]
+             ; Initialize input based on type
              (case type
                :textarea [:textarea attributes]
                :select [:div.ui.dropdown.selection attributes
@@ -69,6 +78,7 @@
            (render nil options select-options state nil nil))
           ([_ options state]
            (render nil options nil state nil nil)))})))
+  ; Abstractions with different parameters
   ([type options state in out]
    (component type options nil state in out))
   ([type options select-options state]

@@ -19,6 +19,7 @@
             [elevent-client.pages.events.id.attendees.id.core :refer [check-in]]))
 
 (defn details-attendee [event leave-event event-logo]
+  "The attendee view of an event"
   (when-let [attendee-id (first (d/q '[:find [?attendee-id ...]
                                        :in $ ?event-id ?user-id
                                        :where
@@ -77,6 +78,7 @@
 (defn details-owner [event activities attendees leave-event
                      logo-to-upload event-logo image-error get-logo
                      can-edit can-check-in is-attendee]
+  "The admin view of an event"
   (let [submit-image
         (fn [callback]
           (let [file (-> (js/jQuery "#file")
@@ -87,6 +89,7 @@
                 (doto
                   (js/FormData.)
                   (.append "Logo" file))]
+            ; Handle API call to upload an image to an event
             (POST (str config/http-url "/events/" (:EventId event) "/logos")
                   {:keywords?       true
                    :timeout         8000
@@ -110,6 +113,7 @@
         (fn [callback]
           (if (js/window.confirm
                 "Are you sure you want to remove the event logo?")
+            ; Handle API call to delete an image from an event
             (DELETE (str config/http-url "/events/" (:EventId event) "/logos")
                     {:keywords?       true
                      :timeout         8000
@@ -131,6 +135,7 @@
             (callback)))
         file-changed
         (fn []
+          ; Verify file exists and is not too large
           (let [file (-> (js/jQuery "#file")
                          (aget 0)
                          (aget "files")
@@ -180,6 +185,7 @@
           {:text (str config/site-url
                       (routes/event-attendee (into {} (d/entity @api/attendees-db
                                                                 attendee-id))))}]])
+      ; Only show when user has edit permissions
       (when can-edit
         [:div.ui.vertical.segment
          [:h2 "Event Logo"]
@@ -210,6 +216,7 @@
        [:h2.ui.header
         "Groups"]
        [groups-table/component (:EventId event)]]
+      ; Only show when user has check-in permissions
       (when can-check-in
         [:div.ui.vertical.segment
          [:h2.ui.header
@@ -261,6 +268,7 @@
            "Edit"]]])]]))
 
 (defn page [event-id]
+  "Event details page"
   (let [logo-to-upload (atom false)
         event-logo (atom false)
         image-error (atom nil)]
@@ -340,6 +348,7 @@
             is-attendee
             [details-attendee event leave-event event-logo]
 
+            ; If not an owner or attendee, just show event details
             :else
             [:div.sixteen.wide.column
              [:div.ui.sixteen.column.grid

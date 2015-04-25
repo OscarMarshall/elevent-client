@@ -4,6 +4,7 @@
             [elevent-client.authentication :as auth]))
 
 (defn component []
+  "Persistent navbar"
   (let [logged-in? (:token @state/session)]
     [:nav.ui.fixed.menu
      [:a.logo.item {:href (routes/home)}
@@ -36,6 +37,7 @@
                   :active)}
         [:i.bar.chart.icon]
         "Statistics"])
+     ; Check if logged in
      (if (:token @state/session)
        [:div.right.menu
         [:div.item

@@ -29,6 +29,7 @@
     [elevent-client.components.event-details :as event-details]))
 
 (defn page [event-id & [activity-id]]
+  "Activity add/edit page"
   ; If editing, but you don't have edit permissions, don't display page.
   (if (and event-id
            (not (get-in (:EventPermissions (:permissions @state/session))
@@ -54,16 +55,19 @@
                                   (format-of
                                     :EndTime
                                     :format #"\d\d\d\d-\d\d-\d\dT\d\d:\d\d"))]
+    ; If activity-id is defined (editing), prepopulate form
     (when activity-id
       (if-let [activity (seq (d/entity @api/activities-db activity-id))]
         (reset! form (let [activity (into {} activity)]
                        (assoc activity
+                         ; Make sure number fields don't prepopulate with 0
                          :EnrollmentCap (if (> (:EnrollmentCap activity) 0)
                                           (str (:EnrollmentCap activity))
                                           "")
                          :TicketPrice   (if (> (:TicketPrice activity) 0)
                                           (string/format "%.2f" (:TicketPrice activity))
                                           ""))))
+        ; Add watch to activities db so changes are reflected in form
         (add-watch api/activities-db
                    :activity-edit
                    (fn [_ _ _ _]
@@ -104,6 +108,7 @@
                      :EndTime   EndTime)
              (validator @form))
 
+            ; All event activities
             activities
             (doall (map #(d/entity @api/activities-db %)
                         (d/q '[:find [?e ...]
@@ -112,6 +117,7 @@
                                [?e :EventId ?event-id]]
                              @api/activities-db)))
 
+            ; Create or update activity
             create-activity
             (fn [form]
               (fn [callback]
@@ -122,6 +128,7 @@
                       :create)
                     (let [start-time (:StartTime form)
                           end-time   (:EndTime form)]
+                      ; Send date fields in proper format
                       (assoc form
                         :StartTime
                         (unparse (:date-hour-minute-second formatters)
@@ -174,10 +181,14 @@
                  :text
                  {}
                  (r/wrap EnrollmentCap swap! form assoc :EnrollmentCap)]]]
-              (let [start-time
+              ; Initialize fields for datepicker
+              (let [; Atoms for input fields
+                    start-time
                     (r/wrap StartTime swap! form assoc :StartTime)
                     end-time
                     (r/wrap EndTime swap! form assoc :EndTime)
+
+                    ; Lower and upper bounds (event start/end dates)
                     event-start
                     (let [d (from-string (:StartDate event))]
                       (local-date-time (year d)
@@ -192,6 +203,8 @@
                                        (day d)
                                        (hour d)
                                        (minute d)))
+
+                    ; Need a JavaScript date object for datepicker
                     event-start-js
                     (let [d (from-string (:StartDate event))]
                       (to-date (date-midnight (local-date (year d)
@@ -265,6 +278,7 @@
                {:class (str "primary" (when (seq errors) " disabled"))}
                (if activity-id "Save" "Add")
                (create-activity @form)]
+              ; If editing, show cancel button
               (when activity-id
                 [:div.ui.button
                  {:on-click #(js/location.replace (routes/event-activity-add event))}

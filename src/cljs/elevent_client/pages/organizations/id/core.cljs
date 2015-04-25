@@ -14,6 +14,7 @@
             [elevent-client.components.paginator :as paginator]))
 
 (defn page [organization-id]
+  "Shows events for the given organization"
   (let [search (atom "")
         page (atom 0)]
     (fn []
@@ -49,6 +50,7 @@
                  (drop (* @page 10))
                  (take 10))
 
+            ; Filter events by past/future
             organization-events-past
             (doall (filter #(after? (minus (now) (hours 6))
                                     (from-string (:EndDate %)))

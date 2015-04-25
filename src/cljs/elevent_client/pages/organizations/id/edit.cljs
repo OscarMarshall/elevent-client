@@ -13,6 +13,7 @@
             [elevent-client.pages.organizations.core :as organizations]))
 
 (defn page [& [organization-id]]
+  "Organization add or edit page"
   ; If editing, but you don't have edit permissions, don't display page.
   (if (and organization-id
            (not (get-in (:OrganizationPermissions (:permissions @state/session))
@@ -22,12 +23,22 @@
       [:p "You do not have permission to edit this organization."]]]
   (let [form (atom {})
         validator (validation-set (presence-of :Name))
+
+        ; State atoms for the permissions assignment form
+        ; Current user
         permissions-user (atom nil)
+        ; Current event
         permissions-event (atom nil)
+        ; Edit event permissions for the user/event
         event-edit-permissions (atom nil)
+        ; Event check-in permissions for the user/event
         check-in-permissions (atom nil)
+        ; Organization edit permissions for the user
         org-permissions (atom nil)
+        ; Organization event add/edit permissions for the user/event
         org-event-permissions (atom nil)
+
+        ; Get the current event-level permissions of the user/event
         get-current-event-permissions
         (fn []
           (let [permissions (ffirst (d/q '[:find ?event-permissions
@@ -42,6 +53,8 @@
                      (fn [event-permissions]
                        (= (:EventId event-permissions) @permissions-event))
                      permissions))))
+
+        ; Get the current org-level permissions of the user
         get-current-org-permissions
         (fn []
           (let [permissions (ffirst (d/q '[:find ?org-permissions
@@ -56,6 +69,8 @@
                      (fn [org-permissions]
                        (= (:OrganizationId org-permissions) organization-id))
                      permissions))))
+
+        ; Update the form checkboxes with the current event permissions
         sync-event-permissions
         (fn []
           (when (and (= @permissions-user 0)
@@ -64,6 +79,8 @@
           (let [current-event-permissions (get-current-event-permissions)]
             (reset! event-edit-permissions (:EditEvent current-event-permissions))
             (reset! check-in-permissions (:EditUser current-event-permissions))))
+
+        ; Update the form checkboxes with the current org permissions
         sync-org-permissions
         (fn []
           (when (and (= @permissions-user 0)
@@ -72,6 +89,7 @@
           (let [current-org-permissions   (get-current-org-permissions)]
             (reset! org-permissions (:EditOrganization current-org-permissions))
             (reset! org-event-permissions (:EditEvent current-org-permissions))))]
+    ; If organization-id is defined, we are editing. Prefill the form.
     (when organization-id
       (if-let [organization (seq (d/entity @api/organizations-db
                                            organization-id))]
@@ -82,6 +100,7 @@
                      (reset! form (into {} (d/entity @api/organizations-db
                                                      organization-id)))
                      (remove-watch api/organizations-db :organization-edit)))))
+    ; Watch for updates of the permissions fields
     (add-watch permissions-user
                :preset-org-permissions
                (fn [_ _ _ _]
@@ -159,6 +178,7 @@
                              organization-id)))))
             save-permissions
             (fn [callback]
+              ; Define permissions structures expected by API
               (let [event-permissions-to-set
                     {:UserId          @permissions-user
                      :EventId         @permissions-event
@@ -212,6 +232,7 @@
                                    [:negative "An error occurred."]]))))]
                   ; Create/update event permissions
                   (when (> @permissions-event 0)
+                    ; Determine whether creating or updating
                     (if (nil? current-event-permissions)
                       (api/api-call :create
                                     "/eventpermission"
@@ -227,6 +248,7 @@
                                     (error-callback callback))))
                   ; Create/update org permissions
                   (if (nil? current-org-permissions)
+                    ; Determine whether creating or updating
                     (api/api-call :create
                                   "/organizationpermission"
                                   org-permissions-to-set
@@ -307,6 +329,7 @@
                     [:label "Organization Event Permissions"]
                     [input/component :checkbox {:label "Add/edit/delete events"} org-event-permissions]]]]
                  [:div.field])]
+              ; Dynamically show fields
               [:div.fields
                (when (> @permissions-user 0)
                  [:div.eight.wide.field

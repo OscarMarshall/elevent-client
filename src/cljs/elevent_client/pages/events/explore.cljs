@@ -17,10 +17,11 @@
             [elevent-client.pages.events.core :as events]))
 
 (defn page []
+  "Events the user is not registered for"
   (let [search (atom "")
         page (atom 0)]
     (fn []
-      (let [unattending-events
+      (let [unattending-events ; future events user is not registered for
             (->> (d/q '[:find [?event-id ...]
                         :in $ ?user-id
                         :where

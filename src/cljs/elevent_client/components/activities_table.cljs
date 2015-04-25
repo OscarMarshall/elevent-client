@@ -8,22 +8,24 @@
             [elevent-client.routes :as routes]
             [elevent-client.state :as state]))
 
+(defn delete-activity! [activity-id]
+  "Delete an activity from an event"
+  (let [activity (d/entity @api/activities-db activity-id)]
+    (when (js/window.confirm (str "Are you sure you want to delete "
+                                  (:Name activity)
+                                  "?"))
+      (api/activities-endpoint :delete
+                               activity
+                               nil))))
+
 (defn component [event-id]
+  "Reusable table of all activities for the given event"
   (let [activities (doall (map #(into {} (d/entity @api/activities-db %))
                                (d/q '[:find [?activity-id ...]
                                       :in $ ?event-id
                                       :where [?activity-id :EventId ?event-id]]
                                     @api/activities-db
-                                    event-id)))
-        delete-activity!
-        (fn [activity-id]
-          (let [activity (d/entity @api/activities-db activity-id)]
-            (when (js/window.confirm (str "Are you sure you want to delete "
-                                          (:Name activity)
-                                          "?"))
-              (api/activities-endpoint :delete
-                                       activity
-                                       nil))))]
+                                    event-id)))]
     [:table.ui.table
      [:thead
       [:tr
@@ -33,6 +35,7 @@
        [:th "Location"]
        [:th "Actions"]]]
      [:tbody
+      ; Get session permissions
       (let [event-permissions (:EventPermissions (:permissions @state/session))]
         (for [activity activities]
           ^{:key (:ActivityId activity)}
@@ -54,6 +57,7 @@
                {:on-click #(delete-activity! (:ActivityId activity))}
                [:i.red.remove.icon.link]]]
              [:td])]))]
+     ; Only show add button if edit permissions
      (when (get-in (:EventPermissions (:permissions @state/session))
                    [event-id :EditEvent])
        [:tfoot

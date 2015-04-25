@@ -8,8 +8,12 @@
             [elevent-client.locale :as locale]
             [elevent-client.api :as api]))
 
-(defn component [scheduled-activities
-                 & [button-text button-action footer-button disabled-condition]]
+(defn component
+  "Reusable table for attendee schedule
+  Must provide the scheduled activities for the user
+  Optional fields are for the action button and footer button"
+  [scheduled-activities
+   & [button-text button-action footer-button disabled-condition]]
   (let [scheduled-activities
         (->> scheduled-activities
              (map (fn [[schedule-id activity-id]]
@@ -65,6 +69,7 @@
            [:td.right.aligned {:noWrap true}
             (when button-text
               [:div
+               ; Button shows help icon if required activity
                (when (and disabled-condition
                           (disabled-condition (:ActivityId activity)))
                  [help-icon/component "This is a required activity"])
@@ -77,10 +82,9 @@
                 (when (:Conflict activity)
                   [:span [:span.ui.red.label "CONFLICT"] " "])
                 button-text]])]]))]
+     ; Footer button exists when user has permissions to edit schedule
      (when footer-button
        [:tfoot
         [:tr
          [:th {:colSpan "6"}
-          footer-button
-          #_[:div.ui.small.labeled.icon.button
-             [:i.print.icon] "Print"]]]])]))
+          footer-button]]])]))

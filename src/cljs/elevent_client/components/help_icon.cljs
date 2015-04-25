@@ -2,6 +2,8 @@
   (:require [reagent.core :as r]))
 
 (defn component [text & [icon]]
+  "Help icon with popup text
+   If icon is not specified, defaults to question mark"
   (r/create-class
     {:component-did-mount
      #(-> %
