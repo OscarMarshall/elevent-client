@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.password-reset
   (:require [reagent.core :as r :refer [atom]]
             [cljs.core.async :refer [put!]]
@@ -13,7 +17,9 @@
             [elevent-client.components.action-button :as action-button]
             [elevent-client.api :as api]))
 
-(defn page [token]
+(defn page
+  "Reagent component that defines the password reset page."
+  [token]
   (let [form (atom {})]
     (fn []
       (let [{:keys [Password PasswordConfirm]} @form

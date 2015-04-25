@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.events.id.attendees.id.core
   (:require [datascript :as d]
             [cljs.core.async :as async :refer [put!]]

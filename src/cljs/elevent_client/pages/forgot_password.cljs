@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.forgot-password
   (:require
     [reagent.core :as r :refer [atom]]
@@ -11,7 +15,9 @@
     [elevent-client.components.action-button :as action-button]
     [elevent-client.api :as api]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the forgot password page."
+  []
   (let [form (atom {})
         validator (validation-set (format-of :Email :format #"@"))]
     (fn []

@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.organizations.explore
   (:require [reagent.core :refer [atom]]
             [clojure.set :as set]
@@ -13,7 +17,10 @@
             [elevent-client.components.paginator :as paginator]
             [elevent-client.pages.organizations.core :as organizations]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the explore organizations page. The
+  organizations shown on this page are ones which the user is not a member of."
+  []
   (let [search (atom "")
         page (atom 0)]
     (fn []

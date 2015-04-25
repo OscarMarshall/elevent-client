@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.core
   (:require [goog.events :as events]
             [goog.history.EventType :as EventType]
@@ -48,7 +52,9 @@
 ;; Frame
 ;; =============================================================================
 
-(defn app-frame []
+(defn app-frame
+  "Reagent component that puts together the top-level Reagent compenents."
+  []
   ^{:key @state/current-page}
   [:div
    [style/stylesheet]
@@ -63,7 +69,10 @@
 ;; =============================================================================
 
 ; must be called after routes have been defined
-(defn hook-browser-navigation! []
+(defn hook-browser-navigation!
+  "Uses goog.history to listen for page navigate events and calls
+  routes/dispatch! with the hash fragment."
+  []
   (doto (History.)
     (events/listen
      EventType/NAVIGATE
@@ -78,9 +87,13 @@
 ;; Initialize app
 ;; =============================================================================
 
-(defn mount-root []
+(defn mount-root
+  "Mounts the app-frame as the DOM body."
+  []
   (r/render [app-frame] (.-body js/document)))
 
-(defn init! []
+(defn init!
+  "Initialize the navigation listener and mount the app-frame."
+  []
   (hook-browser-navigation!)
   (mount-root))

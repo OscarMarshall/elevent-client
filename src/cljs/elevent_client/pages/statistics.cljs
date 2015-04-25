@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.statistics
   (:require [reagent.core :refer [atom]]
             [datascript :as d]
@@ -9,7 +13,9 @@
             [elevent-client.components.chart :as chart]
             [elevent-client.components.input :as input]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the statistics page."
+  []
   (let [event-id (atom 0)]
     (fn []
       (let [events

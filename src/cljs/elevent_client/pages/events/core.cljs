@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.events.core
   (:require [clojure.string :as str]
             [reagent.core :refer [atom]]

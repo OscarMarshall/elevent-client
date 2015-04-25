@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.components.navbar
   (:require [elevent-client.state :as state]
             [elevent-client.routes :as routes]

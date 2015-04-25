@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.sign-up
   (:require [reagent.core :as r :refer [atom]]
             [validateur.validation :refer [format-of
@@ -10,7 +14,9 @@
             [elevent-client.routes :as routes]
             [elevent-client.components.input :as input]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the sign up page."
+  []
   (let [form (atom {})]
     (fn []
       (let [{:keys [Email Password PasswordConfirm FirstName LastName]} @form

@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.calendar
   (:require [datascript :as d]
 
@@ -6,7 +10,9 @@
             [elevent-client.state :as state]
             [elevent-client.components.calendar :as calendar]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the calendar page."
+  []
   (let [user-activities
         (d/q '[:find ?schedule-id ?activity-id
                :in $schedules $activities ?user-id

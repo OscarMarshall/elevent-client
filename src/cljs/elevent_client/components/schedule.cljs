@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.components.schedule
   (:require [cljs-time.coerce :refer [from-string]]
             [cljs-time.format :refer [unparse]]

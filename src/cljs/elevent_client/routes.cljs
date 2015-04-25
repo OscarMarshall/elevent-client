@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.routes
   (:require [cljs.core.async :refer [<! >! chan put!]]
             [secretary.core :as secretary :refer-macros [defroute]]
@@ -7,6 +11,10 @@
 
 ;; Routes
 ;; =============================================================================
+
+;; Defines a group of channels which pages will listen to. When any of these
+;; channels are passed a collection of parameters, a listening page will mount
+;; it's component with the specified parameters.
 
 (def home-chan (chan))
 (def sign-in-chan (chan))
@@ -40,7 +48,12 @@
 (def payments-chan (chan))
 
 
+; Tell Secretary to generate hash fragment links.
 (secretary/set-route-prefix! "#")
+
+;; Defines a group of routes used by Secretary. When the Secretary dispatcher is
+;; called, the matching route will fire its body. Most bodies will just put the
+;; passed parameters on its corresponding async channel.
 
 (defroute home
   "/" []
@@ -179,6 +192,9 @@
   (put! payments-chan []))
 
 (def dispatch!
+  "Creates a Secretary dispatcher which, when called with a uri, will run the
+  body of the matching route found in the vector of routes passed to
+  secretary/uri-dispatcher."
   (secretary/uri-dispatcher [home
                              sign-in
                              sign-up
@@ -214,7 +230,11 @@
                              statistics
                              payments]))
 
-(defn register-page [channel page & [authentication?]]
+(defn register-page
+  "Creates a loop which constantly listens to the specified channel and resets
+  the state/current-page atom with the specified page given the collection of
+  parameters put on the channel."
+  [channel page & [authentication?]]
   (go-loop []
     (let [page (into [] (cons page (<! channel)))]
       (if (or (not authentication?) (:token @state/session))

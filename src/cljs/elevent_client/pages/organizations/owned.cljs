@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.organizations.owned
   (:require [reagent.core :refer [atom]]
             [datascript :as d]
@@ -11,7 +15,10 @@
             [elevent-client.components.input :as input]
             [elevent-client.pages.organizations.core :as organizations]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the owned organizations page. Owned
+  organizations are organizations that the user is an administrator for."
+  []
   (let [search (atom "")
         page (atom 0)]
     (fn []

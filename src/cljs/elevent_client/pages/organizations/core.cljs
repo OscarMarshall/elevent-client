@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.organizations.core
   (:require [reagent.core :refer [atom]]
             [datascript :as d]
@@ -9,7 +13,9 @@
             [elevent-client.components.input :as input]
             [elevent-client.components.paginator :as paginator]))
 
-(defn tabs [page]
+(defn tabs
+  "Reagent component that defines the tabs for the organization listing pages."
+  [page]
   (let [logged-in? (:token @state/session)]
     [:div.ui.top.attached.tabular.menu
      (when logged-in?
@@ -28,7 +34,10 @@
                                                           "active")}
         "Add"])]))
 
-(defn page []
+(defn page
+  "Reagent component that defines the organizations page. This page will only
+  show the organizations that the user is a member of."
+  []
   (let [search (atom "")
         page (atom 0)]
     (fn []

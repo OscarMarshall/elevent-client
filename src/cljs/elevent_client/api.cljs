@@ -1,3 +1,7 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.api
   (:require [ajax.core :refer [DELETE GET POST PUT]]
             [cljs.core.async :as async :refer [put! chan <!]]
@@ -12,7 +16,11 @@
 ;; REST
 ;; =============================================================================
 
-(defn api-call [op uri params handler & [error-handler]]
+(defn api-call
+  "Calls the corresponding cljs-ajax function on the uri with the specified
+  params and sane defaults. The specified handler function will be called on
+  success and the specified error-handler will be called on failure."
+  [op uri params handler & [error-handler]]
   (let [options {:format          :json
                  :response-format (when (= op :read) :json)
                  :keywords?       true
@@ -32,7 +40,13 @@
       :read   (GET url options)
       :delete (DELETE url options))))
 
-(defn endpoint [uri element-id state]
+(defn endpoint
+  "Generates an endpoint function with the given uri, element-id, and state
+  atom. The resulting function will take a CRUD operation keyword, body params,
+  and handlers, and calls the corresponding cljs-ajax function on the uri. If
+  the :read operation was specified, the state atom is updated with the
+  response, else the endpoint is recursively called with the :read operation."
+  [uri element-id state]
   (fn dispatch!
     ([operation params handler error-handler]
      (let [options {:format          :json
@@ -134,6 +148,8 @@
     ([operation params handler]
      (dispatch! operation params handler nil))))
 
+;; Uses the endpoints macro to define endpoints, backing local storage, and
+;; databases for the given endpoints.
 (endpoints
   [attendees     (str config/https-url "/attendees")     :AttendeeId     true]
   [organizations (str config/https-url "/organizations") :OrganizationId false]
@@ -146,18 +162,28 @@
   [mandates      (str config/https-url "/mandates")      :MandateId      true]
   [permissions   (str config/https-url "/permissions")   :UserId         true])
 
+;; If something is put on the state/api-refresh-chan, all of the endpoints are
+;; refreshed.
 (go-loop []
   (refresh!)
   (<! state/api-refresh-chan)
   (recur))
 
+;; Listens to the state/auth-sign-up-chan and signs up the user put on the
+;; channel.
 (go-loop []
   (let [form (<! state/auth-sign-up-chan)]
     (users-endpoint :create-no-read form #(auth/sign-in! form))
     (recur)))
 
-(def update-user-permissions-chan (chan))
+(def update-user-permissions-chan
+  "Channel which prompts the user permissions to be updated. This is necessary
+  because both the users and permissions databases need to be filled in in order
+  to get the user permissons."
+  (chan))
 
+;; Fills in the :user map inthe  state/session atom and notifies
+;; update-user-permissions-chan that it might want to update.
 (add-watch users-db
            :users-update
            (fn [_ _ _ db]
@@ -175,11 +201,15 @@
                         (into {} (d/entity db entity-id)))))
              (put! update-user-permissions-chan true)))
 
+;; Notifies update-user-permissions-chan that it might want to update.
 (add-watch permissions-db
            :permissions-update
            (fn [_ _ _ db]
              (put! update-user-permissions-chan true)))
 
+;; Whenever a sigal comes over the update-user-permissions-chan, checks to see
+;; if it can get the user permissions. If it can, it puts the on the
+;; state/session atom as :permissions.
 (go-loop []
   (<! update-user-permissions-chan)
   (when-let [user-id (get-in @state/session [:user :UserId])]

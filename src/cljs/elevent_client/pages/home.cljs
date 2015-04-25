@@ -1,8 +1,14 @@
+;; Senior Project 2015
+;; Elevent Solutions -- Client
+;; Leslie Baker and Oscar Marshall
+
 (ns elevent-client.pages.home
   (:require [elevent-client.routes :as routes]
             [elevent-client.state :as state]))
 
-(defn module [text icon destination]
+(defn module
+  "Reagent component that defines the large buttons found on the home page."
+  [text icon destination]
   [:div.four.wide.column
    [:div.ui.segment {:style {:padding "0"
                              :height "200px"}}
@@ -12,7 +18,9 @@
      [:h1.ui.header [:i.icon.centered
                      {:class icon}]]]]])
 
-(defn page []
+(defn page
+  "Reagent component that defines the home page."
+  []
   [:div.sixteen.wide.column
    (let [logged-in? (:token @state/session)]
      [:div.ui.sixteen.column.grid
