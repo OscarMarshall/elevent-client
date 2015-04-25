@@ -22,12 +22,10 @@
 ;; Location
 ;; =============================================================================
 
-(defonce location
-  "Atom which stores the current location hash fragment."
-  (atom ""))
-(defonce current-page
-  "Atom which stores the Reagent component for the current page."
-  (atom nil))
+; Atom which stores the current location hash fragment.
+(defonce location (atom ""))
+; Atom which stores the Reagent component for the current page.
+(defonce current-page (atom nil))
 
 
 ;; Session
@@ -44,11 +42,10 @@
 ;; Messages
 ;; =============================================================================
 
-(defonce messages
-  "Map from arbitrary identifiers to messages. The messages are displayed at the
-  top of the site (right under the navbar and breadcrumbs) and are used to give
-  the user feedback."
-  (atom {}))
+;; Map from arbitrary identifiers to messages. The messages are displayed at the
+;; top of the site (right under the navbar and breadcrumbs) and are used to give
+;; the user feedback.
+(defonce messages (atom {}))
 (def add-messages-chan
   "Channel which will add any two value sequence put on it to the messages map.
   The first value will be interpreted as the key and the second the value. If a
