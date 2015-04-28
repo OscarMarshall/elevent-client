@@ -12,3 +12,5 @@ pom.xml.asc
 /.repl
 /figwheel_server.log
 /resources/public/bower_components
+/.idea
+elevent_client.iml
