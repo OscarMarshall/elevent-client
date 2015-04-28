@@ -1,29 +1,31 @@
 # Elevent Client
 
-The web client component of Elevent that interacts with the Elevent API.
+The web front-end for Elevent Solutions, an all-around event software solution.
 
 ## Dependencies
 
-- java 1.7+
-- [boot][1]
-- [leiningen][2]
+* [Leiningen](http://leiningen.org/) - download script from website and follow directions to install.
+* [Bower](http://bower.io/) - install with `$ npm install -g bower`.
 
 ## Usage
 
-1. Start the auto-compiler. In a terminal:
+1. `$ bower install`.
+2. `$ lein figwheel`.
+3. Optionally for repl support, in another terminal `$ lein repl` then
+   `elevent-client.dev=> (browser-repl)`.
+4. In a browser, navigate to [localhost:8000](http://localhost:8000/).
 
-    ```bash
-    $ boot development
-    ```
+## Production
 
-2. Go to [http://localhost:8000][3] in your browser.
+	$ lein clean
+	$ lein cljsbuild once prod
+The compiled files will be in `./resources/public/`
 
-3. You're already done.
+## Platforms
 
-## License
+The build system runs on anything that has a JRE.
+Our web app will run in most browsers, but we only tested in Chrome.
 
-Copyright © 2014, Leslie Baker, James Bloom, John Clukey, and Oscar Marshall
+## Authors
 
-[1]: https://github.com/tailrecursion/boot
-[2]: https://github.com/technomancy/leiningen
-[3]: http://localhost:8000
+Oscar Marshall and Leslie Baker
