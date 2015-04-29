@@ -41,7 +41,7 @@
      [:tbody
       ; Get session permissions
       (let [event-permissions (:EventPermissions (:permissions @state/session))]
-        (for [activity activities]
+        (for [activity (sort-by :StartTime activities)]
           ^{:key (:ActivityId activity)}
           [:tr
            [:td (let [start (from-string (:StartTime activity))]

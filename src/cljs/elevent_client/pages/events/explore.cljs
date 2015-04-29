@@ -26,24 +26,30 @@
         page (atom 0)]
     (fn []
       (let [unattending-events ; future events user is not registered for
-            (->> (d/q '[:find [?event-id ...]
-                        :in $ ?user-id
-                        :where
-                        [?attendee-id :EventId ?event-id]
-                        [?attendee-id :UserId ?user-id]]
-                      @api/attendees-db
-                      (get-in @state/session [:user :UserId]))
-                 (into #{})
-                 (set/difference (into #{} (d/q '[:find [?event-id ...]
-                                                  :where [?event-id]]
-                                                @api/events-db)))
-                 (map (partial d/entity @api/events-db))
-                 (filter #(when (seq %)
-                            (and (re-find (re-pattern (str/lower-case @search))
-                                          (str/lower-case (:Name %)))
-                                 (after? (from-string (:EndDate %))
-                                         (minus (now) (hours 6))))))
-                 (sort-by :StartDate))
+            (->>
+             (d/q '[:find [?event-id ...]
+                    :in $ ?user-id
+                    :where
+                    [?attendee-id :EventId ?event-id]
+                    [?attendee-id :UserId ?user-id]]
+                  @api/attendees-db
+                  (get-in @state/session [:user :UserId]))
+             (into #{})
+             (set/difference (into #{} (d/q '[:find [?event-id ...]
+                                              :where [?event-id]]
+                                            @api/events-db)))
+             (map (partial d/entity @api/events-db))
+             (filter
+              #(when (seq %)
+                (let [pattern (re-pattern (str/lower-case @search))]
+                  (and (or (re-find pattern
+                                    (str/lower-case (:Name %)))
+                           (when (:Description %)
+                             (re-find pattern
+                                      (str/lower-case (:Description %)))))
+                       (after? (from-string (:EndDate %))
+                               (minus (now) (hours 6)))))))
+             (sort-by :StartDate))
             paged-events
             (->> unattending-events
                  (drop (* @page 10))

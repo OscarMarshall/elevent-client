@@ -49,10 +49,11 @@
        [:th]]]
      [:tbody
       (doall
-        (for [activity scheduled-activities]
+        (for [activity (sort-by :StartTime scheduled-activities)]
           ^{:key (:ScheduleId activity)}
           [:tr {:class (when (:Conflict activity) "error")}
            [:td {:noWrap true}
+            (when (:Conflict activity) [:a.ui.red.ribbon.label "Conflict"])
             (when activity
               [:p
                (unparse locale/time-formatter
@@ -77,15 +78,12 @@
                (when (and disabled-condition
                           (disabled-condition (:ActivityId activity)))
                  [help-icon/component "This is a required activity"])
-               [:div.ui.small.button
-                {:class (when (and disabled-condition
-                                   (disabled-condition (:ActivityId activity)))
-                          "disabled")
-                 :on-click #(button-action (:ScheduleId activity)
-                                           (:ActivityId activity))}
-                (when (:Conflict activity)
-                  [:span [:span.ui.red.label "CONFLICT"] " "])
-                button-text]])]]))]
+               (when (not (and disabled-condition
+                               (disabled-condition (:ActivityId activity))))
+                 [:div.ui.small.button
+                  {:on-click #(button-action (:ScheduleId activity)
+                                             (:ActivityId activity))}
+                  button-text])])]]))]
      ; Footer button exists when user has permissions to edit schedule
      (when footer-button
        [:tfoot

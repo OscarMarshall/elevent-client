@@ -43,20 +43,25 @@
         page (atom 0)]
     (fn []
       (let [attending-events
-            (->> (d/q '[:find ?event-id ?attendee-id
-                        :in $ ?user-id
-                        :where
-                        [?attendee-id :UserId  ?user-id]
-                        [?attendee-id :EventId ?event-id]]
-                      @api/attendees-db
-                      (get-in @state/session [:user :UserId]))
-                 (map (fn [[event-id attendee-id]]
-                        (assoc (into {} (d/entity @api/events-db event-id))
-                          :AttendeeId attendee-id)))
-                 (sort-by :StartDate)
-                 (filter #(when (:Name %)
-                            (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %))))))
+            (->>
+             (d/q '[:find ?event-id ?attendee-id
+                    :in $ ?user-id
+                    :where
+                    [?attendee-id :UserId  ?user-id]
+                    [?attendee-id :EventId ?event-id]]
+                  @api/attendees-db
+                  (get-in @state/session [:user :UserId]))
+             (map (fn [[event-id attendee-id]]
+                    (assoc (into {} (d/entity @api/events-db event-id))
+                      :AttendeeId attendee-id)))
+             (sort-by :StartDate)
+             (filter #(when (:Name %)
+                       (let [pattern (re-pattern (str/lower-case @search))]
+                         (or (re-find pattern
+                                      (str/lower-case (:Name %)))
+                             (when (:Description %)
+                               (re-find pattern
+                                        (str/lower-case (:Description %)))))))))
             ; Split events into pages
             paged-events
             (->> attending-events

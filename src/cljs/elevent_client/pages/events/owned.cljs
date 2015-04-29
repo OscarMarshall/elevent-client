@@ -39,15 +39,20 @@
         page (atom 0)]
     (fn []
       (let [owned-events
-            (->> (get-in @state/session [:permissions :EventPermissions])
-                 (filter (fn [[event-id event-permissions]]
-                           (or (:EditEvent event-permissions)
-                               (:EditUser  event-permissions))))
-                 (map #(into {} (d/entity @api/events-db (first %))))
-                 (filter #(when (seq %)
-                            (re-find (re-pattern (str/lower-case @search))
-                                     (str/lower-case (:Name %)))))
-                 (sort-by :StartDate))
+            (->>
+             (get-in @state/session [:permissions :EventPermissions])
+             (filter (fn [[event-id event-permissions]]
+                       (or (:EditEvent event-permissions)
+                           (:EditUser  event-permissions))))
+             (map #(into {} (d/entity @api/events-db (first %))))
+             (filter #(when (seq %)
+                       (let [pattern (re-pattern (str/lower-case @search))]
+                         (or (re-find pattern
+                                      (str/lower-case (:Name %)))
+                             (when (:Description %)
+                               (re-find pattern
+                                        (str/lower-case (:Description %))))))))
+             (sort-by :StartDate))
             paged-events
             (->> owned-events
                  (drop (* @page 10))
