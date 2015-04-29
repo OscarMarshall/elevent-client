@@ -41,6 +41,10 @@
                   :active)}
         [:i.bar.chart.icon]
         "Statistics"])
+     [:a.blue.item
+      {:href "https://github.com/OscarMarshall/elevent-client/wiki"}
+      [:i.book.icon]
+      "Tutorial"]
      ; Check if logged in
      (if (:token @state/session)
        [:div.right.menu
